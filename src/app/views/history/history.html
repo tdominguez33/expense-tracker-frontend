@@ -1,0 +1,582 @@
+<div class="max-w-5xl mx-auto space-y-8 pb-20">
+  <!-- Title & Description -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-4xl font-bold mb-2">Histórico</h1>
+      <p class="text-base-content/70">Consulta y analiza tus gastos pasados por año y mes.</p>
+    </div>
+
+    <!-- Quick Navigation Stepper -->
+    <div class="flex items-center gap-2 self-start sm:self-auto">
+      <button class="btn btn-outline btn-sm gap-1" (click)="prevPeriod()" [disabled]="isLoading() || !canGoPrev()" title="Período anterior">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        <span class="hidden sm:inline">Anterior</span>
+      </button>
+      <div class="badge badge-lg badge-neutral font-bold px-3 py-4 text-sm">
+        {{ getPeriodLabel() }}
+      </div>
+      <button class="btn btn-outline btn-sm gap-1" (click)="nextPeriod()" [disabled]="isLoading() || !canGoNext()" title="Período siguiente">
+        <span class="hidden sm:inline">Siguiente</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Period Selector Card -->
+  <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5 space-y-4">
+    <!-- Year Selector -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-bold uppercase tracking-wider text-base-content/60 mr-2">Año:</span>
+      @for (y of availableYears(); track y) {
+        <button type="button" 
+                class="btn btn-sm"
+                [disabled]="isLoading()"
+                [ngClass]="selectedYear() === y ? 'btn-primary' : 'btn-outline border-base-content/20 text-base-content/80'"
+                (click)="setYear(y)">
+          {{ y }}
+        </button>
+      }
+    </div>
+
+    <!-- Month Selector -->
+    <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-base-content/10">
+      <span class="text-xs font-bold uppercase tracking-wider text-base-content/60 mr-2">Mes:</span>
+      
+      <!-- Todo el año -->
+      <button type="button" 
+              class="btn btn-sm"
+              [disabled]="isLoading()"
+              [attr.tabindex]="availableMonths().length > 0 ? 0 : -1"
+              [attr.aria-disabled]="availableMonths().length === 0"
+              [ngClass]="selectedMonth() === null ? 'btn-primary font-bold' : (availableMonths().length > 0 ? 'btn-ghost border border-base-content/20 text-base-content/80' : 'btn-ghost border border-base-content/10 text-base-content/40 cursor-default hover:bg-transparent hover:text-base-content/40 hover:border-base-content/10 no-animation')"
+              (click)="availableMonths().length > 0 && setMonth(null)">
+        Todo el año
+      </button>
+
+      <!-- 12 Months -->
+      @for (mName of monthShortNames; track $index; let idx = $index) {
+        @let mNum = idx + 1;
+        @let hasData = isMonthAvailable(mNum);
+        <button type="button" 
+                class="btn btn-sm"
+                [disabled]="isLoading()"
+                [attr.tabindex]="hasData ? 0 : -1"
+                [attr.aria-disabled]="!hasData"
+                [ngClass]="{
+                  'btn-primary font-bold': selectedMonth() === mNum,
+                  'btn-ghost text-base-content/80': selectedMonth() !== mNum && hasData,
+                  'btn-ghost text-base-content/40 cursor-default hover:bg-transparent hover:text-base-content/40 hover:border-transparent no-animation': selectedMonth() !== mNum && !hasData
+                }"
+                (click)="hasData && setMonth(mNum)">
+          {{ mName }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  @if (showSpinner()) {
+    <div class="flex justify-center my-16">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else if (errorMsg()) {
+    <div role="alert" class="alert alert-error shadow-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  } @else if (!hasLoadedOnce()) {
+    <div class="flex justify-center my-16 min-h-[200px]"></div>
+  } @else if (reportData(); as report) {
+
+    <!-- KPI Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Total Gastado -->
+      <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5">
+        <div class="text-sm font-medium text-base-content/70">Total Gastado</div>
+        <div class="text-2xl md:text-3xl font-bold mt-1">${{ report.total_amount | number:'1.0-0' }}</div>
+        
+        @if (report.comparison; as comp) {
+          <div class="flex items-center gap-1 text-xs mt-2">
+            @if (comp.percentage !== null) {
+              <span class="inline-flex items-center font-semibold"
+                    [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                {{ comp.percentage > 0 ? '+' : '' }}{{ comp.percentage | number:'1.1-1' }}%
+              </span>
+              <span class="text-base-content/60">vs {{ selectedMonth() !== null ? 'mes anterior' : 'año anterior' }}</span>
+            } @else {
+              <span class="text-base-content/50 italic">Sin datos período anterior</span>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Promedio -->
+      <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5">
+        <div class="text-sm font-medium text-base-content/70">
+          {{ selectedMonth() !== null ? 'Promedio Diario' : 'Promedio Mensual' }}
+        </div>
+        <div class="text-2xl md:text-3xl font-bold mt-1">
+          ${{ (selectedMonth() !== null ? report.average_per_day : report.average_per_month) || 0 | number:'1.0-0' }}
+        </div>
+        <div class="text-xs text-base-content/60 mt-2">
+          {{ selectedMonth() !== null ? 'por día en el mes' : 'por mes en el año' }}
+        </div>
+      </div>
+
+      <!-- Cantidad de Gastos -->
+      <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5">
+        <div class="text-sm font-medium text-base-content/70">Operaciones</div>
+        <div class="text-2xl md:text-3xl font-bold mt-1">{{ report.transaction_count }}</div>
+        <div class="text-xs text-base-content/60 mt-2">gastos registrados</div>
+      </div>
+
+      <!-- Categoría Principal -->
+      <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5">
+        <div class="text-sm font-medium text-base-content/70">Rubro Principal</div>
+        @if (getTopCategory(); as topCat) {
+          <div class="text-xl md:text-2xl font-bold mt-1 truncate" [title]="topCat.name">
+            {{ topCat.name }}
+          </div>
+          <div class="text-xs text-base-content/70 mt-2 flex items-center gap-1.5">
+            <span class="badge badge-sm font-bold border-0" 
+                  [style.backgroundColor]="topCat.color" 
+                  [style.color]="getTextColorForBackground(topCat.color)">
+              {{ topCat.pct }}%
+            </span>
+            <span>${{ topCat.amount | number:'1.0-0' }}</span>
+          </div>
+        } @else {
+          <div class="text-base-content/50 italic mt-2">Sin gastos</div>
+        }
+      </div>
+    </div>
+
+    <!-- Doughnut & Category Breakdown Section -->
+    <div class="card bg-base-100 shadow-sm border border-base-content/20 p-6 lg:p-10">
+      <div class="mb-4">
+        <h2 class="text-2xl font-bold">Desglose por Categorías</h2>
+        <p class="text-sm text-base-content/60">Distribución porcentual y montos correspondientes a {{ getPeriodLabel() }}</p>
+      </div>
+
+      <app-category-doughnut
+        [breakdown]="report.by_category"
+        [totalAmount]="report.total_amount"
+        [periodTitle]="getPeriodLabel()"
+        emptyMessage="No se registraron gastos en este período.">
+      </app-category-doughnut>
+    </div>
+
+    <!-- Timeline Bar Chart -->
+    <div id="timeline-card" class="card bg-base-100 shadow-sm border border-base-content/20 p-6 lg:p-8">
+      <div class="mb-4">
+        <h2 class="text-xl font-bold">Evolución en el Tiempo</h2>
+        <p class="text-sm text-base-content/60">
+          {{ selectedMonth() !== null ? 'Picos y distribución diaria a lo largo del mes' : 'Distribución mensual de gastos durante el año' }}
+        </p>
+      </div>
+
+      <!-- Chart Area (sin overflow-x-auto para evitar barra de desplazamiento en ancho maximo) -->
+      <div class="relative pt-16 pb-2">
+        <div class="h-48 flex items-end justify-between gap-0.5 sm:gap-1 md:gap-1.5 px-1"
+             (mouseleave)="hoveredBarIndex.set(null)">
+          @for (bar of getTimelineData(); track bar.label; let i = $index; let first = $first; let last = $last) {
+            @let isSelected = isBarSelected(bar);
+            <div class="relative flex flex-col items-center flex-1 h-full justify-end min-w-0 group"
+                 [attr.data-timeline-bar]="bar.amount > 0 ? 'true' : null"
+                 [ngClass]="bar.amount > 0 ? 'cursor-pointer' : 'cursor-default'"
+                 (mouseenter)="bar.amount > 0 ? hoveredBarIndex.set(i) : hoveredBarIndex.set(null)"
+                 (click)="onBarClick(bar, i, $event)">
+
+              <!-- Bar Track & Fill -->
+              <div class="relative w-full flex-1 flex items-end justify-center"
+                   [ngClass]="selectedMonth() !== null ? 'max-w-[24px]' : 'max-w-[36px]'">
+
+                <!-- Popover Flotante (solo cuando hay gastos en el periodo) -->
+                @if (hoveredBarIndex() === i && bar.amount > 0) {
+                  <div class="absolute z-30 pointer-events-none mb-2.5 transition-all duration-150"
+                       [style.bottom.%]="bar.heightPct"
+                       [ngClass]="{
+                         'left-0': first || i === 1,
+                         'right-0': last || i >= getTimelineData().length - 2,
+                         'left-1/2 -translate-x-1/2': !first && !last && i !== 1 && i < getTimelineData().length - 2
+                       }">
+                    <div class="bg-neutral text-neutral-content rounded-xl shadow-2xl px-3.5 py-2 whitespace-nowrap text-center border border-neutral-content/15 relative">
+                      <!-- Period / Day -->
+                      <div class="text-[11px] font-medium text-neutral-content/80 flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{{ bar.fullLabel }}</span>
+                      </div>
+
+                      <!-- Monto -->
+                      <div class="text-base sm:text-lg font-black text-primary mt-0.5 tracking-tight">
+                        ${{ bar.amount | number:'1.0-0' }}
+                      </div>
+
+                      <!-- Cantidad de operaciones -->
+                      <div class="text-[10px] font-medium text-neutral-content/70">
+                        {{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }}
+                      </div>
+
+                      <!-- Popover downward arrow -->
+                      <div class="w-2.5 h-2.5 bg-neutral rotate-45 absolute -bottom-1 border-r border-b border-neutral-content/15"
+                           [ngClass]="{
+                             'left-3.5': first || i === 1,
+                             'right-3.5': last || i >= getTimelineData().length - 2,
+                             'left-1/2 -translate-x-1/2': !first && !last && i !== 1 && i < getTimelineData().length - 2
+                           }">
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <div class="w-full rounded-t transition-all duration-200"
+                     [style.height.%]="bar.heightPct"
+                     [class.bg-primary]="bar.amount > 0"
+                     [class.shadow-sm]="bar.amount > 0"
+                     [class.bg-base-300/60]="bar.amount === 0"
+                     [class.ring-2]="(isSelected || hoveredBarIndex() === i) && bar.amount > 0"
+                     [class.ring-primary]="(isSelected || hoveredBarIndex() === i) && bar.amount > 0"
+                     [class.ring-offset-2]="isSelected && bar.amount > 0"
+                     [class.ring-offset-base-100]="isSelected && bar.amount > 0"
+                     [class.shadow-md]="(isSelected || hoveredBarIndex() === i) && bar.amount > 0"
+                     [class.brightness-110]="(isSelected || hoveredBarIndex() === i) && bar.amount > 0"
+                     [class.opacity-40]="bar.amount > 0 && !isSelected && hoveredBarIndex() !== i && (dateFilter() !== '' || hoveredBarIndex() !== null)">
+                </div>
+              </div>
+
+              <!-- Label X-Axis -->
+              <span class="text-[10px] sm:text-[11px] font-medium mt-2 truncate w-full text-center select-none"
+                    [ngClass]="{
+                      'text-primary font-bold': (hoveredBarIndex() === i || isSelected) && bar.amount > 0,
+                      'text-base-content/60': !((hoveredBarIndex() === i || isSelected) && bar.amount > 0)
+                    }">
+                {{ bar.label }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle de Gastos (Transactions Table) -->
+    <div id="transactions-section" class="card bg-base-100 shadow-sm border border-base-content/20 p-6 scroll-mt-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-xl font-bold">Detalle de Gastos</h2>
+          <p class="text-sm text-base-content/60">Listado de operaciones registradas en {{ getPeriodLabel() }}</p>
+        </div>
+
+        <!-- Controls: Date filter & Search -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <!-- Date Filter Input -->
+          <div class="relative w-full sm:w-44">
+            <svg xmlns="http://www.w3.org/2000/svg" 
+                 class="h-4 w-4 absolute left-3 top-2 text-base-content/40 pointer-events-none" 
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            @if (selectedMonth() !== null) {
+              <input type="date" 
+                     [ngModel]="dateFilter()" 
+                     (ngModelChange)="onDateFilterChange($event)"
+                     [min]="getMinDate()"
+                     [max]="getMaxDate()"
+                     class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
+                     title="Filtrar por fecha" />
+            } @else {
+              <input type="month" 
+                     [ngModel]="dateFilter()" 
+                     (ngModelChange)="onDateFilterChange($event)"
+                     [min]="getMinDate()"
+                     [max]="getMaxDate()"
+                     class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
+                     title="Filtrar por mes" />
+            }
+            @if (dateFilter()) {
+              <button type="button" 
+                      class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold z-10"
+                      (click)="clearDateFilter()" 
+                      title="Limpiar fecha">
+                ✕
+              </button>
+            }
+          </div>
+
+          <!-- Search Controls -->
+          <div class="relative w-full sm:w-56">
+            <input type="text" 
+                   [(ngModel)]="searchQuery" 
+                   (ngModelChange)="currentPage.set(1)"
+                   placeholder="Buscar en el período..." 
+                   class="input input-bordered input-sm w-full pl-9 pr-8" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            @if (searchQuery()) {
+              <button class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold"
+                      type="button"
+                      (click)="searchQuery.set(''); currentPage.set(1)"
+                      title="Limpiar búsqueda">
+                ✕
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick category filter pills -->
+      <div class="flex items-center gap-1.5 flex-wrap mb-4 pb-3 border-b border-base-content/10">
+        <span class="text-xs font-medium text-base-content/60 mr-1">Filtrar por:</span>
+        <button type="button" 
+                class="btn btn-xs"
+                [ngClass]="categoryFilter() === null ? 'btn-neutral' : 'btn-ghost text-base-content/70'"
+                (click)="clearCategoryFilter()">
+          Todas ({{ report.transactions.length }})
+        </button>
+
+        @for (c of report.by_category; track c.id) {
+          <button type="button" 
+                  class="btn btn-xs gap-1.5"
+                  [ngClass]="categoryFilter() === c.id ? 'btn-primary' : 'btn-ghost border border-base-content/20 text-base-content/80'"
+                  (click)="toggleCategoryFilter(c.id)">
+            <span class="w-2.5 h-2.5 rounded-full" [style.backgroundColor]="c.color"></span>
+            <span>{{ c.name }} ({{ c.count }})</span>
+          </button>
+        }
+      </div>
+
+      <!-- Table -->
+      @let txList = paginatedTransactions();
+      @let totalCount = totalItems();
+      @if (totalCount === 0) {
+        <div class="text-center py-12 text-base-content/50 italic space-y-3">
+          <p>No se encontraron gastos con los filtros aplicados.</p>
+          @if (dateFilter() || categoryFilter() !== null || searchQuery()) {
+            <div>
+              <button type="button" class="btn btn-outline btn-xs gap-1" (click)="clearAllFilters()">
+                Limpiar filtros
+              </button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-sm w-full table-fixed min-w-[760px]">
+            <colgroup>
+              <col class="w-[115px]">
+              <col>
+              <col class="w-[170px]">
+              <col class="w-[140px]">
+              <col class="w-[110px]">
+              <col class="w-[145px]">
+            </colgroup>
+            <thead>
+              <tr class="text-base-content/70 select-none">
+                <!-- Fecha -->
+                <th class="w-[115px] cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('date')"
+                    [attr.aria-sort]="sortColumn() === 'date' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span [class.text-primary]="sortColumn() === 'date'" [class.font-bold]="sortColumn() === 'date'">Fecha</span>
+                    @if (sortColumn() === 'date') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+
+                <!-- Descripción -->
+                <th class="cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('description')"
+                    [attr.aria-sort]="sortColumn() === 'description' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span [class.text-primary]="sortColumn() === 'description'" [class.font-bold]="sortColumn() === 'description'">Descripción</span>
+                    @if (sortColumn() === 'description') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+
+                <!-- Categoría -->
+                <th class="w-[170px] cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('category')"
+                    [attr.aria-sort]="sortColumn() === 'category' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span [class.text-primary]="sortColumn() === 'category'" [class.font-bold]="sortColumn() === 'category'">Categoría</span>
+                    @if (sortColumn() === 'category') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+
+                <!-- Cuenta -->
+                <th class="w-[140px] cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('account')"
+                    [attr.aria-sort]="sortColumn() === 'account' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span [class.text-primary]="sortColumn() === 'account'" [class.font-bold]="sortColumn() === 'account'">Cuenta</span>
+                    @if (sortColumn() === 'account') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+
+                <!-- Cuotas -->
+                <th class="w-[110px] cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('installments')"
+                    [attr.aria-sort]="sortColumn() === 'installments' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center gap-1.5">
+                    <span [class.text-primary]="sortColumn() === 'installments'" [class.font-bold]="sortColumn() === 'installments'">Cuotas</span>
+                    @if (sortColumn() === 'installments') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+
+                <!-- Monto -->
+                <th class="w-[145px] text-right cursor-pointer hover:text-base-content transition-colors group"
+                    (click)="setSort('amount')"
+                    [attr.aria-sort]="sortColumn() === 'amount' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                    <span [class.text-primary]="sortColumn() === 'amount'" [class.font-bold]="sortColumn() === 'amount'">Monto</span>
+                    @if (sortColumn() === 'amount') {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150"
+                           [class.rotate-180]="sortDirection() === 'desc'"
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                      </svg>
+                    } @else {
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-0 group-hover:opacity-40 shrink-0 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                      </svg>
+                    }
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of txList; track t.id) {
+                <tr class="hover">
+                  <td class="font-mono text-xs whitespace-nowrap">
+                    {{ t.transaction_date | date:'dd-MM-yyyy':'UTC' }}
+                  </td>
+                  <td class="font-medium truncate" [title]="t.description || '-'">
+                    {{ t.description || '-' }}
+                  </td>
+                  <td class="truncate">
+                    <span class="inline-flex items-center gap-1.5 text-xs font-medium max-w-full">
+                      <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="t.category_color"></span>
+                      <span class="truncate">{{ t.category_name }}</span>
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap">
+                    <span class="badge badge-ghost badge-sm text-xs truncate max-w-full">{{ t.account_name }}</span>
+                  </td>
+                  <td class="whitespace-nowrap">
+                    @if (t.installments_count > 1) {
+                      <span class="badge badge-outline badge-sm">{{ t.installments_count }} cuotas</span>
+                    } @else {
+                      <span class="text-base-content/40 text-xs">1 cuota</span>
+                    }
+                  </td>
+                  <td class="text-right font-bold whitespace-nowrap">
+                    ${{ t.amount | number:'1.2-2' }}
+                    @if (t.real_amount !== null && t.real_amount !== t.total_amount) {
+                      <span class="text-[10px] text-base-content/50 block line-through font-normal">
+                        ${{ t.total_amount | number:'1.2-2' }}
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls Footer -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-base-content/10">
+          <div class="text-xs text-base-content/60">
+            Mostrando <span class="font-semibold">{{ (currentPage() - 1) * pageSize() + 1 }}</span> a 
+            <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), totalCount) }}</span> de 
+            <span class="font-semibold">{{ totalCount }}</span> gastos
+            @if (totalCount !== report.transactions.length) {
+              <span class="text-base-content/40 ml-1">(filtrados de {{ report.transactions.length }})</span>
+            }
+          </div>
+
+          @if (totalPages() > 1) {
+            <div class="join">
+              <button class="join-item btn btn-sm" 
+                      [disabled]="currentPage() <= 1" 
+                      (click)="goToPage(1)"
+                      title="Primera página">
+                ««
+              </button>
+              <button class="join-item btn btn-sm" 
+                      [disabled]="currentPage() <= 1" 
+                      (click)="goToPage(currentPage() - 1)"
+                      title="Página anterior">
+                « Anterior
+              </button>
+              <button type="button" tabindex="-1" class="join-item btn btn-sm btn-ghost no-animation cursor-default font-medium hover:bg-transparent hover:border-transparent pointer-events-none select-none">
+                Página {{ currentPage() }} de {{ totalPages() }}
+              </button>
+              <button class="join-item btn btn-sm" 
+                      [disabled]="currentPage() >= totalPages()" 
+                      (click)="goToPage(currentPage() + 1)"
+                      title="Página siguiente">
+                Siguiente »
+              </button>
+              <button class="join-item btn btn-sm" 
+                      [disabled]="currentPage() >= totalPages()" 
+                      (click)="goToPage(totalPages())"
+                      title="Última página">
+                »»
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+  }
+</div>

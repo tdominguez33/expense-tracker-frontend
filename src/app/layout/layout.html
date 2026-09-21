@@ -1,0 +1,87 @@
+<div class="drawer lg:drawer-open">
+  <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
+  
+  <div class="drawer-content flex flex-col bg-base-100">
+    <!-- Navbar for mobile -->
+    <div class="w-full navbar bg-base-200 lg:hidden shadow-sm sticky top-0 z-30">
+      <div class="flex-none">
+        <label for="my-drawer-2" aria-label="open sidebar" class="btn btn-square btn-ghost">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </label>
+      </div>
+      <div class="flex-1 px-2 mx-2 text-xl font-bold">Expense Tracker</div>
+    </div>
+    
+    <!-- Main content -->
+    <main class="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto">
+      <router-outlet></router-outlet>
+    </main>
+  </div> 
+  
+  <div class="drawer-side z-50">
+    <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label> 
+    <ul class="menu flex flex-col bg-base-200 text-base-content min-h-full w-72 p-4 space-y-2">
+      <!-- Sidebar Title -->
+      <li class="menu-title mb-4">
+        <div class="flex items-center gap-3 px-0">
+          <img src="icon.png" alt="Logo" class="w-8 h-8 object-contain" />
+          <span class="text-xl font-bold text-base-content tracking-wide">Expense Tracker</span>
+        </div>
+      </li>
+      
+      <!-- Menu Items -->
+      <li>
+        <a routerLink="/dashboard" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a routerLink="/transactions" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Gastos
+        </a>
+      </li>
+      <li>
+        <a routerLink="/statements" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Resúmenes
+        </a>
+      </li>
+      <li>
+        <a routerLink="/history" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Histórico
+        </a>
+      </li>
+      <!-- Spacer to push items to bottom -->
+      <div class="flex-1"></div>
+      
+      <li class="pt-4 border-t border-base-content/10">
+        <a routerLink="/settings" routerLinkActive="active" class="py-3 font-medium" (click)="closeDrawer()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          Ajustes
+        </a>
+      </li>
+      <li>
+        <button class="py-3 font-medium" (click)="toggleTheme()">
+          @if (isDarkTheme) {
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            Modo Claro
+          } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            Modo Oscuro
+          }
+        </button>
+      </li>
+      <li>
+        <button class="py-3 font-medium text-error hover:bg-error/10" (click)="logout()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+          Cerrar Sesión
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>

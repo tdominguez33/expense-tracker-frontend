@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Doppio+One&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scrollbar-gutter: stable !important;
+  overflow-anchor: none;
+}
+
+body, main {
+  font-family: 'Inter', sans-serif;
+  overflow-anchor: none;
+}
+
+@layer utilities {
+  .no-spinners {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .no-spinners::-webkit-outer-spin-button,
+  .no-spinners::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+    display: none;
+  }
+
+  .date-input-icon-left::-webkit-calendar-picker-indicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 34px;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+@keyframes doughnutSweep {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.doughnut-mask-circle {
+  animation: doughnutSweep 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doughnut-mask-circle {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}

@@ -1,0 +1,374 @@
+<div class="max-w-5xl mx-auto space-y-6 pb-10">
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div>
+      <h1 class="text-4xl font-bold mb-2">Gastos</h1>
+      <p class="text-base-content/70">Historial de tus transacciones y registros.</p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+      <div class="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
+        <!-- Search Input -->
+        <div class="relative w-full sm:w-64">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-base-content/50">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input type="text" 
+                 class="input input-bordered w-full pl-9 pr-8 text-sm" 
+                 placeholder="Buscar gasto..." 
+                 [ngModel]="searchTerm()" 
+                 (ngModelChange)="onSearchChange($event)" />
+          @if (searchTerm()) {
+            <button class="absolute inset-y-0 right-0 flex items-center pr-3 text-base-content/50 hover:text-base-content" 
+                    type="button"
+                    (click)="clearSearch()">
+              ✕
+            </button>
+          }
+        </div>
+
+        <!-- Category Filter -->
+        <select class="select select-bordered shadow-sm w-full sm:w-auto text-sm" 
+                [ngModel]="selectedFilterCategory()" 
+                (ngModelChange)="onCategoryChange($event)">
+          <option value="all">Todas las categorías</option>
+          @for (cat of categories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- New Transaction Button -->
+      <button class="btn btn-primary shadow-sm w-full sm:w-auto whitespace-nowrap" (click)="openModal()" [disabled]="isLoading()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        Nuevo
+      </button>
+    </div>
+  </div>
+
+  @if (showSpinner()) {
+    <div class="flex justify-center my-10">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else if (errorMsg()) {
+    <div role="alert" class="alert alert-error">
+      <span>{{ errorMsg() }}</span>
+    </div>
+  } @else if (!hasLoadedOnce()) {
+    <div class="flex justify-center my-10 min-h-[200px]"></div>
+  } @else if (transactions().length === 0) {
+    <div class="flex flex-col items-center justify-center py-20 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+      @if (searchTerm() || selectedFilterCategory() !== 'all') {
+        <p class="text-xl font-medium">No se encontraron transacciones</p>
+        <p class="text-sm mt-1">Prueba cambiando los filtros o el término de búsqueda.</p>
+        <button class="btn btn-sm btn-outline mt-4" (click)="resetFilters()">Limpiar filtros</button>
+      } @else {
+        <p class="text-xl font-medium">No hay gastos registrados aún</p>
+        <p class="text-sm mt-1">Registra tu primer gasto con el botón superior.</p>
+      }
+    </div>
+  } @else {
+    <div class="space-y-8">
+      @for (group of groupedTransactions(); track group.date) {
+        <div>
+          <div class="flex items-center gap-3 mb-3 pl-2">
+            <h3 class="text-lg font-bold text-neutral-800 dark:text-neutral-200 transaction-date-header">{{ group.date | date:'dd/MM/yyyy':'UTC' }}</h3>
+            <span class="badge badge-error badge-outline font-semibold">${{ group.total | number:'1.0-0' }}</span>
+          </div>
+          <!-- Mobile view (< md): Touch-friendly card list, no horizontal scroll -->
+          <div class="md:hidden bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden">
+            @for (tx of group.items; track tx.id) {
+              <div class="flex items-center justify-between p-3.5 hover:bg-base-200/50 active:bg-base-200/80 cursor-pointer transition-colors select-none gap-3"
+                   (click)="openModal(tx)">
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-base text-base-content truncate">
+                    {{ tx.description || 'Sin descripción' }}
+                  </div>
+                  <div class="text-xs text-base-content/60 truncate mt-0.5 flex items-center gap-1.5">
+                    <span class="inline-block w-2 h-2 rounded-full shrink-0" [style.backgroundColor]="getCategoryColor(tx.category_id)"></span>
+                    <span>{{ getCategoryName(tx.category_id) }}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <div class="text-right">
+                    <div class="font-bold text-error text-base">
+                      @if (tx.real_amount !== null && tx.real_amount !== undefined) {
+                        ${{ tx.real_amount | number:'1.0-0' }}
+                        <div class="text-xs text-base-content/50 font-normal">(${{ tx.total_amount | number:'1.0-0' }})</div>
+                      } @else {
+                        ${{ tx.total_amount | number:'1.0-0' }}
+                      }
+                    </div>
+                  </div>
+                  <button type="button" 
+                          class="btn btn-sm btn-circle btn-ghost text-error" 
+                          (click)="$event.stopPropagation(); confirmDeleteTx(tx)" 
+                          title="Eliminar"
+                          aria-label="Eliminar gasto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Desktop view (>= md): Full table -->
+          <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+            <table class="table table-fixed table-zebra table-md w-full">
+              <colgroup>
+                <col class="w-[35%]">
+                <col class="w-[20%]">
+                <col class="w-[20%]">
+                <col class="w-[15%]">
+                <col class="w-[10%]">
+              </colgroup>
+              <tbody>
+                @for (tx of group.items; track tx.id) {
+                  <tr class="hover">
+                    <td class="truncate" [title]="tx.description || 'Sin descripción'">
+                      <div class="font-medium truncate">{{ tx.description || 'Sin descripción' }}</div>
+                    </td>
+                    <td>
+                      <span class="badge font-bold border-0" 
+                            [style.backgroundColor]="getCategoryColor(tx.category_id)"
+                            [style.color]="getTextColorForBackground(getCategoryColor(tx.category_id))">
+                        {{ getCategoryName(tx.category_id) }}
+                      </span>
+                    </td>
+                    <td class="font-bold text-error">
+                      @if (tx.real_amount !== null && tx.real_amount !== undefined) {
+                        ${{ tx.real_amount | number:'1.0-0' }} 
+                        <span class="text-xs text-base-content/50 font-normal">(${{ tx.total_amount | number:'1.0-0' }})</span>
+                      } @else {
+                        ${{ tx.total_amount | number:'1.0-0' }}
+                      }
+                    </td>
+                    <td>
+                      @if (tx.installments_count > 1) {
+                        <div class="badge badge-outline">{{ tx.installments_count }} cuotas</div>
+                      } @else {
+                        <span class="text-base-content/50 text-sm">1 cuota</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="flex gap-1">
+                        <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openModal(tx)" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                        <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteTx(tx)" title="Eliminar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      <!-- Pagination Bar -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-base-content/10">
+        <div class="text-sm text-base-content/70">
+          Mostrando <span class="font-semibold">{{ (currentPage() - 1) * pageSize() + 1 }}</span> a 
+          <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), totalItems()) }}</span> de 
+          <span class="font-semibold">{{ totalItems() }}</span> transacciones
+        </div>
+
+        <div class="join">
+          <button class="join-item btn btn-sm hidden sm:inline-flex" 
+                  [disabled]="currentPage() <= 1 || isLoading()" 
+                  (click)="goToPage(1)"
+                  title="Primera página">
+            ««
+          </button>
+          <button class="join-item btn btn-sm" 
+                  [disabled]="currentPage() <= 1 || isLoading()" 
+                  (click)="goToPage(currentPage() - 1)"
+                  title="Página anterior">
+            <span class="hidden sm:inline">« Anterior</span>
+            <span class="sm:hidden">«</span>
+          </button>
+          <button type="button" tabindex="-1" class="join-item btn btn-sm btn-ghost no-animation cursor-default font-medium hover:bg-transparent hover:border-transparent pointer-events-none select-none">
+            <span class="hidden sm:inline">Página {{ currentPage() }} de {{ totalPages() }}</span>
+            <span class="sm:hidden">{{ currentPage() }} / {{ totalPages() }}</span>
+          </button>
+          <button class="join-item btn btn-sm" 
+                  [disabled]="currentPage() >= totalPages() || isLoading()" 
+                  (click)="goToPage(currentPage() + 1)"
+                  title="Página siguiente">
+            <span class="hidden sm:inline">Siguiente »</span>
+            <span class="sm:hidden">»</span>
+          </button>
+          <button class="join-item btn btn-sm hidden sm:inline-flex" 
+                  [disabled]="currentPage() >= totalPages() || isLoading()" 
+                  (click)="goToPage(totalPages())"
+                  title="Última página">
+            »»
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Modal Nuevo Gasto -->
+<dialog id="tx_modal" class="modal">
+  <div class="modal-box w-11/12 max-w-2xl bg-base-100 overflow-x-hidden">
+    <h3 class="font-bold text-2xl mb-6">{{ editingTxId() ? 'Editar Gasto' : 'Nuevo Gasto' }}</h3>
+    
+    <form [formGroup]="txForm" (ngSubmit)="onSubmit()" class="space-y-4">
+      
+      <div class="form-control w-full">
+        <label class="label"><span class="label-text font-medium">Monto</span></label>
+        <label class="input input-bordered flex items-center gap-2">
+          $
+          <input type="text" formControlName="total_amount" class="grow" placeholder="0,00" />
+        </label>
+      </div>
+      
+      <div class="form-control w-full">
+        <label class="label"><span class="label-text font-medium">Descripción (Opcional)</span></label>
+        <input type="text" formControlName="description" class="input input-bordered w-full" placeholder="Ej: Supermercado..." />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
+        <div class="form-control w-full min-w-0">
+          <label class="label"><span class="label-text font-medium">Cuenta</span></label>
+          <div class="relative w-full min-w-0">
+            <select formControlName="account_id" class="select select-bordered w-full min-w-0 max-w-full text-sm pl-3 pr-8 opacity-0 absolute inset-0 z-10 cursor-pointer peer">
+              <option value="" disabled class="pr-4 pl-3">Selecciona una cuenta</option>
+              @for (acc of accounts(); track acc.id) {
+                <option [value]="acc.id" class="pr-4 pl-3">
+                  {{ getEntityName(acc.entity_id) }} - {{ acc.name }}&nbsp;&nbsp;
+                </option>
+              }
+            </select>
+            <div class="select select-bordered w-full min-w-0 flex items-center text-sm pl-3 pr-8 pointer-events-none peer-focus:outline peer-focus:outline-2 peer-focus:outline-offset-2 peer-focus:outline-primary">
+              <span class="truncate" [class.text-base-content/50]="!txForm.get('account_id')?.value">
+                {{ getSelectedAccountDisplay() }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-control w-full min-w-0">
+          <label class="label"><span class="label-text font-medium">Categoría</span></label>
+          <select formControlName="category_id" class="select select-bordered w-full min-w-0 max-w-full text-sm pl-3 pr-8">
+            <option value="" disabled class="pr-4 pl-3">Selecciona una categoría</option>
+            @for (cat of categories(); track cat.id) {
+              <option [value]="cat.id" class="pr-4 pl-3">{{ cat.name }}&nbsp;&nbsp;</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (showInstallments()) {
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 animate-fade-in min-w-0">
+          <div class="form-control w-full min-w-0">
+            <label class="label"><span class="label-text font-medium">Cantidad de cuotas</span></label>
+            <div class="join w-full">
+              <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepInstallments(-1)">-</button>
+              <input type="text" inputmode="numeric" formControlName="installments_count" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
+              <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepInstallments(1)">+</button>
+            </div>
+          </div>
+          
+          <div class="form-control w-full min-w-0">
+            <label class="label"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+            <label class="input input-bordered flex items-center gap-2">
+              $
+              <input type="text" formControlName="real_amount" class="grow min-w-0" placeholder="Monto total..." />
+            </label>
+          </div>
+        </div>
+      }
+
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
+        <div class="form-control w-full min-w-0">
+          <label class="label"><span class="label-text font-medium">Fecha</span></label>
+          <input type="date" formControlName="transaction_date" class="input input-bordered w-full min-w-0 text-sm px-2 sm:px-4" />
+        </div>
+        <div class="form-control w-full min-w-0">
+          <label class="label"><span class="label-text font-medium">Hora <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+          @if (isMobile()) {
+            <input type="time" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm text-center px-2" />
+          } @else {
+            <input type="text" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm" placeholder="HH:MM" maxlength="5" />
+          }
+        </div>
+      </div>
+
+      @if (formError()) {
+        <div role="alert" class="alert alert-error mt-4 py-2">
+          <span>{{ formError() }}</span>
+        </div>
+      }
+
+      <div class="modal-action mt-6">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="txForm.invalid || isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="loading loading-spinner"></span> Guardando...
+          } @else {
+            Guardar Gasto
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<!-- Modal: Confirm Delete -->
+<dialog id="confirm_modal" class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4 text-error">¿Confirmar Eliminación?</h3>
+    <p class="py-4">
+      Estás a punto de eliminar el gasto: 
+      <strong class="text-base-content block mt-2 text-lg">
+        {{ deleteTarget()?.description || 'Sin descripción' }} (${{ deleteTarget()?.total_amount | number:'1.0-0' }})
+      </strong>
+    </p>
+    <p class="text-sm text-base-content/70">
+      Esta acción no se puede deshacer. ¿Deseas continuar?
+    </p>
+    
+    <div class="modal-action mt-6">
+      <button type="button" class="btn btn-ghost" (click)="closeConfirmModal()">Cancelar</button>
+      <button type="button" class="btn btn-error" [disabled]="isSubmitting()" (click)="executeDelete()">
+        @if (isSubmitting()) {
+          <span class="loading loading-spinner"></span> Eliminando...
+        } @else {
+          Eliminar
+        }
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Floating Scroll To Top Button -->
+<button
+  type="button"
+  (click)="scrollToTop()"
+  class="fixed bottom-6 right-6 z-50 btn btn-circle btn-primary shadow-xl transition-all duration-300 transform"
+  [class.opacity-100]="showScrollTop()"
+  [class.scale-100]="showScrollTop()"
+  [class.pointer-events-auto]="showScrollTop()"
+  [class.opacity-0]="!showScrollTop()"
+  [class.scale-75]="!showScrollTop()"
+  [class.pointer-events-none]="!showScrollTop()"
+  aria-label="Volver arriba"
+  title="Volver arriba">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />
+  </svg>
+</button>
+

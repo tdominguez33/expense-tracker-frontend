@@ -1,0 +1,80 @@
+<div class="flex flex-col md:flex-row items-center md:items-start gap-10 lg:gap-24">
+  
+  <!-- Chart Container -->
+  <div class="flex-shrink-0 w-64 h-64 relative flex justify-center mt-2">
+    
+    <!-- SVG Doughnut -->
+    <svg viewBox="0 0 42 42" class="absolute inset-0 w-full h-full -rotate-90 filter drop-shadow-sm pointer-events-none">
+      <defs>
+        <mask [id]="maskId">
+          @for (key of [renderKey()]; track key) {
+            <circle cx="21" cy="21" r="15.915494309"
+                    fill="none"
+                    stroke="white"
+                    stroke-width="8"
+                    pathLength="100"
+                    stroke-dasharray="104 100"
+                    stroke-dashoffset="100"
+                    class="doughnut-mask-circle">
+            </circle>
+          }
+        </mask>
+      </defs>
+
+      <!-- Background ring -->
+      <circle cx="21" cy="21" r="15.915494309" fill="none" stroke="currentColor" stroke-width="4" class="text-base-200"></circle>
+      
+      <g [attr.mask]="'url(#' + maskId + ')'">
+        @for (cat of getSvgBreakdown(); track cat.id) {
+          @if (cat.pct > 0) {
+            <circle cx="21" cy="21" r="15.915494309" 
+                    fill="none" 
+                    [attr.stroke]="cat.color" 
+                    stroke-width="4" 
+                    [attr.stroke-dasharray]="cat.dasharray"
+                    [attr.stroke-dashoffset]="cat.offset"
+                    style="pointer-events: visiblePainted;"
+                    class="transition-[stroke-width,opacity] duration-200 cursor-pointer"
+                    [class.stroke-[5]]="hoveredCategory() === cat.id"
+                    [class.opacity-40]="hoveredCategory() !== null && hoveredCategory() !== cat.id"
+                    (mouseenter)="onCategoryHover(cat.id)"
+                    (mouseleave)="onCategoryLeave()">
+            </circle>
+          }
+        }
+      </g>
+    </svg>
+
+    <!-- Center Info -->
+    <div class="absolute inset-0 flex flex-col items-center justify-center m-10 bg-base-100 rounded-full z-10 pointer-events-none">
+      @let info = getHoveredInfo();
+      <span class="text-sm text-base-content/60 text-center px-2 truncate w-full" [style.color]="info.color">{{ info.name }}</span>
+      <span class="text-xl font-bold mt-1">${{ info.amount | number:'1.0-0' }}</span>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  @if (showLegend()) {
+    <div class="flex-1 w-full">
+      @if (periodTitle()) {
+        <h3 class="font-bold text-lg mb-6 text-center md:text-left capitalize">{{ periodTitle() }}</h3>
+      }
+      @if (breakdown().length === 0) {
+        <p class="text-base-content/50 italic text-center md:text-left">{{ emptyMessage() }}</p>
+      } @else {
+        <ul class="columns-1 lg:columns-2 gap-x-8" (mouseleave)="onCategoryLeave()">
+          @for (cat of breakdown(); track cat.id; let i = $index) {
+            <li class="flex items-center gap-3 text-lg overflow-hidden break-inside-avoid py-2 transition-opacity duration-300 cursor-default"
+                [class.opacity-40]="hoveredCategory() !== null && hoveredCategory() !== cat.id"
+                (mouseenter)="onCategoryHover(cat.id)">
+              <span class="w-4 h-4 rounded-full flex-shrink-0" [style.background-color]="cat.color"></span>
+              <span class="font-medium text-base-content/70 truncate">{{ cat.pct }}% - {{ cat.name }} -</span>
+              <span class="font-bold flex-shrink-0">${{ cat.amount | number:'1.0-0' }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+  
+</div>

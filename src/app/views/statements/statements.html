@@ -1,0 +1,392 @@
+<div class="max-w-5xl mx-auto space-y-6 pb-10">
+  @if (!routeId() && !routeAccountId()) {
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div>
+        <h1 class="text-4xl font-bold mb-2">Resúmenes</h1>
+        <p class="text-base-content/70">Tus tarjetas de crédito y sus últimos resúmenes.</p>
+      </div>
+    </div>
+    
+    @if (isLoading()) {
+      <div class="flex justify-center my-10">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    } @else if (accounts().length === 0) {
+      <div class="flex flex-col items-center justify-center py-20 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+        <p class="text-xl font-medium">No tienes tarjetas de crédito configuradas</p>
+        <p class="text-sm mt-1">Ve a Configuración para agregar una.</p>
+      </div>
+    } @else {
+      @for (acc of accounts(); track acc.id) {
+        <div class="mb-10">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
+            <h2 class="text-2xl font-bold text-base-content">{{ getEntityName(acc.entity_id) }}{{ acc.name }}</h2>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-primary shadow-sm" (click)="openModal(undefined, acc.id)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Nuevo Resumen
+              </button>
+              <button class="btn btn-sm btn-outline" (click)="viewAccount(acc.id)">Ver más</button>
+            </div>
+          </div>
+          
+          @let recentSts = getLatestStatementsForAccount(acc.id);
+          @if (recentSts.length === 0) {
+            <div class="flex flex-col items-center justify-center py-10 text-base-content/50 bg-base-200/30 rounded-box border border-base-content/20 border-dashed">
+              <p class="text-md font-medium">No hay resúmenes para esta tarjeta</p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+              <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
+                <thead>
+                  <tr>
+                    <th class="w-[22%]">Periodo</th>
+                    <th class="w-[14%]">Cierre</th>
+                    <th class="w-[14%]">Vencimiento</th>
+                    <th class="w-[16%]">Total</th>
+                    <th class="w-[22%]">Estado</th>
+                    <th class="w-[12%]">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (st of recentSts; track st.id) {
+                    <tr class="hover cursor-pointer" (click)="viewStatement(st)">
+                      <td class="font-medium truncate">{{ getStatementPeriod(st.start_date, st.closing_date) }}</td>
+                      <td>{{ st.closing_date }}</td>
+                      <td>{{ st.due_date }}</td>
+                      <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
+                      <td>
+                        @let stState = getStatementState(st);
+                        <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
+                             [class.badge-success]="stState === 'PAID'"
+                             [class.badge-warning]="stState === 'CLOSED'"
+                             [class.badge-info]="stState === 'OPEN'">
+                          {{ translateState(stState) }}
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex gap-1">
+                          <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openModal(st); $event.stopPropagation()" title="Editar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDelete(st); $event.stopPropagation()" title="Eliminar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+    }
+  } @else if (!routeId() && routeAccountId()) {
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div class="flex items-center gap-4">
+        <button class="btn btn-circle btn-ghost" (click)="closeView()" [disabled]="isLoading()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </button>
+        <div>
+          @if (isLoading()) {
+            <div class="skeleton h-10 w-64 mb-2"></div>
+          } @else {
+            @let acc = accounts().find(a => a.id === routeAccountId());
+            <h1 class="text-4xl font-bold mb-2">{{ getEntityName(acc?.entity_id) }}{{ acc?.name }}</h1>
+          }
+          <p class="text-base-content/70">Historial completo de resúmenes de esta tarjeta.</p>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary shadow-sm" (click)="openModal()" [disabled]="isLoading()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        Nuevo Resumen
+      </button>
+    </div>
+
+    @if (isLoading()) {
+      <div class="flex justify-center my-10">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    } @else if (filteredStatements().length === 0) {
+      <div class="flex flex-col items-center justify-center py-20 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+        <p class="text-xl font-medium">No hay resúmenes para esta tarjeta</p>
+        <p class="text-sm mt-1">Crea tu primer resumen.</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+        <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
+          <thead>
+            <tr>
+              <th class="w-[22%]">Periodo</th>
+              <th class="w-[14%]">Cierre</th>
+              <th class="w-[14%]">Vencimiento</th>
+              <th class="w-[16%]">Total</th>
+              <th class="w-[22%]">Estado</th>
+              <th class="w-[12%]">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (st of filteredStatements(); track st.id) {
+              <tr class="hover cursor-pointer" (click)="viewStatement(st)">
+                <td class="font-medium truncate">{{ getStatementPeriod(st.start_date, st.closing_date) }}</td>
+                <td>{{ st.closing_date }}</td>
+                <td>{{ st.due_date }}</td>
+                <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
+                <td>
+                  @let stState = getStatementState(st);
+                  <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
+                       [class.badge-success]="stState === 'PAID'"
+                       [class.badge-warning]="stState === 'CLOSED'"
+                       [class.badge-info]="stState === 'OPEN'">
+                    {{ translateState(stState) }}
+                  </div>
+                </td>
+                <td>
+                  <div class="flex gap-1">
+                    <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openModal(st); $event.stopPropagation()" title="Editar">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDelete(st); $event.stopPropagation()" title="Eliminar">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  } @else {
+    <!-- DETAIL VIEW -->
+    <div class="flex items-center gap-4 mb-6">
+      <button class="btn btn-circle btn-ghost" (click)="closeView()" [disabled]="isLoading()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+      </button>
+      <div class="flex-grow">
+        <h1 class="text-4xl font-bold mb-2">Detalle del Resumen</h1>
+        @if (isLoading()) {
+          <div class="skeleton h-5 w-48 mt-1"></div>
+        } @else {
+          <p class="text-base-content/70">{{ getStatementPeriod(viewingStatement()?.start_date, viewingStatement()?.closing_date) }}</p>
+        }
+      </div>
+      <div>
+        @let stStateDetail = getStatementState(viewingStatement());
+        @if (stStateDetail === 'CLOSED') {
+          <button class="btn btn-success" (click)="markAsPaid(viewingStatement())" [disabled]="isLoading()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            Marcar como pago
+          </button>
+        } @else if (stStateDetail === 'PAID') {
+          <button class="btn btn-outline btn-error" (click)="markAsUnpaid(viewingStatement())" [disabled]="isLoading()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            Marcar como no pago
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (isLoading()) {
+      <div class="flex justify-center my-10">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    } @else {
+    <!-- STATS CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="card bg-base-100 shadow-sm border border-base-content/20">
+        <div class="card-body">
+          <h3 class="text-base-content/70 font-medium">Gasto Total</h3>
+          <p class="text-3xl font-bold text-error">${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}</p>
+          @if (viewingStatement().tax_percentage > 0) {
+            <div class="text-sm text-base-content/60 mt-1">
+              ${{ getStatementSubtotal(viewingStatement()) | number:'1.0-0' }} + ${{ getStatementTaxAmount(viewingStatement()) | number:'1.0-0' }} (Impuestos)
+            </div>
+          }
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm border border-base-content/20">
+        <div class="card-body">
+          <h3 class="text-base-content/70 font-medium">Fecha de Cierre</h3>
+          <p class="text-3xl font-bold">{{ viewingStatement().closing_date }}</p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow-sm border border-base-content/20">
+        <div class="card-body">
+          <h3 class="text-base-content/70 font-medium">Fecha de Vencimiento</h3>
+          <p class="text-3xl font-bold">{{ viewingStatement().due_date }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS LIST -->
+    <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+      <table class="table table-zebra table-md w-full">
+        <thead>
+          <tr>
+            <th>Concepto</th>
+            <th>Categoría</th>
+            <th>Monto Cuota</th>
+            <th>Fecha Original</th>
+            <th>Cuota</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tx of getViewingDetails(); track tx.id) {
+            <tr class="hover">
+              <td>
+                <div class="font-medium">{{ tx.description || 'Sin descripción' }}</div>
+              </td>
+              <td>
+                <span class="badge font-bold border-0" 
+                      [style.backgroundColor]="getCategoryColor(tx.category_id)"
+                      [style.color]="getTextColorForBackground(getCategoryColor(tx.category_id))">
+                  {{ getCategoryName(tx.category_id) }}
+                </span>
+              </td>
+              <td class="font-bold text-error">
+                ${{ tx.installment_amount | number:'1.0-0' }}
+              </td>
+              <td>{{ tx.transaction_date }}</td>
+              <td>
+                @if (tx.installments_count > 1) {
+                  <div class="badge badge-outline">Cuota {{ tx.installment_number }} de {{ tx.installments_count }}</div>
+                } @else {
+                  <span class="text-base-content/50 text-sm">Pago único</span>
+                }
+              </td>
+              <td>
+                @if (canPostpone(tx, viewingStatement())) {
+                  <button class="btn btn-xs btn-outline btn-primary" (click)="postponeTransaction(tx, true)" title="Mover todas las cuotas al siguiente mes">
+                    Mover a siguiente resumen
+                  </button>
+                }
+                @if (canRevertPostpone(tx, viewingStatement())) {
+                  <button class="btn btn-xs btn-outline btn-warning" (click)="postponeTransaction(tx, false)" title="Devolver las cuotas al resumen original">
+                    Devolver a resumen original
+                  </button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="p-0">
+                <div class="flex flex-col items-center justify-center py-12 text-base-content/50 bg-base-200/30">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <p class="text-lg font-medium">No hay gastos en este resumen</p>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+        @if (getViewingDetails().length > 0) {
+          <tfoot>
+            <tr class="text-base">
+              <td colspan="2" class="text-right font-medium text-base-content/70">Subtotal:</td>
+              <td class="font-bold text-error">${{ getStatementSubtotal(viewingStatement()) | number:'1.0-0' }}</td>
+              <td colspan="3"></td>
+            </tr>
+            @if (viewingStatement().tax_percentage > 0) {
+              <tr class="text-base">
+                <td colspan="2" class="text-right font-medium text-base-content/70">Impuestos ({{ viewingStatement().tax_percentage }}%):</td>
+                <td class="font-bold text-error">${{ getStatementTaxAmount(viewingStatement()) | number:'1.0-0' }}</td>
+                <td colspan="3"></td>
+              </tr>
+              <tr class="bg-base-200/50">
+                <td colspan="2" class="text-right font-bold text-xl">Total:</td>
+                <td class="font-bold text-error text-xl">${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}</td>
+                <td colspan="3"></td>
+              </tr>
+            }
+          </tfoot>
+        }
+      </table>
+    </div>
+    }
+  }
+</div>
+
+<!-- Modal -->
+<dialog id="st_modal" class="modal">
+  <div class="modal-box bg-base-100">
+    <h3 class="font-bold text-xl mb-6">{{ editingStId() ? 'Editar Resumen' : 'Nuevo Resumen' }}</h3>
+    
+    <form [formGroup]="stForm" (ngSubmit)="onSubmit()" class="space-y-4">
+      @if (filteredStatements().length > 0 && !editingStId()) {
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></label>
+          <div class="input input-bordered w-full bg-base-200 flex items-center text-base-content/70 cursor-not-allowed">
+            {{ stForm.get('start_date')?.value }} (Automático)
+          </div>
+        </div>
+      } @else {
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></label>
+          <input type="date" formControlName="start_date" class="input input-bordered w-full" />
+        </div>
+      }
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Fecha de Cierre</span></label>
+        <input type="date" formControlName="closing_date" class="input input-bordered w-full" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Fecha de Vencimiento</span></label>
+        <input type="date" formControlName="due_date" class="input input-bordered w-full" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Impuestos (%)</span></label>
+        <div class="join w-full">
+          <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxStatement(-0.1)">-</button>
+          <input type="text" formControlName="tax_percentage" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
+          <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxStatement(0.1)">+</button>
+        </div>
+      </div>
+
+      @if (formError()) { <div class="alert alert-error mt-2 py-2"><span>{{ formError() }}</span></div> }
+
+      <div class="modal-action mt-6">
+        <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="stForm.invalid || isSubmitting()">Guardar</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Confirm Delete -->
+<dialog id="confirm_st_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4 text-error">¿Confirmar Eliminación?</h3>
+    <p>Eliminar un resumen devolverá sus compras en cuotas al estado flotante.</p>
+    <div class="modal-action mt-6">
+      <button type="button" class="btn btn-ghost" (click)="closeConfirmModal()">Cancelar</button>
+      <button type="button" class="btn btn-error" (click)="executeDelete()">Eliminar</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Confirm Postpone -->
+<dialog id="confirm_postpone_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4" [class.text-primary]="postponeTargetIsForward()" [class.text-warning]="!postponeTargetIsForward()">
+      {{ postponeTargetIsForward() ? '¿Mover a siguiente resumen?' : '¿Devolver al resumen original?' }}
+    </h3>
+    <p>
+      {{ postponeTargetIsForward() 
+         ? 'Esta acción moverá la compra y todas sus cuotas al siguiente período de facturación.' 
+         : 'Esta acción devolverá la compra y sus cuotas al período en el que fue originalmente realizada.' }}
+    </p>
+    <div class="modal-action mt-6">
+      <button type="button" class="btn btn-ghost" (click)="closePostponeModal()">Cancelar</button>
+      <button type="button" class="btn" [class.btn-primary]="postponeTargetIsForward()" [class.btn-warning]="!postponeTargetIsForward()" (click)="executePostpone()">Confirmar</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>

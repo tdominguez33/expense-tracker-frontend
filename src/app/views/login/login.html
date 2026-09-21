@@ -1,0 +1,54 @@
+<div class="min-h-screen flex items-center justify-center bg-base-200 px-4">
+  <div class="card w-full max-w-sm bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl font-bold justify-center items-center gap-3 mb-6">
+        <img src="icon.png" alt="Logo" class="w-9 h-9 object-contain" />
+        <span>Expense Tracker</span>
+      </h2>
+      
+      <form (ngSubmit)="onSubmit()" class="space-y-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">URL del Servidor</span>
+          </label>
+          <input 
+            type="text" 
+            [(ngModel)]="apiUrl" 
+            name="apiUrl"
+            placeholder="midominio.com"
+            class="input input-bordered w-full" 
+            required 
+            [disabled]="loading"
+          />
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-medium">Contraseña</span>
+          </label>
+          <input 
+            type="password" 
+            [(ngModel)]="password" 
+            name="password"
+            class="input input-bordered w-full" 
+            required 
+            autofocus
+            [disabled]="loading"
+          />
+        </div>
+        
+        <div *ngIf="error" class="alert alert-error text-sm p-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span>{{ error }}</span>
+        </div>
+        
+        <div class="form-control mt-6">
+          <button type="submit" class="btn btn-primary" [disabled]="loading || !password || !apiUrl">
+            <span *ngIf="loading" class="loading loading-spinner"></span>
+            Ingresar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

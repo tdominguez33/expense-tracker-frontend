@@ -1,0 +1,395 @@
+<div class="max-w-5xl mx-auto space-y-8">
+  <div>
+    <h1 class="text-4xl font-bold mb-2">Dashboard</h1>
+    <p class="text-base-content/70">Resumen financiero de tus cuentas y tarjetas de crédito.</p>
+  </div>
+
+  @if (isLoading()) {
+    <div class="flex justify-center my-10">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  } @else if (errorMsg()) {
+    <div role="alert" class="alert alert-error shadow-lg">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <span>{{ errorMsg() }}</span>
+    </div>
+  } @else {
+
+    
+    @if (generalReport()) {
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold mb-4">Gastos Generales</h2>
+                <!-- Cards Selector -->
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+          
+          <!-- Dia -->
+          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
+               [class.ring]="selectedPeriod() === 'day'" [class.ring-primary]="selectedPeriod() === 'day'"
+               (click)="setPeriod('day')">
+            <div class="card-body p-5 overflow-visible">
+              <h3 class="card-title text-sm text-base-content/70">Hoy</h3>
+              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.day | number:'1.0-0' }}</p>
+              @if (getComparison('day'); as comp) {
+                <div class="relative group/comp inline-block self-start mt-1">
+                  <div class="flex items-center gap-1 text-xs">
+                    @if (comp.percentage !== null) {
+                      <span class="inline-flex items-center gap-0.5 font-semibold"
+                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                        @if (comp.percentage > 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                          </svg>
+                          +{{ comp.percentage | number:'1.1-1' }}%
+                        } @else if (comp.percentage < 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                          </svg>
+                          {{ comp.percentage | number:'1.1-1' }}%
+                        } @else {
+                          0%
+                        }
+                      </span>
+                      <span class="text-base-content/60">vs ayer</span>
+                    } @else {
+                      <span class="text-base-content/60">Sin gastos ayer</span>
+                    }
+                  </div>
+
+                  <!-- Tooltip elaborado solo si hubo gastos previos -->
+                  @if (comp.percentage !== null) {
+                    @if (getComparisonTooltip('day'); as tip) {
+                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
+                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
+                                  transition-all duration-200 delay-150
+                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
+                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
+                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
+                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Semana -->
+          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
+               [class.ring]="selectedPeriod() === 'week'" [class.ring-primary]="selectedPeriod() === 'week'"
+               (click)="setPeriod('week')">
+            <div class="card-body p-5 overflow-visible">
+              <h3 class="card-title text-sm text-base-content/70">Esta Semana</h3>
+              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.week | number:'1.0-0' }}</p>
+              @if (getComparison('week'); as comp) {
+                <div class="relative group/comp inline-block self-start mt-1">
+                  <div class="flex items-center gap-1 text-xs">
+                    @if (comp.percentage !== null) {
+                      <span class="inline-flex items-center gap-0.5 font-semibold"
+                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                        @if (comp.percentage > 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                          </svg>
+                          +{{ comp.percentage | number:'1.1-1' }}%
+                        } @else if (comp.percentage < 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                          </svg>
+                          {{ comp.percentage | number:'1.1-1' }}%
+                        } @else {
+                          0%
+                        }
+                      </span>
+                      <span class="text-base-content/60">vs sem. ant.</span>
+                    } @else {
+                      <span class="text-base-content/60">Sin gastos sem. ant.</span>
+                    }
+                  </div>
+
+                  <!-- Tooltip elaborado solo si hubo gastos previos -->
+                  @if (comp.percentage !== null) {
+                    @if (getComparisonTooltip('week'); as tip) {
+                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
+                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
+                                  transition-all duration-200 delay-150
+                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
+                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
+                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
+                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Mes -->
+          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
+               [class.ring]="selectedPeriod() === 'month'" [class.ring-primary]="selectedPeriod() === 'month'"
+               (click)="setPeriod('month')">
+            <div class="card-body p-5 overflow-visible">
+              <h3 class="card-title text-sm text-base-content/70">Este Mes</h3>
+              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.month | number:'1.0-0' }}</p>
+              @if (getComparison('month'); as comp) {
+                <div class="relative group/comp inline-block self-start mt-1">
+                  <div class="flex items-center gap-1 text-xs">
+                    @if (comp.percentage !== null) {
+                      <span class="inline-flex items-center gap-0.5 font-semibold"
+                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                        @if (comp.percentage > 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                          </svg>
+                          +{{ comp.percentage | number:'1.1-1' }}%
+                        } @else if (comp.percentage < 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                          </svg>
+                          {{ comp.percentage | number:'1.1-1' }}%
+                        } @else {
+                          0%
+                        }
+                      </span>
+                      <span class="text-base-content/60">vs mes ant.</span>
+                    } @else {
+                      <span class="text-base-content/60">Sin gastos mes ant.</span>
+                    }
+                  </div>
+
+                  <!-- Tooltip elaborado solo si hubo gastos previos -->
+                  @if (comp.percentage !== null) {
+                    @if (getComparisonTooltip('month'); as tip) {
+                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
+                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
+                                  transition-all duration-200 delay-150
+                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
+                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
+                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
+                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Año -->
+          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
+               [class.ring]="selectedPeriod() === 'year'" [class.ring-primary]="selectedPeriod() === 'year'"
+               (click)="setPeriod('year')">
+            <div class="card-body p-5 overflow-visible">
+              <h3 class="card-title text-sm text-base-content/70">Este Año</h3>
+              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.year | number:'1.0-0' }}</p>
+              @if (getComparison('year'); as comp) {
+                <div class="relative group/comp inline-block self-start mt-1">
+                  <div class="flex items-center gap-1 text-xs">
+                    @if (comp.percentage !== null) {
+                      <span class="inline-flex items-center gap-0.5 font-semibold"
+                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                        @if (comp.percentage > 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                          </svg>
+                          +{{ comp.percentage | number:'1.1-1' }}%
+                        } @else if (comp.percentage < 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                          </svg>
+                          {{ comp.percentage | number:'1.1-1' }}%
+                        } @else {
+                          0%
+                        }
+                      </span>
+                      <span class="text-base-content/60">vs año ant.</span>
+                    } @else {
+                      <span class="text-base-content/60">Sin gastos año ant.</span>
+                    }
+                  </div>
+
+                  <!-- Tooltip elaborado solo si hubo gastos previos -->
+                  @if (comp.percentage !== null) {
+                    @if (getComparisonTooltip('year'); as tip) {
+                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
+                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
+                                  transition-all duration-200 delay-150
+                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
+                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
+                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
+                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Carousel Controls (Top Right) -->
+        <div class="flex justify-end gap-2 mb-3">
+          <button class="btn btn-circle btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+                  [disabled]="selectedPeriod() === 'day'"
+                  (click)="prevSlide()">
+            ❮
+          </button>
+          <button class="btn btn-circle btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+                  [disabled]="selectedPeriod() === 'day'"
+                  (click)="nextSlide()">
+            ❯
+          </button>
+        </div>
+
+        <!-- Carousel Section -->
+        <div class="relative w-full overflow-hidden">
+          
+          <!-- Main Container: Grid layout where all slides occupy the same cell -->
+          <div class="grid grid-cols-1 w-full relative">
+            
+            <!-- Slide 1: Doughnut Chart -->
+            <div class="col-start-1 row-start-1 w-full" [ngClass]="getSlideClass(0)">
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 p-6 lg:p-10 w-full h-full">
+                <app-category-doughnut
+                  [breakdown]="getCategoryBreakdown(selectedPeriod())"
+                  [totalAmount]="generalReport()?.totals?.[selectedPeriod()] || 0"
+                  [periodTitle]="getPeriodTitle()">
+                </app-category-doughnut>
+              </div>
+            </div>
+
+            <!-- Slide 2: Timeline Bar Chart -->
+            <div class="col-start-1 row-start-1 w-full" [ngClass]="getSlideClass(1)">
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 p-6 lg:p-10 w-full h-full">
+                <div class="flex flex-col h-full">
+                  
+                  <div class="mb-6 flex justify-between items-center">
+                    <h3 class="font-bold text-lg capitalize text-base-content/70">{{ selectedPeriod() === 'week' ? 'Esta Semana' : selectedPeriod() === 'month' ? 'Este Mes' : 'Este Año' }}</h3>
+                    <div class="text-xl font-bold cursor-default" [title]="getTimelineAverageTooltip()">{{ getTimelineAverage() }}</div>
+                  </div>
+
+                  <!-- Chart Area -->
+                  <div class="flex-1 min-h-[220px] flex items-end justify-between gap-1 sm:gap-2 mt-4 px-2">
+                    @for (bar of getTimelineData(); track bar.label) {
+                      <div class="relative flex flex-col items-center w-full h-full justify-end group">
+                        
+                        <!-- Tooltip -->
+                        <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 whitespace-nowrap bg-neutral text-neutral-content text-xs px-2 py-1 rounded shadow-lg">
+                          {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
+                        </div>
+                        
+                        <!-- Bar Background (capsule) -->
+                        <div class="w-full max-w-[40px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative">
+                          <!-- Filled portion -->
+                          <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                               [style.height]="bar.heightPct + '%'">
+                          </div>
+                        </div>
+
+                        <!-- Label -->
+                        <div class="mt-3 text-xs sm:text-sm font-semibold text-base-content/60 w-full text-center truncate">
+                          {{ bar.label }}
+                        </div>
+
+                      </div>
+                    }
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    }
+    
+    @if (creditCards().length > 0) {
+      <div class="mt-8">
+        <h2 class="text-2xl font-bold mb-4">Tus Tarjetas</h2>
+        
+        <!-- Native DaisyUI Stats Block -->
+        <div class="stats stats-vertical md:stats-horizontal auto-cols-fr md:grid-cols-2 shadow w-full border border-base-content/20 mb-6">
+          <div class="stat">
+            <div class="stat-figure text-error">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+            </div>
+            <div class="stat-title text-base-content/70">Deuda Global (Crédito)</div>
+            <div class="stat-value text-error">${{ globalDebt() | number:'1.0-0' }}</div>
+            <div class="stat-desc">Suma de todas las tarjetas</div>
+          </div>
+          
+          <div class="stat">
+            <div class="stat-figure text-success">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="stat-title text-base-content/70">Límite Global Disponible</div>
+            <div class="stat-value text-success">${{ globalLimit() | number:'1.0-0' }}</div>
+            <div class="stat-desc">Remanente de tus tarjetas</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-6">
+          @for (card of creditCards(); track card.id) {
+            @if (creditReports()[card.id]) {
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1 basis-[100%] md:basis-[calc(50%-1.5rem)] lg:basis-[calc(33.33%-1.5rem)] min-w-[280px]">
+                <div class="card-body">
+                  <h3 class="card-title text-xl">{{ getEntityName(card.entity_id) }}{{ card.name }}</h3>
+                  
+                  <div class="divider my-1"></div>
+                  
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-base-content/70 font-medium">Gasto último resumen</span>
+                    <span class="font-bold text-xl">${{ creditReports()[card.id].last_statement_total | number:'1.0-0' }}</span>
+                  </div>
+                  
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-base-content/70 font-medium">Variación anterior</span>
+                    <span class="font-medium flex items-center gap-1"
+                          [class.text-success]="creditReports()[card.id].variation_pct <= 0"
+                          [class.text-error]="creditReports()[card.id].variation_pct > 0">
+                      @if (creditReports()[card.id].variation_pct > 0) {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                        +{{ creditReports()[card.id].variation_pct }}%
+                      } @else if (creditReports()[card.id].variation_pct < 0) {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+                        {{ creditReports()[card.id].variation_pct }}%
+                      } @else {
+                        0%
+                      }
+                    </span>
+                  </div>
+
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-base-content/70 font-medium">Cuotas futuras (flotantes)</span>
+                    <span class="font-medium text-lg">${{ creditReports()[card.id].future_statements_debt | number:'1.0-0' }}</span>
+                  </div>
+                  
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-base-content/70 font-medium">Deuda total actual</span>
+                    <span class="font-bold text-error text-xl">${{ creditReports()[card.id].total_current_debt | number:'1.0-0' }}</span>
+                  </div>
+
+                  <div class="divider my-1"></div>
+
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-base-content/70 font-medium">Uso del Límite</span>
+                    <span class="font-bold text-lg">{{ creditReports()[card.id].utilization_pct }}%</span>
+                  </div>
+                  <progress class="progress progress-error w-full mb-1 h-3" 
+                            [value]="creditReports()[card.id].utilization_pct" max="100"></progress>
+                  <div class="text-right mt-2">
+                    <span class="text-base-content/70 font-medium text-lg mr-1">Libre:</span>
+                    <span class="font-black text-success text-2xl">${{ creditReports()[card.id].available_limit | number:'1.0-0' }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

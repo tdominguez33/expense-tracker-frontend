@@ -1,0 +1,13 @@
+.transaction-date-header {
+  color: #1f2937;
+}
+
+:host-context([data-theme="dark"]) .transaction-date-header,
+[data-theme="dark"] .transaction-date-header {
+  color: #e5e5e5;
+}
+
+select option {
+  padding-left: 0.75rem;
+  padding-right: 1.5rem;
+}

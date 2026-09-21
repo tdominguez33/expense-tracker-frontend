@@ -1,0 +1,513 @@
+<div class="max-w-5xl mx-auto space-y-8 pb-20">
+  <div>
+    <h1 class="text-4xl font-bold mb-2">Configuración</h1>
+    <p class="text-base-content/70">Gestiona los ajustes de tu cuenta y rubros.</p>
+  </div>
+  <!-- Preferencias Generales -->
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
+    <input type="checkbox" name="settings-accordion" checked="checked" /> 
+    <div class="collapse-title text-xl font-medium flex items-center">
+      <div>
+        <div class="font-bold">Preferencias Generales</div>
+        <div class="text-sm font-normal text-base-content/60">Configura los valores predeterminados de la aplicación</div>
+      </div>
+    </div>
+    <div class="collapse-content pt-2">
+      <fieldset [disabled]="isLoading()">
+        <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="space-y-4 max-w-md mt-4">
+        
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">Cuenta Predeterminada para Gastos</span></label>
+          <select class="select select-bordered w-full" formControlName="default_account_id">
+            <option [ngValue]="null">-- Ninguna --</option>
+            @for (ent of entities(); track ent.id) {
+              <optgroup [label]="ent.name">
+                @for (acc of accountsByEntity()[ent.name]?.accounts; track acc.id) {
+                  <option [ngValue]="acc.id">{{ acc.name }} ({{ translateType(acc.account_type) }})</option>
+                }
+              </optgroup>
+            }
+          </select>
+          <label class="label"><span class="label-text-alt text-base-content/60">Se seleccionará automáticamente al crear un nuevo gasto.</span></label>
+        </div>
+
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">Impuesto Predeterminado para Resúmenes (%)</span></label>
+          
+          <div class="join w-full">
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(-0.1)">-</button>
+            <input type="text" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="default_tax_percentage" />
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(0.1)">+</button>
+          </div>
+          
+          <label class="label"><span class="label-text-alt text-base-content/60">Se aplicará automáticamente a los nuevos resúmenes (ej. Sellos).</span></label>
+        </div>
+        
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">Días de gracia para cierre de resumen</span></label>
+          <div class="join w-full">
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(-1)">-</button>
+            <input type="text" inputmode="numeric" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="statement_grace_days" />
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(1)">+</button>
+          </div>
+          <label class="label"><span class="label-text-alt text-base-content/60">Días antes del cierre en los que un gasto puede ser movido al mes siguiente.</span></label>
+        </div>
+        
+        <div class="pt-2">
+          <button type="submit" class="btn btn-primary" [disabled]="configForm.invalid || isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            Guardar Preferencias
+          </button>
+        </div>
+      </form>
+      </fieldset>
+    </div>
+  </div>
+
+
+  <!-- Categorías -->
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
+    <input type="checkbox" name="settings-accordion" checked="checked" /> 
+    <div class="collapse-title text-xl font-medium flex items-center">
+      <div>
+        <div class="font-bold">Categorías</div>
+        <div class="text-sm font-normal text-base-content/60">Rubros de tus gastos</div>
+      </div>
+    </div>
+    <div class="collapse-content pt-2">
+      <div class="flex justify-end items-center mb-4">
+        @if (isLoading()) {
+          <span class="loading loading-spinner loading-sm text-primary mr-3"></span>
+        }
+        <button class="btn btn-sm btn-outline" (click)="openCatModal()" [disabled]="isLoading()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          Nueva Categoría
+        </button>
+      </div>
+      
+      @if (categories().length === 0) {
+        <div class="flex flex-col items-center justify-center py-12 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed mt-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+          <p class="text-lg font-medium">No hay categorías configuradas</p>
+        </div>
+      } @else {
+        <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20">
+          @for (cat of categories(); track cat.id; let idx = $index) {
+            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0"
+                [class.opacity-50]="draggedCatIndex() === idx"
+                draggable="true" 
+                (dragstart)="onDragStartCat(idx, $event)"
+                (dragover)="onDragOverCat($event)"
+                (drop)="onDropCat(idx, $event)"
+                (dragend)="onDragEndCat()">
+              <a class="flex items-center gap-3 flex-grow pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+                <span class="w-4 h-4 rounded-full" [style.backgroundColor]="cat.color"></span>
+                <span class="font-medium">{{ cat.name }}</span>
+              </a>
+              <div class="flex gap-2 p-2">
+                <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openCatModal(cat)" title="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteCategory(cat)" title="Eliminar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+
+  <!-- Cuentas y Entidades -->
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
+    <input type="checkbox" name="settings-accordion" checked="checked" /> 
+    <div class="collapse-title text-xl font-medium flex items-center">
+      <div>
+        <div class="font-bold">Cuentas y Entidades</div>
+        <div class="text-sm font-normal text-base-content/60">Bancos, tarjetas de crédito y débito</div>
+      </div>
+    </div>
+    <div class="collapse-content pt-2">
+      <div class="flex gap-2 justify-end items-center mb-4">
+        @if (isLoading()) {
+          <span class="loading loading-spinner loading-sm text-primary mr-2"></span>
+        }
+        <button class="btn btn-sm btn-outline" (click)="openEntModal()" [disabled]="isLoading()">Nueva Entidad</button>
+        <button class="btn btn-sm btn-primary" (click)="openAccModal()" [disabled]="isLoading()">Nueva Cuenta</button>
+      </div>
+      
+      @if (entities().length === 0 && accounts().length === 0) {
+        <div class="flex flex-col items-center justify-center py-12 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed mt-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+          <p class="text-lg font-medium">No hay cuentas configuradas</p>
+        </div>
+      } @else {
+        <div class="flex flex-col gap-6">
+          @for (ent of entities(); track ent.id; let i = $index) {
+          @let entName = ent.name;
+          @if (accountsByEntity()[entName]) {
+            <div draggable="true"
+                 (dragstart)="onDragStartEnt(i, $event)"
+                 (dragover)="onDragOverEnt($event)"
+                 (drop)="onDropEnt(i, $event)"
+                 (dragend)="onDragEndEnt()"
+                 class="transition-opacity duration-300"
+                 [class.opacity-40]="draggedEntIndex() === i && draggedEntIndex() !== null">
+              <div class="flex items-center justify-between mb-3 px-2 cursor-grab active:cursor-grabbing">
+                <h3 class="font-bold text-lg flex items-center gap-2 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                  {{ entName }}
+                </h3>
+                <div class="flex gap-1">
+                  <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openEntModal({id: ent.id, name: entName})" title="Editar Entidad">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  </button>
+                  <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteEntity({id: ent.id, name: entName})" title="Eliminar Entidad">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+              
+              @if (accountsByEntity()[entName].accounts.length === 0) {
+                <div class="ml-2 flex items-center justify-center py-4 bg-base-200/30 rounded-box text-base-content/50 text-sm">
+                  Sin cuentas asociadas a esta entidad
+                </div>
+              } @else {
+                <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 ml-2">
+                  @for (acc of accountsByEntity()[entName].accounts; track acc.id; let j = $index) {
+                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 transition-opacity duration-300"
+                        draggable="true"
+                        (dragstart)="onDragStartAcc(entName, j, $event)"
+                        (dragover)="onDragOverAcc(entName, $event)"
+                        (drop)="onDropAcc(entName, j, $event)"
+                        (dragend)="onDragEndAcc()"
+                        [class.opacity-40]="draggedAccIndex()?.entityName === entName && draggedAccIndex()?.index === j">
+                      <a class="flex justify-between items-center flex-grow cursor-grab active:cursor-grabbing pointer-events-none">
+                        <div class="flex items-center gap-3">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                          <span class="font-medium">{{ acc.name }}</span>
+                        </div>
+                        <div class="badge badge-sm badge-ghost">{{ translateType(acc.account_type) }}</div>
+                      </a>
+                      <div class="flex gap-2 p-2">
+                        <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openAccModal(acc)" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                        <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteAccount(acc)" title="Eliminar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Opciones avanzadas -->
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
+    <input type="checkbox" name="settings-accordion" /> 
+    <div class="collapse-title text-xl font-medium flex items-center">
+      <div>
+        <div class="font-bold">Opciones avanzadas</div>
+        <div class="text-sm font-normal text-base-content/60">Configura la zona horaria y copia de seguridad</div>
+      </div>
+    </div>
+    <div class="collapse-content pt-2 space-y-4">
+      
+      <div>
+        <label class="label"><span class="label-text font-medium">Zona Horaria Global</span></label>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <select [formControl]="timezoneControl" class="select select-bordered w-full sm:max-w-xs">
+            <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires</option>
+            <option value="America/Montevideo">America/Montevideo</option>
+            <option value="America/Santiago">America/Santiago</option>
+            <option value="America/Bogota">America/Bogota</option>
+            <option value="America/Mexico_City">America/Mexico_City</option>
+            <option value="Europe/Madrid">Europe/Madrid</option>
+            <option value="UTC">UTC</option>
+          </select>
+          <button class="btn btn-primary w-full sm:w-auto" (click)="saveTimezone()">Guardar Zona</button>
+        </div>
+        <label class="label"><span class="label-text-alt text-base-content/60">Afecta las fechas de tus nuevos gastos.</span></label>
+      </div>
+
+      <div class="divider my-2"></div>
+
+      <div>
+        <label class="label"><span class="label-text font-medium">Copia de Seguridad y Restauración</span></label>
+        
+        <!-- Descargar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-base-200/50 rounded-box border border-base-content/10 mb-3">
+          <div>
+            <div class="font-semibold text-base">Descargar copia (.sqlite)</div>
+            <div class="text-sm text-base-content/70">
+              Descarga una copia íntegra del archivo SQLite con todos tus gastos, cuentas y configuraciones.
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-primary shrink-0 w-full sm:w-60" (click)="downloadDatabase()" [disabled]="isDownloadingDb()">
+            @if (isDownloadingDb()) {
+              <span class="loading loading-spinner loading-sm"></span>
+              Descargando...
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Descargar Base de Datos
+            }
+          </button>
+        </div>
+
+        <!-- Restaurar / Importar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-base-200/50 rounded-box border border-base-content/10">
+          <div>
+            <div class="font-semibold text-base">Restaurar / Importar base de datos (.sqlite)</div>
+            <div class="text-sm text-base-content/70">
+              Restaura una copia de seguridad SQLite previa. Se creará un respaldo de seguridad del estado actual automáticamente antes de aplicar los cambios.
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-warning shrink-0 w-full sm:w-60" (click)="openImportModal()" [disabled]="isImportingDb()">
+            @if (isImportingDb()) {
+              <span class="loading loading-spinner loading-sm"></span>
+              Importando...
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Importar Base de Datos
+            }
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Categoría -->
+<dialog id="cat_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4">{{ editingCatId() ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
+    <form [formGroup]="catForm" (ngSubmit)="onSubmitCat()" class="space-y-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Nombre</span></label>
+        <input type="text" formControlName="name" class="input input-bordered w-full" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Color</span></label>
+        
+        <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-2">
+          @for (c of (showAllColors() ? pastelColors : pastelColors.slice(0, 10)); track c) {
+            <button type="button" 
+                    class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center"
+                    [style.backgroundColor]="c"
+                    [class.border-base-content]="catForm.get('color')?.value === c"
+                    [class.border-transparent]="catForm.get('color')?.value !== c"
+                    (click)="selectColor(c)">
+              @if (catForm.get('color')?.value === c) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 drop-shadow-sm" [style.color]="getTextColorForBackground(c)" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                </svg>
+              }
+            </button>
+          }
+        </div>
+        
+        @if (!showAllColors()) {
+          <button type="button" class="btn btn-xs btn-ghost self-start text-base-content/70 mt-1" (click)="showAllColors.set(true)">
+            Ver más colores
+          </button>
+        } @else {
+          <button type="button" class="btn btn-xs btn-ghost self-start text-base-content/70 mt-1" (click)="showAllColors.set(false)">
+            Ocultar colores
+          </button>
+        }
+      </div>
+      
+      @if (errorMsg()) { <div class="alert alert-error mt-2 py-2"><span>{{ errorMsg() }}</span></div> }
+      
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="closeModal('cat_modal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="catForm.invalid || isSubmitting()">Guardar</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal: Entidad -->
+<dialog id="ent_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4">{{ editingEntId() ? 'Editar Entidad / Banco' : 'Nueva Entidad / Banco' }}</h3>
+    <form [formGroup]="entForm" (ngSubmit)="onSubmitEnt()" class="space-y-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Nombre</span></label>
+        <input type="text" formControlName="name" class="input input-bordered w-full" />
+      </div>
+      
+      @if (errorMsg()) { <div class="alert alert-error mt-2 py-2"><span>{{ errorMsg() }}</span></div> }
+      
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="closeModal('ent_modal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="entForm.invalid || isSubmitting()">Guardar</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal: Cuenta -->
+<dialog id="acc_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4">{{ editingAccId() ? 'Editar Cuenta' : 'Nueva Cuenta' }}</h3>
+    <form [formGroup]="accForm" (ngSubmit)="onSubmitAcc()" class="space-y-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Entidad / Banco</span></label>
+        <select formControlName="entity_id" class="select select-bordered w-full">
+          <option value="" disabled>Selecciona una entidad</option>
+          @for (ent of entities(); track ent.id) {
+            <option [value]="ent.id">{{ ent.name }}</option>
+          }
+        </select>
+      </div>
+      
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Tipo de Cuenta</span></label>
+        <select formControlName="account_type" class="select select-bordered w-full">
+          <option value="DEBIT">Débito</option>
+          <option value="CREDIT_CARD">Tarjeta de Crédito</option>
+        </select>
+      </div>
+      
+      <div class="form-control">
+        <label class="label"><span class="label-text font-medium">Nombre</span></label>
+        <input type="text" formControlName="name" class="input input-bordered w-full" placeholder="Ej: Visa Signature" />
+      </div>
+      
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-medium">Alias de Apple Wallet (Opcional)</span>
+          <span class="label-text-alt text-base-content/60">Para automatizaciones</span>
+        </label>
+        <input type="text" formControlName="apple_wallet_alias" class="input input-bordered w-full" />
+      </div>
+      
+      @if (accForm.get('account_type')?.value === 'CREDIT_CARD') {
+        <div class="form-control animate-fade-in">
+          <label class="label"><span class="label-text font-medium">Límite Disponible ($)</span></label>
+          <input type="text" formControlName="available_limit" class="input input-bordered w-full" placeholder="0,00" />
+        </div>
+      }
+      
+      @if (errorMsg()) { <div class="alert alert-error mt-2 py-2"><span>{{ errorMsg() }}</span></div> }
+      
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" (click)="closeModal('acc_modal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="accForm.invalid || isSubmitting()">Guardar</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal: Confirm Delete -->
+<dialog id="confirm_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-xl mb-4 text-error">¿Confirmar Eliminación?</h3>
+    <p class="py-4">
+      Estás a punto de eliminar: 
+      <strong class="text-base-content block mt-2 text-lg">
+        {{ deleteTarget()?.name }}
+      </strong>
+    </p>
+    <p class="text-sm text-base-content/70">
+      Esta acción no se puede deshacer. ¿Deseas continuar?
+    </p>
+    
+    <div class="modal-action mt-6">
+      <button type="button" class="btn btn-ghost" (click)="closeModal('confirm_modal')">Cancelar</button>
+      <button type="button" class="btn btn-error" [disabled]="isSubmitting()" (click)="executeDelete()">
+        @if (isSubmitting()) {
+          <span class="loading loading-spinner"></span> Eliminando...
+        } @else {
+          Eliminar
+        }
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Modal: Importar Base de Datos -->
+<dialog id="import_modal" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="font-bold text-xl mb-3 flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      Restaurar Base de Datos
+    </h3>
+
+    <div class="alert alert-warning/10 border border-warning/30 text-sm mb-4">
+      <p>
+        <strong>¡Atención!</strong> Esta acción reemplazará los datos actuales por los contenidos en el archivo subido. 
+        Se generará automáticamente una copia de respaldo previa en el servidor antes de sobrescribir.
+      </p>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-medium">Seleccionar archivo SQLite (.sqlite, .db, .sqlite3)</span></label>
+      <input type="file" 
+             accept=".sqlite,.db,.sqlite3" 
+             (change)="onImportFileSelected($event)" 
+             class="file-input file-input-bordered w-full" 
+             [disabled]="isImportingDb()" />
+    </div>
+
+    @if (selectedImportFile(); as f) {
+      <div class="text-xs text-base-content/70 bg-base-200/50 p-2.5 rounded-lg border border-base-content/10 mb-4 flex justify-between items-center">
+        <span class="truncate font-mono">{{ f.name }}</span>
+        <span class="font-semibold shrink-0 ml-2">{{ (f.size / 1024).toFixed(1) }} KB</span>
+      </div>
+    }
+
+    @if (importError()) {
+      <div class="alert alert-error text-sm py-2 mb-4">
+        <span>{{ importError() }}</span>
+      </div>
+    }
+
+    @if (importSuccessMsg()) {
+      <div class="alert alert-success text-sm py-2 mb-4">
+        <span>{{ importSuccessMsg() }}</span>
+      </div>
+    }
+
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" (click)="closeImportModal()" [disabled]="isImportingDb()">
+        Cancelar
+      </button>
+      <button type="button" 
+              class="btn btn-warning" 
+              [disabled]="!selectedImportFile() || isImportingDb() || importSuccessMsg() !== ''"
+              (click)="confirmImportDatabase()">
+        @if (isImportingDb()) {
+          <span class="loading loading-spinner loading-sm"></span>
+          Restaurando...
+        } @else {
+          Confirmar e Importar
+        }
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button (click)="closeImportModal()">close</button></form>
+</dialog>
