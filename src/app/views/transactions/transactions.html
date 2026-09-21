@@ -14,7 +14,7 @@
             </svg>
           </div>
           <input type="text" 
-                 class="input input-bordered w-full pl-9 pr-8 text-sm" 
+                 class="input input-bordered w-full pl-9 pr-8 text-base sm:text-sm" 
                  placeholder="Buscar gasto..." 
                  [ngModel]="searchTerm()" 
                  (ngModelChange)="onSearchChange($event)" />
@@ -28,10 +28,10 @@
         </div>
 
         <!-- Category Filter -->
-        <select class="select select-bordered shadow-sm w-full sm:w-auto text-sm" 
+        <select class="select select-bordered shadow-sm w-full sm:w-auto text-base sm:text-sm" 
                 [ngModel]="selectedFilterCategory()" 
                 (ngModelChange)="onCategoryChange($event)">
-          <option value="all">Todas las categorías</option>
+          <option value="all">{{ isMobile() ? 'Todos' : 'Todas las categorías' }}</option>
           @for (cat of categories(); track cat.id) {
             <option [value]="cat.id">{{ cat.name }}</option>
           }
@@ -74,7 +74,7 @@
         <div>
           <div class="flex items-center gap-3 mb-3 pl-2">
             <h3 class="text-lg font-bold text-neutral-800 dark:text-neutral-200 transaction-date-header">{{ group.date | date:'dd/MM/yyyy':'UTC' }}</h3>
-            <span class="badge badge-error badge-outline font-semibold">${{ group.total | number:'1.0-0' }}</span>
+            <span class="badge badge-outline font-semibold text-base-content">${{ group.total | number:'1.0-0' }}</span>
           </div>
           <!-- Mobile view (< md): Touch-friendly card list, no horizontal scroll -->
           <div class="md:hidden bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden">
@@ -92,7 +92,7 @@
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                   <div class="text-right">
-                    <div class="font-bold text-error text-base">
+                    <div class="font-bold text-base-content text-base">
                       @if (tx.real_amount !== null && tx.real_amount !== undefined) {
                         ${{ tx.real_amount | number:'1.0-0' }}
                         <div class="text-xs text-base-content/50 font-normal">(${{ tx.total_amount | number:'1.0-0' }})</div>
@@ -138,7 +138,7 @@
                         {{ getCategoryName(tx.category_id) }}
                       </span>
                     </td>
-                    <td class="font-bold text-error">
+                    <td class="font-bold text-base-content">
                       @if (tx.real_amount !== null && tx.real_amount !== undefined) {
                         ${{ tx.real_amount | number:'1.0-0' }} 
                         <span class="text-xs text-base-content/50 font-normal">(${{ tx.total_amount | number:'1.0-0' }})</span>

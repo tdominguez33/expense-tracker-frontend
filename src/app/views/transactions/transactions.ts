@@ -436,7 +436,17 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
       });
     }
     
-    (document.getElementById('tx_modal') as HTMLDialogElement).showModal();
+    const modal = document.getElementById('tx_modal') as HTMLDialogElement;
+    modal.showModal();
+    
+    // Evitar que se abra el teclado en móvil al editar
+    if (this.isMobile() && tx) {
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 0);
+    }
   }
 
   closeModal() {

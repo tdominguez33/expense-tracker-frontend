@@ -1,4 +1,4 @@
-import { Component, input, signal, computed } from '@angular/core';
+import { Component, input, signal, computed, HostListener, ElementRef, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface CategoryBreakdownItem {
@@ -16,9 +16,10 @@ export interface CategoryBreakdownItem {
   imports: [CommonModule],
   templateUrl: './category-doughnut.html'
 })
-export class CategoryDoughnut {
+export class CategoryDoughnut implements OnDestroy {
   private static idCounter = 0;
   readonly maskId = `doughnut-mask-${++CategoryDoughnut.idCounter}`;
+  private el = inject(ElementRef);
 
   breakdown = input<CategoryBreakdownItem[]>([]);
   totalAmount = input<number>(0);
@@ -27,7 +28,13 @@ export class CategoryDoughnut {
   showLegend = input<boolean>(true);
 
   hoveredCategory = signal<number | null>(null);
+  selectedCategory = signal<number | null>(null);
+
+  activeCategoryId = computed(() => this.hoveredCategory() ?? this.selectedCategory());
+
   private hoverTimer: any = null;
+  private touchStartX = 0;
+  private touchStartY = 0;
 
   renderKey = computed(() => {
     const items = this.breakdown();
@@ -49,8 +56,68 @@ export class CategoryDoughnut {
     }, 75);
   }
 
+  onCategoryClick(catId: number, event?: Event) {
+    event?.stopPropagation();
+    if (this.hoverTimer) clearTimeout(this.hoverTimer);
+    this.selectedCategory.set(catId);
+    this.hoveredCategory.set(null);
+  }
+
+  clearSelection() {
+    if (this.hoverTimer) clearTimeout(this.hoverTimer);
+    this.selectedCategory.set(null);
+    this.hoveredCategory.set(null);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as Element | null;
+    const isInside = this.el.nativeElement.contains(target);
+    const categoryEl = isInside ? target?.closest('[data-category-id]') : null;
+    if (!categoryEl) {
+      this.clearSelection();
+    }
+  }
+
+  @HostListener('document:touchstart', ['$event'])
+  onTouchStart(event: TouchEvent) {
+    if (event.touches.length > 0) {
+      this.touchStartX = event.touches[0].clientX;
+      this.touchStartY = event.touches[0].clientY;
+    }
+  }
+
+  @HostListener('document:touchend', ['$event'])
+  onTouchEnd(event: TouchEvent) {
+    if (event.changedTouches.length > 0) {
+      const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
+      const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
+      if (deltaX < 10 && deltaY < 10) {
+        const target = event.target as Element | null;
+        const isInside = this.el.nativeElement.contains(target);
+        const categoryEl = isInside ? target?.closest('[data-category-id]') : null;
+        if (categoryEl) {
+          const rawId = categoryEl.getAttribute('data-category-id');
+          const catId = rawId !== null ? Number(rawId) : NaN;
+          if (!isNaN(catId)) {
+            this.selectedCategory.set(catId);
+            this.hoveredCategory.set(null);
+          }
+        } else {
+          this.clearSelection();
+        }
+      }
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+    }
+  }
+
   getHoveredInfo(): { name: string; amount: number; color?: string } {
-    const catId = this.hoveredCategory();
+    const catId = this.activeCategoryId();
     if (catId !== null) {
       const cat = this.breakdown().find(c => c.id === catId);
       if (cat) {

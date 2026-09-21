@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../services/api.service';
 import { CategoryDoughnut } from '../../components/category-doughnut/category-doughnut';
@@ -203,7 +203,25 @@ export class Dashboard implements OnInit {
     this.animTimeout = setTimeout(() => {
       this.activeSlide.set(to);
       this.animatingSlide.set(null);
+      if (to === 1) {
+        this.scrollToCurrentDay();
+      }
     }, 400);
+  }
+
+  scrollToCurrentDay() {
+    if (typeof window === 'undefined' || window.innerWidth >= 768) return;
+    setTimeout(() => {
+      const container = document.getElementById('timeline_scroll_container');
+      if (container && this.selectedPeriod() === 'month') {
+        const now = new Date();
+        const currentDay = now.getDate();
+        const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const scrollRatio = Math.max(0, (currentDay - 3) / totalDays);
+        const targetScroll = container.scrollWidth * scrollRatio;
+        container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+      }
+    }, 100);
   }
 
   getSlideClass(slideIndex: number): string {
@@ -230,12 +248,16 @@ export class Dashboard implements OnInit {
   
   setPeriod(period: string) {
     this._selectedPeriod.set(period);
+    this.selectedTimelineBar.set(null);
+    this.hoveredTimelineBar.set(null);
     if (period === 'day') {
       if (this.animTimeout) {
         clearTimeout(this.animTimeout);
       }
       this.activeSlide.set(0);
       this.animatingSlide.set(null);
+    } else if (period === 'month' && this.activeSlide() === 1) {
+      this.scrollToCurrentDay();
     }
   }
 
@@ -316,7 +338,8 @@ export class Dashboard implements OnInit {
         data.push({ label: days[i], fullLabel: fullDays[i], amount: amt, heightPct: 0 });
       }
     } else if (period === 'month') {
-      const totalDays = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      const now = new Date();
+      const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       for (let i = 1; i <= totalDays; i++) {
         const amt = timeline[i] || 0;
         if (amt > maxAmount) maxAmount = amt;
@@ -401,5 +424,94 @@ export class Dashboard implements OnInit {
       return `Promedio sobre ${activeMonths} ${activeMonths === 1 ? 'mes con gastos' : 'meses con gastos'}`;
     }
     return '';
+  }
+
+  selectedTimelineBar = signal<{ label: string, fullLabel: string, amount: number, heightPct: number } | null>(null);
+  hoveredTimelineBar = signal<{ label: string, fullLabel: string, amount: number, heightPct: number } | null>(null);
+
+  activeTimelineBar = computed(() => this.hoveredTimelineBar() ?? this.selectedTimelineBar());
+
+  private touchStartX = 0;
+  private touchStartY = 0;
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as Element | null;
+    const isTimelineBar = target?.closest('[data-timeline-bar]');
+    if (!isTimelineBar && (this.selectedTimelineBar() !== null || this.hoveredTimelineBar() !== null)) {
+      this.selectedTimelineBar.set(null);
+      this.hoveredTimelineBar.set(null);
+    }
+  }
+
+  @HostListener('document:touchstart', ['$event'])
+  onTouchStart(event: TouchEvent) {
+    if (event.touches.length > 0) {
+      this.touchStartX = event.touches[0].clientX;
+      this.touchStartY = event.touches[0].clientY;
+    }
+  }
+
+  @HostListener('document:touchend', ['$event'])
+  onTouchEnd(event: TouchEvent) {
+    if (event.changedTouches.length > 0) {
+      const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
+      const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
+      if (deltaX < 10 && deltaY < 10) {
+        const target = event.target as Element | null;
+        const isTimelineBar = target?.closest('[data-timeline-bar]');
+        if (!isTimelineBar && (this.selectedTimelineBar() !== null || this.hoveredTimelineBar() !== null)) {
+          this.selectedTimelineBar.set(null);
+          this.hoveredTimelineBar.set(null);
+        }
+      }
+    }
+  }
+
+  selectTimelineBar(bar: any, event?: Event) {
+    event?.stopPropagation();
+    if (this.selectedTimelineBar()?.fullLabel === bar.fullLabel) {
+      this.selectedTimelineBar.set(null);
+    } else {
+      this.selectedTimelineBar.set(bar);
+    }
+    this.hoveredTimelineBar.set(null);
+  }
+
+  hoverTimelineBar(bar: any) {
+    this.hoveredTimelineBar.set(bar);
+  }
+
+  leaveTimelineBar() {
+    this.hoveredTimelineBar.set(null);
+  }
+
+  getTimelinePeak(): { label: string, amount: number } | null {
+    const data = this.getTimelineData();
+    if (!data.length) return null;
+    let peak = data[0];
+    for (const d of data) {
+      if (d.amount > peak.amount) {
+        peak = d;
+      }
+    }
+    return peak.amount > 0 ? { label: peak.fullLabel, amount: peak.amount } : null;
+  }
+
+  getTimelineActiveCount(): { active: number, total: number } {
+    const data = this.getTimelineData();
+    const active = data.filter(d => d.amount > 0).length;
+    return { active, total: data.length };
+  }
+
+  getTimelineMonthRows(): { label: string, fullLabel: string, amount: number, heightPct: number }[][] {
+    const data = this.getTimelineData();
+    if (this.selectedPeriod() !== 'month' || data.length <= 15) {
+      return [data];
+    }
+    return [
+      data.slice(0, 15),
+      data.slice(15)
+    ];
   }
 }

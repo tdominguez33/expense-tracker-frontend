@@ -150,4 +150,18 @@ describe('Transactions', () => {
     component.isMobile.set(false);
     expect(component.getSelectedAccountDisplay()).toBe('Santander - Visa Gold');
   });
+
+  it('should display "Todos" on mobile and "Todas las categorías" on desktop in category filter', () => {
+    // 1. Mobile
+    component.isMobile.set(true);
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('select:not([formControlName])');
+    const firstOption = select.querySelector('option[value="all"]');
+    expect(firstOption.textContent.trim()).toBe('Todos');
+
+    // 2. Desktop
+    component.isMobile.set(false);
+    fixture.detectChanges();
+    expect(firstOption.textContent.trim()).toBe('Todas las categorías');
+  });
 });
