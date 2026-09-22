@@ -295,4 +295,27 @@ describe('Dashboard', () => {
 
     expect(component.maxCategoryAmount()).toBe(1000000);
   });
+
+  it('should adjust creditCardsGridClass dynamically when cards count is less than 3', () => {
+    // 1 card -> full width on all screens
+    component.creditCards.set([{ id: 1, name: 'Visa' }]);
+    expect(component.creditCardsGridClass()).toBe('grid-cols-1');
+
+    // 2 cards -> 2 columns on tablet/desktop, filling full width
+    component.creditCards.set([{ id: 1, name: 'Visa' }, { id: 2, name: 'Mastercard' }]);
+    expect(component.creditCardsGridClass()).toBe('grid-cols-1 md:grid-cols-2');
+
+    // 3 cards -> 3 columns on desktop
+    component.creditCards.set([{ id: 1, name: 'Visa' }, { id: 2, name: 'Mastercard' }, { id: 3, name: 'Amex' }]);
+    expect(component.creditCardsGridClass()).toBe('grid-cols-1 md:grid-cols-2 xl:grid-cols-3');
+
+    // 4 cards -> 3 columns on desktop
+    component.creditCards.set([
+      { id: 1, name: 'Visa' },
+      { id: 2, name: 'Mastercard' },
+      { id: 3, name: 'Amex' },
+      { id: 4, name: 'Naranja' }
+    ]);
+    expect(component.creditCardsGridClass()).toBe('grid-cols-1 md:grid-cols-2 xl:grid-cols-3');
+  });
 });

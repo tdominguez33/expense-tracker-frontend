@@ -61,6 +61,16 @@ export class Dashboard implements OnInit {
   errorMsg = signal<string>('');
 
   creditCards = signal<any[]>([]);
+  creditCardsGridClass = computed(() => {
+    const count = this.creditCards().length;
+    if (count === 1) {
+      return 'grid-cols-1';
+    }
+    if (count === 2) {
+      return 'grid-cols-1 md:grid-cols-2';
+    }
+    return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+  });
   creditReports = signal<Record<number, any>>({});
   entities = signal<any[]>([]);
   categories = signal<any[]>([]);
