@@ -4,21 +4,21 @@
     <p class="text-base-content/70">Gestiona los ajustes de tu cuenta y rubros.</p>
   </div>
   <!-- Preferencias Generales -->
-  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
-    <input type="checkbox" name="settings-accordion" checked="checked" /> 
-    <div class="collapse-title text-xl font-medium flex items-center">
-      <div>
-        <div class="font-bold">Preferencias Generales</div>
-        <div class="text-sm font-normal text-base-content/60">Configura los valores predeterminados de la aplicación</div>
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
+    <input type="checkbox" checked="checked" /> 
+    <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold truncate">Preferencias Generales</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Configura los valores predeterminados de la aplicación</div>
       </div>
     </div>
-    <div class="collapse-content pt-2">
-      <fieldset [disabled]="isLoading()">
-        <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="space-y-4 max-w-md mt-4">
+    <div class="collapse-content pt-2 min-w-0 max-w-full overflow-hidden">
+      <fieldset [disabled]="isLoading()" class="min-w-0 max-w-full">
+        <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="space-y-4 max-w-full sm:max-w-md mt-4 min-w-0">
         
-        <div class="form-control">
+        <div class="form-control w-full min-w-0">
           <label class="label"><span class="label-text font-medium">Cuenta Predeterminada para Gastos</span></label>
-          <select class="select select-bordered w-full" formControlName="default_account_id">
+          <select class="select select-bordered w-full min-w-0 max-w-full truncate text-sm sm:text-base" formControlName="default_account_id">
             <option [ngValue]="null">-- Ninguna --</option>
             @for (ent of entities(); track ent.id) {
               <optgroup [label]="ent.name">
@@ -28,29 +28,29 @@
               </optgroup>
             }
           </select>
-          <label class="label"><span class="label-text-alt text-base-content/60">Se seleccionará automáticamente al crear un nuevo gasto.</span></label>
+          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se seleccionará automáticamente al crear un nuevo gasto.</span></label>
         </div>
 
-        <div class="form-control">
+        <div class="form-control w-full min-w-0">
           <label class="label"><span class="label-text font-medium">Impuesto Predeterminado para Resúmenes (%)</span></label>
           
-          <div class="join w-full">
+          <div class="join w-full min-w-0 max-w-full">
             <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(-0.1)">-</button>
             <input type="text" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="default_tax_percentage" />
             <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(0.1)">+</button>
           </div>
           
-          <label class="label"><span class="label-text-alt text-base-content/60">Se aplicará automáticamente a los nuevos resúmenes (ej. Sellos).</span></label>
+          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se aplicará automáticamente a los nuevos resúmenes (ej. Sellos).</span></label>
         </div>
         
-        <div class="form-control">
+        <div class="form-control w-full min-w-0">
           <label class="label"><span class="label-text font-medium">Días de gracia para cierre de resumen</span></label>
-          <div class="join w-full">
+          <div class="join w-full min-w-0 max-w-full">
             <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(-1)">-</button>
             <input type="text" inputmode="numeric" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="statement_grace_days" />
             <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(1)">+</button>
           </div>
-          <label class="label"><span class="label-text-alt text-base-content/60">Días antes del cierre en los que un gasto puede ser movido al mes siguiente.</span></label>
+          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Días antes del cierre en los que un gasto puede ser movido al mes siguiente.</span></label>
         </div>
         
         <div class="pt-2">
@@ -68,15 +68,15 @@
 
 
   <!-- Categorías -->
-  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
-    <input type="checkbox" name="settings-accordion" checked="checked" /> 
-    <div class="collapse-title text-xl font-medium flex items-center">
-      <div>
-        <div class="font-bold">Categorías</div>
-        <div class="text-sm font-normal text-base-content/60">Rubros de tus gastos</div>
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
+    <input type="checkbox" checked="checked" /> 
+    <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold truncate">Categorías</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Rubros de tus gastos</div>
       </div>
     </div>
-    <div class="collapse-content pt-2">
+    <div class="collapse-content pt-2 min-w-0 max-w-full overflow-hidden">
       <div class="flex justify-end items-center mb-4">
         @if (isLoading()) {
           <span class="loading loading-spinner loading-sm text-primary mr-3"></span>
@@ -93,26 +93,37 @@
           <p class="text-lg font-medium">No hay categorías configuradas</p>
         </div>
       } @else {
-        <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20">
+        <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
           @for (cat of categories(); track cat.id; let idx = $index) {
-            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0"
+            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0 select-none transition-all duration-150 rounded-lg min-w-0"
+                [attr.data-cat-index]="idx"
                 [class.opacity-50]="draggedCatIndex() === idx"
+                [class.shadow-xl]="touchDraggedCatIndex() === idx"
+                [class.scale-[1.02]]="touchDraggedCatIndex() === idx"
+                [class.bg-base-100]="touchDraggedCatIndex() === idx"
+                [class.border]="touchDraggedCatIndex() === idx"
+                [class.border-primary]="touchDraggedCatIndex() === idx"
+                [class.z-20]="touchDraggedCatIndex() === idx"
                 draggable="true" 
                 (dragstart)="onDragStartCat(idx, $event)"
                 (dragover)="onDragOverCat($event)"
                 (drop)="onDropCat(idx, $event)"
-                (dragend)="onDragEndCat()">
-              <a class="flex items-center gap-3 flex-grow pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
-                <span class="w-4 h-4 rounded-full" [style.backgroundColor]="cat.color"></span>
-                <span class="font-medium">{{ cat.name }}</span>
+                (dragend)="onDragEndCat()"
+                (touchstart)="onTouchStartCat(idx, $event)"
+                (touchmove)="onTouchMoveCat($event)"
+                (touchend)="onTouchEndCat()"
+                (touchcancel)="onTouchEndCat()">
+              <a class="flex items-center gap-2.5 sm:gap-3 flex-grow pointer-events-none min-w-0 py-2 sm:py-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+                <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full shrink-0" [style.backgroundColor]="cat.color"></span>
+                <span class="font-medium text-sm sm:text-base truncate">{{ cat.name }}</span>
               </a>
-              <div class="flex gap-2 p-2">
-                <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openCatModal(cat)" title="Editar">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+              <div class="flex gap-1 sm:gap-2 p-1 sm:p-2 shrink-0">
+                <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-info" (click)="openCatModal(cat)" title="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                 </button>
-                <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteCategory(cat)" title="Eliminar">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteCategory(cat)" title="Eliminar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
             </li>
@@ -123,15 +134,15 @@
   </div>
 
   <!-- Cuentas y Entidades -->
-  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
-    <input type="checkbox" name="settings-accordion" checked="checked" /> 
-    <div class="collapse-title text-xl font-medium flex items-center">
-      <div>
-        <div class="font-bold">Cuentas y Entidades</div>
-        <div class="text-sm font-normal text-base-content/60">Bancos, tarjetas de crédito y débito</div>
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
+    <input type="checkbox" checked="checked" /> 
+    <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold truncate">Cuentas y Entidades</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Bancos, tarjetas de crédito y débito</div>
       </div>
     </div>
-    <div class="collapse-content pt-2">
+    <div class="collapse-content pt-2 min-w-0 max-w-full overflow-hidden">
       <div class="flex gap-2 justify-end items-center mb-4">
         @if (isLoading()) {
           <span class="loading loading-spinner loading-sm text-primary mr-2"></span>
@@ -146,7 +157,7 @@
           <p class="text-lg font-medium">No hay cuentas configuradas</p>
         </div>
       } @else {
-        <div class="flex flex-col gap-6">
+        <div class="flex flex-col gap-6 min-w-0">
           @for (ent of entities(); track ent.id; let i = $index) {
           @let entName = ent.name;
           @if (accountsByEntity()[entName]) {
@@ -155,50 +166,50 @@
                  (dragover)="onDragOverEnt($event)"
                  (drop)="onDropEnt(i, $event)"
                  (dragend)="onDragEndEnt()"
-                 class="transition-opacity duration-300"
+                 class="transition-opacity duration-300 min-w-0"
                  [class.opacity-40]="draggedEntIndex() === i && draggedEntIndex() !== null">
-              <div class="flex items-center justify-between mb-3 px-2 cursor-grab active:cursor-grabbing">
-                <h3 class="font-bold text-lg flex items-center gap-2 pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                  {{ entName }}
+              <div class="flex items-center justify-between mb-2 sm:mb-3 pl-1 sm:pl-2 pr-[5px] cursor-grab active:cursor-grabbing min-w-0">
+                <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 pointer-events-none min-w-0 flex-1 truncate">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 opacity-70 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                  <span class="truncate">{{ entName }}</span>
                 </h3>
-                <div class="flex gap-1">
-                  <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openEntModal({id: ent.id, name: entName})" title="Editar Entidad">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <div class="flex gap-1 sm:gap-2 p-1 sm:p-2 shrink-0">
+                  <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-info" (click)="openEntModal({id: ent.id, name: entName})" title="Editar Entidad">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                   </button>
-                  <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteEntity({id: ent.id, name: entName})" title="Eliminar Entidad">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteEntity({id: ent.id, name: entName})" title="Eliminar Entidad">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
               </div>
               
               @if (accountsByEntity()[entName].accounts.length === 0) {
-                <div class="ml-2 flex items-center justify-center py-4 bg-base-200/30 rounded-box text-base-content/50 text-sm">
+                <div class="flex items-center justify-center py-4 bg-base-200/30 rounded-box text-base-content/50 text-sm">
                   Sin cuentas asociadas a esta entidad
                 </div>
               } @else {
-                <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 ml-2">
+                <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
                   @for (acc of accountsByEntity()[entName].accounts; track acc.id; let j = $index) {
-                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 transition-opacity duration-300"
+                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 transition-opacity duration-300 min-w-0 flex-nowrap"
                         draggable="true"
                         (dragstart)="onDragStartAcc(entName, j, $event)"
                         (dragover)="onDragOverAcc(entName, $event)"
                         (drop)="onDropAcc(entName, j, $event)"
                         (dragend)="onDragEndAcc()"
                         [class.opacity-40]="draggedAccIndex()?.entityName === entName && draggedAccIndex()?.index === j">
-                      <a class="flex justify-between items-center flex-grow cursor-grab active:cursor-grabbing pointer-events-none">
-                        <div class="flex items-center gap-3">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                          <span class="font-medium">{{ acc.name }}</span>
+                      <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 cursor-grab active:cursor-grabbing pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-1 min-w-0 gap-0.5 sm:gap-2">
+                          <span class="font-medium text-sm sm:text-base truncate">{{ acc.name }}</span>
+                          <span class="badge badge-xs sm:badge-sm badge-ghost shrink-0 w-fit text-[11px] sm:text-xs">{{ translateType(acc.account_type) }}</span>
                         </div>
-                        <div class="badge badge-sm badge-ghost">{{ translateType(acc.account_type) }}</div>
                       </a>
-                      <div class="flex gap-2 p-2">
-                        <button class="btn btn-sm btn-circle btn-ghost text-info" (click)="openAccModal(acc)" title="Editar">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      <div class="flex gap-1 sm:gap-2 p-1 sm:p-2 shrink-0">
+                        <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-info" (click)="openAccModal(acc)" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                         </button>
-                        <button class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteAccount(acc)" title="Eliminar">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-error" (click)="confirmDeleteAccount(acc)" title="Eliminar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </div>
                     </li>
@@ -214,12 +225,12 @@
   </div>
 
   <!-- Opciones avanzadas -->
-  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm">
-    <input type="checkbox" name="settings-accordion" /> 
-    <div class="collapse-title text-xl font-medium flex items-center">
-      <div>
-        <div class="font-bold">Opciones avanzadas</div>
-        <div class="text-sm font-normal text-base-content/60">Configura la zona horaria y copia de seguridad</div>
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
+    <input type="checkbox" /> 
+    <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold truncate">Opciones avanzadas</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Configura la zona horaria y copia de seguridad</div>
       </div>
     </div>
     <div class="collapse-content pt-2 space-y-4">

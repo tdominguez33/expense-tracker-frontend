@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -13,7 +13,7 @@ import { getContrastColor } from '../../utils/color';
   templateUrl: './settings.html',
   styleUrl: './settings.css'
 })
-export class Settings implements OnInit {
+export class Settings implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
   
@@ -266,6 +266,99 @@ export class Settings implements OnInit {
   
   onDragEndCat() {
     this.draggedCatIndex.set(null);
+  }
+
+  // -- Touch Drag & Drop Categories (Mobile Long-Press) --
+  touchDraggedCatIndex = signal<number | null>(null);
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private longPressTimeout: any = null;
+  private isTouchDragging = false;
+
+  onTouchStartCat(index: number, event: TouchEvent) {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.isTouchDragging = false;
+
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+    }
+
+    this.longPressTimeout = setTimeout(() => {
+      this.isTouchDragging = true;
+      this.touchDraggedCatIndex.set(index);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate?.(40);
+        } catch {}
+      }
+    }, 280);
+  }
+
+  onTouchMoveCat(event: TouchEvent) {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+
+    if (!this.isTouchDragging) {
+      const moveDistance = Math.hypot(touch.clientX - this.touchStartX, touch.clientY - this.touchStartY);
+      if (moveDistance > 8) {
+        if (this.longPressTimeout) {
+          clearTimeout(this.longPressTimeout);
+          this.longPressTimeout = null;
+        }
+      }
+      return;
+    }
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    const currentIdx = this.touchDraggedCatIndex();
+    if (currentIdx === null) return;
+
+    if (typeof document !== 'undefined') {
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetLi = elem?.closest('[data-cat-index]');
+      if (targetLi) {
+        const targetIdx = parseInt(targetLi.getAttribute('data-cat-index') || '', 10);
+        if (!isNaN(targetIdx) && targetIdx !== currentIdx && targetIdx >= 0 && targetIdx < this.categories().length) {
+          const cats = [...this.categories()];
+          const [movedItem] = cats.splice(currentIdx, 1);
+          cats.splice(targetIdx, 0, movedItem);
+          this.categories.set(cats);
+          this.touchDraggedCatIndex.set(targetIdx);
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            try {
+              navigator.vibrate?.(20);
+            } catch {}
+          }
+        }
+      }
+    }
+  }
+
+  onTouchEndCat() {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+
+    if (this.isTouchDragging) {
+      this.isTouchDragging = false;
+      this.touchDraggedCatIndex.set(null);
+      const orders = this.categories().map((cat, idx) => ({ id: cat.id, sort_order: idx }));
+      this.api.reorderCategories(orders).subscribe();
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
   }
 
   // -- Drag & Drop Entities --
