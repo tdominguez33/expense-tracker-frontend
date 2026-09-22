@@ -72,7 +72,19 @@ describe('CategoryDoughnut', () => {
     expect(component.activeCategoryId()).toBe(2);
     expect(component.getHoveredInfo().name).toBe('Servicios');
 
-    // 3. Click outside (document)
+    // 3. Click category 2 again to deselect it
+    legendItems[1].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.selectedCategory()).toBe(null);
+    expect(component.activeCategoryId()).toBe(null);
+    expect(component.getHoveredInfo().name).toBe('Total Este Mes');
+
+    // 4. Click outside (document)
+    legendItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+    expect(component.selectedCategory()).toBe(1);
+
     document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     fixture.detectChanges();
 
@@ -81,7 +93,7 @@ describe('CategoryDoughnut', () => {
     expect(component.getHoveredInfo().name).toBe('Total Este Mes');
   });
 
-  it('should handle mobile touch taps to select category and tap outside to clear', () => {
+  it('should handle mobile touch taps to select category, deselect on re-tap, and tap outside to clear', () => {
     fixture.componentRef.setInput('breakdown', [
       { id: 1, name: 'Comida', color: '#ff0000', amount: 500, pct: 50 },
       { id: 2, name: 'Servicios', color: '#00ff00', amount: 500, pct: 50 }
@@ -91,7 +103,31 @@ describe('CategoryDoughnut', () => {
 
     const legendItems = fixture.nativeElement.querySelectorAll('li[data-category-id]');
 
-    // Simulate touch tap (< 10px delta)
+    // 1. Simulate touch tap to select category 1
+    component.onTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }]
+    } as any);
+
+    component.onTouchEnd({
+      changedTouches: [{ clientX: 102, clientY: 101 }],
+      target: legendItems[0]
+    } as any);
+
+    expect(component.selectedCategory()).toBe(1);
+
+    // 2. Simulate touch tap on category 1 again to deselect
+    component.onTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }]
+    } as any);
+
+    component.onTouchEnd({
+      changedTouches: [{ clientX: 101, clientY: 101 }],
+      target: legendItems[0]
+    } as any);
+
+    expect(component.selectedCategory()).toBe(null);
+
+    // 3. Select category 1 again and tap outside
     component.onTouchStart({
       touches: [{ clientX: 100, clientY: 100 }]
     } as any);
@@ -114,5 +150,127 @@ describe('CategoryDoughnut', () => {
     } as any);
 
     expect(component.selectedCategory()).toBe(null);
+  });
+
+  it('should compute effectiveMaxAmount and amountMinWidthCh for visual alignment', () => {
+    // 1. Without maxAmount input, defaults to max in current breakdown
+    fixture.componentRef.setInput('breakdown', [
+      { id: 1, name: 'Comida', color: '#ff0000', amount: 500, pct: 25 },
+      { id: 2, name: 'Alquiler', color: '#00ff00', amount: 150000, pct: 75 }
+    ]);
+    fixture.detectChanges();
+
+    expect(component.effectiveMaxAmount()).toBe(150000);
+    // '$150.000' is 8 characters -> 8 + 0.5 = 8.5ch
+    expect(component.amountMinWidthCh()).toBe(8.5);
+
+    // 2. With global maxAmount input across all periods (e.g. year has 25400000 -> '$25.400.000' = 11 chars)
+    fixture.componentRef.setInput('maxAmount', 25400000);
+    fixture.detectChanges();
+
+    expect(component.effectiveMaxAmount()).toBe(25400000);
+    expect(component.amountMinWidthCh()).toBe(11.5);
+
+    // Verify amount spans have the computed min-width
+    const amountSpan = fixture.nativeElement.querySelector('li[data-category-id="1"] span.tabular-nums.text-right') as HTMLElement;
+    expect(amountSpan).toBeTruthy();
+    expect(amountSpan.style.minWidth).toBe('11.5ch');
+  });
+
+  it('should support collapsing and expanding categories beyond top 5 on mobile without scroll', () => {
+    const eightCategories = [
+      { id: 1, name: 'Cat 1', color: '#f00', amount: 800, pct: 30 },
+      { id: 2, name: 'Cat 2', color: '#0f0', amount: 500, pct: 20 },
+      { id: 3, name: 'Cat 3', color: '#00f', amount: 400, pct: 15 },
+      { id: 4, name: 'Cat 4', color: '#ff0', amount: 300, pct: 10 },
+      { id: 5, name: 'Cat 5', color: '#0ff', amount: 200, pct: 10 },
+      { id: 6, name: 'Cat 6', color: '#f0f', amount: 100, pct: 5 },
+      { id: 7, name: 'Cat 7', color: '#888', amount: 100, pct: 5 },
+      { id: 8, name: 'Cat 8', color: '#aaa', amount: 100, pct: 5 }
+    ];
+    fixture.componentRef.setInput('breakdown', eightCategories);
+    fixture.detectChanges();
+
+    const items = fixture.nativeElement.querySelectorAll('li[data-category-id]');
+    expect(items.length).toBe(8);
+
+    // Initial state: not expanded
+    expect(component.isExpanded()).toBe(false);
+    const expandGrid = fixture.nativeElement.querySelector('.expand-grid');
+    expect(expandGrid).toBeTruthy();
+    expect(expandGrid.classList.contains('expanded')).toBe(false);
+
+    // Toggle button should be present
+    const toggleBtn = fixture.nativeElement.querySelector('button.btn-ghost');
+    expect(toggleBtn).toBeTruthy();
+    expect(toggleBtn.textContent).toContain('Ver más (3 más)');
+
+    // Click toggle to expand
+    toggleBtn.click();
+    fixture.detectChanges();
+
+    expect(component.isExpanded()).toBe(true);
+    expect(expandGrid.classList.contains('expanded')).toBe(true);
+    expect(toggleBtn.textContent).toContain('Ver menos');
+
+    // Click toggle to collapse
+    toggleBtn.click();
+    fixture.detectChanges();
+
+    expect(component.isExpanded()).toBe(false);
+    expect(expandGrid.classList.contains('expanded')).toBe(false);
+
+    // Auto-expand when selecting category #7 (index 6) via click
+    component.onCategoryClick(7);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+    expect(expandGrid.classList.contains('expanded')).toBe(true);
+
+    // Collapse again: category #7 (extra) should be deselected because it becomes hidden
+    component.toggleExpand();
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+    expect(component.selectedCategory()).toBe(null);
+
+    // Select a top category (#2, index 1) that remains visible when collapsed
+    component.onCategoryClick(2);
+    fixture.detectChanges();
+    expect(component.selectedCategory()).toBe(2);
+
+    // Expand list
+    component.toggleExpand();
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+    expect(component.selectedCategory()).toBe(2);
+
+    // Collapse list again: top category should REMAIN selected
+    component.toggleExpand();
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+    expect(component.selectedCategory()).toBe(2);
+
+    // Deselect category 2
+    component.clearSelection();
+
+    // Auto-expand when touching category #8 (index 7) via touch tap
+    component.onTouchStart({ touches: [{ clientX: 100, clientY: 100 }] } as any);
+    component.onTouchEnd({
+      changedTouches: [{ clientX: 101, clientY: 101 }],
+      target: items[7]
+    } as any);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+    expect(expandGrid.classList.contains('expanded')).toBe(true);
+
+    // Expansion should persist when breakdown is passed a new array instance with same categories
+    fixture.componentRef.setInput('breakdown', [...eightCategories]);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+
+    // Expansion should reset to collapsed when periodTitle changes
+    fixture.componentRef.setInput('periodTitle', 'Esta Semana');
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+    expect(expandGrid.classList.contains('expanded')).toBe(false);
   });
 });

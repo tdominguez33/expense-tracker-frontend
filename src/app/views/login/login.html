@@ -18,7 +18,7 @@
             placeholder="midominio.com"
             class="input input-bordered w-full" 
             required 
-            [disabled]="loading"
+            [disabled]="loading()"
           />
         </div>
 
@@ -33,18 +33,22 @@
             class="input input-bordered w-full" 
             required 
             autofocus
-            [disabled]="loading"
+            [disabled]="loading()"
           />
         </div>
         
-        <div *ngIf="error" class="alert alert-error text-sm p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          <span>{{ error }}</span>
-        </div>
+        @if (error()) {
+          <div class="alert alert-error text-sm py-2 px-3 flex flex-row items-center gap-2 text-left justify-start">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span class="leading-tight">{{ error() }}</span>
+          </div>
+        }
         
         <div class="form-control mt-6">
-          <button type="submit" class="btn btn-primary" [disabled]="loading || !password || !apiUrl">
-            <span *ngIf="loading" class="loading loading-spinner"></span>
+          <button type="submit" class="btn btn-primary" [disabled]="loading() || !password || !apiUrl">
+            @if (loading()) {
+              <span class="loading loading-spinner"></span>
+            }
             Ingresar
           </button>
         </div>

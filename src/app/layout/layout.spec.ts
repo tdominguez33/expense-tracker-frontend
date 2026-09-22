@@ -22,4 +22,10 @@ describe('Layout', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should render the app icon next to the title in the navbar', () => {
+    const navbarImg = fixture.nativeElement.querySelector('.navbar img[alt="Logo"]') as HTMLImageElement;
+    expect(navbarImg).toBeTruthy();
+    expect(navbarImg.getAttribute('src')).toBe('icon.png');
+  });
 });

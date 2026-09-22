@@ -1,7 +1,28 @@
-import { Component, inject, OnInit, signal, computed, HostListener } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin, of, switchMap, map, catchError } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { CategoryDoughnut } from '../../components/category-doughnut/category-doughnut';
+
+export type DashboardPeriod = 'day' | 'week' | 'month' | 'year';
+
+export interface TimelineBar {
+  label: string;
+  fullLabel: string;
+  amount: number;
+  heightPct: number;
+}
+
+export interface TimelinePeak {
+  label: string;
+  amount: number;
+}
+
+export interface TimelineActiveCount {
+  active: number;
+  total: number;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -12,6 +33,26 @@ import { CategoryDoughnut } from '../../components/category-doughnut/category-do
 })
 export class Dashboard implements OnInit {
   private api = inject(ApiService);
+  private destroyRef = inject(DestroyRef);
+
+  readonly periods: readonly DashboardPeriod[] = ['day', 'week', 'month', 'year'] as const;
+
+  readonly periodMetadata = [
+    { period: 'day', label: 'Hoy', vsLabel: 'vs ayer', noDataLabel: 'Sin gastos ayer' },
+    { period: 'week', label: 'Esta Semana', vsLabel: 'vs sem. ant.', noDataLabel: 'Sin gastos sem. ant.' },
+    { period: 'month', label: 'Este Mes', vsLabel: 'vs mes ant.', noDataLabel: 'Sin gastos mes ant.' },
+    { period: 'year', label: 'Este Año', vsLabel: 'vs año ant.', noDataLabel: 'Sin gastos año ant.' }
+  ] as const;
+
+  // Selected period state
+  private _selectedPeriod = signal<string>('month');
+  get selectedPeriod() { return this._selectedPeriod; }
+
+  currentPeriodIndex = computed(() => {
+    const p = this.selectedPeriod();
+    const idx = this.periods.indexOf(p as DashboardPeriod);
+    return idx >= 0 ? idx : 2;
+  });
 
   generalReport = signal<any>(null);
   globalDebt = signal<number>(0);
@@ -20,7 +61,7 @@ export class Dashboard implements OnInit {
   errorMsg = signal<string>('');
 
   creditCards = signal<any[]>([]);
-  creditReports = signal<{[key: number]: any}>({});
+  creditReports = signal<Record<number, any>>({});
   entities = signal<any[]>([]);
   categories = signal<any[]>([]);
 
@@ -32,41 +73,52 @@ export class Dashboard implements OnInit {
     this.isLoading.set(true);
     this.errorMsg.set('');
 
-    this.api.getEntities().subscribe(ents => this.entities.set(ents));
-    this.api.getCategories().subscribe(cats => this.categories.set(cats));
+    forkJoin({
+      entities: this.api.getEntities().pipe(catchError(() => of([]))),
+      categories: this.api.getCategories().pipe(catchError(() => of([]))),
+      accounts: this.api.getAccounts().pipe(catchError(() => of([]))),
+      general: this.api.getGeneralReport(),
+      creditAll: this.api.getCreditAllReport().pipe(catchError(() => of(null)))
+    })
+    .pipe(
+      takeUntilDestroyed(this.destroyRef),
+      switchMap(res => {
+        this.entities.set(res.entities || []);
+        this.categories.set(res.categories || []);
+        this.generalReport.set(res.general || null);
+        this.globalDebt.set(res.creditAll?.total_global_debt || 0);
+        this.globalLimit.set(res.creditAll?.total_available_limit || 0);
 
-    // Fetch accounts to get credit cards
-    this.api.getAccounts().subscribe({
-      next: (accs) => {
-        const cards = accs.filter((a: any) => a.account_type === 'CREDIT_CARD');
+        const cards = (res.accounts || []).filter((a: any) => a.account_type === 'CREDIT_CARD');
         this.creditCards.set(cards);
-        
-        let reports: any = {};
-        cards.forEach((card: any) => {
-          this.api.getCreditReport(card.id).subscribe(report => {
-            reports[card.id] = report;
-            this.creditReports.set({...reports});
-          });
-        });
-      },
-      error: (err) => this.handleError(err)
-    });
 
-    // Fetch both global reports
-    this.api.getGeneralReport().subscribe({
-      next: (genData) => {
-        this.generalReport.set(genData);
-        
-        this.api.getCreditAllReport().subscribe({
-          next: (credData) => {
-            this.globalDebt.set(credData?.total_global_debt || 0);
-            this.globalLimit.set(credData?.total_available_limit || 0);
-            this.isLoading.set(false);
-          },
-          error: (err) => {
-            this.handleError(err);
-          }
-        });
+        if (cards.length === 0) {
+          this.creditReports.set({});
+          return of([]);
+        }
+
+        const reportObservables = cards.map((card: any) =>
+          this.api.getCreditReport(card.id).pipe(
+            map((report: any) => ({ cardId: card.id, report })),
+            catchError(() => of({ cardId: card.id, report: null }))
+          )
+        );
+
+        return forkJoin(reportObservables);
+      })
+    )
+    .subscribe({
+      next: (cardReports: any) => {
+        if (Array.isArray(cardReports) && cardReports.length > 0) {
+          const reportsMap: Record<number, any> = {};
+          cardReports.forEach(({ cardId, report }) => {
+            if (report) {
+              reportsMap[cardId] = report;
+            }
+          });
+          this.creditReports.set(reportsMap);
+        }
+        this.isLoading.set(false);
       },
       error: (err) => {
         this.handleError(err);
@@ -85,13 +137,13 @@ export class Dashboard implements OnInit {
     return ent ? `${ent.name} - ` : '';
   }
 
-  getComparison(period: 'day' | 'week' | 'month' | 'year'): any {
+  getComparison(period: string): any {
     const report = this.generalReport();
     if (!report || !report.comparisons) return null;
     return report.comparisons[period] || null;
   }
 
-  getComparisonTooltip(period: 'day' | 'week' | 'month' | 'year'): { title: string; subtitle: string } {
+  getComparisonTooltip(period: string): { title: string; subtitle: string } {
     const comp = this.getComparison(period);
     if (!comp) return { title: '', subtitle: '' };
 
@@ -176,37 +228,208 @@ export class Dashboard implements OnInit {
     return breakdown;
   }
 
+  currentCategoryBreakdown = computed(() => {
+    return this.getCategoryBreakdown(this.selectedPeriod());
+  });
+
+  maxCategoryAmount = computed(() => {
+    const report = this.generalReport();
+    if (!report?.by_category) return 0;
+    let max = 0;
+    for (const p of this.periods) {
+      const byCat = report.by_category[p];
+      if (byCat) {
+        for (const val of Object.values(byCat)) {
+          const amt = Number(val);
+          if (!isNaN(amt) && amt > max) {
+            max = amt;
+          }
+        }
+      }
+    }
+    return max;
+  });
+
+  // Desktop doughnut card min-height computed signal
+  desktopDoughnutMinHeight = computed<string>(() => {
+    let maxAvailable = this.categories().length;
+    
+    // Check if any period has uncategorized expenses (catId === 0)
+    const report = this.generalReport();
+    if (report?.by_category) {
+      for (const p of this.periods) {
+        if ((report.by_category[p]?.[0] || 0) > 0 || (report.by_category[p]?.['0'] || 0) > 0) {
+          maxAvailable = Math.max(maxAvailable, this.categories().length + 1);
+          break;
+        }
+      }
+    }
+
+    // Also check if any period breakdown has more categories
+    for (const p of this.periods) {
+      const count = this.getCategoryBreakdown(p).length;
+      if (count > maxAvailable) {
+        maxAvailable = count;
+      }
+    }
+
+    const count = Math.max(maxAvailable, 1);
+    const rows = Math.ceil(count / 2);
+    // Dynamic legend height: title (~36px) + rows (~40px each)
+    const legendHeight = 36 + rows * 40;
+    // Doughnut chart circle height on desktop (256px)
+    const innerContentHeight = Math.max(256, legendHeight);
+    // Compact vertical padding (py-4 to py-5: ~40px total) + 2px border
+    const totalHeight = innerContentHeight + 42;
+    // Stable desktop baseline (360px) ensuring all periods match perfectly in height
+    return `${Math.max(totalHeight, 360)}px`;
+  });
+
+  getDesktopDoughnutMinHeight(): string {
+    return this.desktopDoughnutMinHeight();
+  }
+
   activeSlide = signal<number>(0);
   readonly TOTAL_SLIDES = 2;
-  animatingSlide = signal<{ from: number; to: number; direction: 'next' | 'prev' } | null>(null);
-  private animTimeout: any = null;
+  isChartSwiping = false;
+  chartSwipeOffset = signal<number>(0);
+  private chartTouchStartX = 0;
+  private chartTouchStartY = 0;
+  private isMouseDownOnChart = false;
+  private chartMouseStartX = 0;
+
+  getChartTransform(): string {
+    const basePct = -this.activeSlide() * 100;
+    const offsetPx = this.chartSwipeOffset();
+    if (offsetPx !== 0) {
+      return `translateX(calc(${basePct}% + ${offsetPx}px))`;
+    }
+    return `translateX(${basePct}%)`;
+  }
+
+  goToSlide(index: number) {
+    if (this.selectedPeriod() === 'day' || index === this.activeSlide()) return;
+    this.activeSlide.set(index);
+    if (index === 1) {
+      this.scrollToCurrentDay();
+    }
+  }
 
   nextSlide() {
-    if (this.selectedPeriod() === 'day' || this.animatingSlide() !== null) return;
-    const from = this.activeSlide();
-    const to = (from + 1) % this.TOTAL_SLIDES;
-    this.startSlideAnimation(from, to, 'next');
+    if (this.selectedPeriod() === 'day') return;
+    this.goToSlide((this.activeSlide() + 1) % this.TOTAL_SLIDES);
   }
 
   prevSlide() {
-    if (this.selectedPeriod() === 'day' || this.animatingSlide() !== null) return;
-    const from = this.activeSlide();
-    const to = (from - 1 + this.TOTAL_SLIDES) % this.TOTAL_SLIDES;
-    this.startSlideAnimation(from, to, 'prev');
+    if (this.selectedPeriod() === 'day') return;
+    this.goToSlide((this.activeSlide() - 1 + this.TOTAL_SLIDES) % this.TOTAL_SLIDES);
   }
 
-  private startSlideAnimation(from: number, to: number, direction: 'next' | 'prev') {
-    if (this.animTimeout) {
-      clearTimeout(this.animTimeout);
+  chartGestureDirection: 'none' | 'horizontal' | 'vertical' = 'none';
+
+  onChartTouchStart(e: TouchEvent) {
+    if (e.touches.length > 0) {
+      this.chartTouchStartX = e.touches[0].clientX;
+      this.chartTouchStartY = e.touches[0].clientY;
+      this.isChartSwiping = false;
+      this.chartSwipeOffset.set(0);
+      this.chartGestureDirection = 'none';
     }
-    this.animatingSlide.set({ from, to, direction });
-    this.animTimeout = setTimeout(() => {
-      this.activeSlide.set(to);
-      this.animatingSlide.set(null);
-      if (to === 1) {
-        this.scrollToCurrentDay();
+  }
+
+  onChartTouchMove(e: TouchEvent) {
+    if (this.selectedPeriod() === 'day' || e.touches.length === 0) return;
+    if (this.chartGestureDirection === 'vertical') return;
+
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - this.chartTouchStartX;
+    const deltaY = currentY - this.chartTouchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (this.chartGestureDirection === 'none') {
+      if (absX < 8 && absY < 8) return;
+
+      // If vertical motion is significant, lock into vertical page scroll and ignore horizontal gestures
+      if (absY >= absX * 0.75) {
+        this.chartGestureDirection = 'vertical';
+        this.isChartSwiping = false;
+        this.chartSwipeOffset.set(0);
+        return;
       }
-    }, 400);
+
+      // Only lock into horizontal swipe if movement is clearly horizontal
+      if (absX > 10 && absX > absY * 1.5) {
+        this.chartGestureDirection = 'horizontal';
+      } else {
+        return;
+      }
+    }
+
+    if (this.chartGestureDirection === 'horizontal') {
+      this.isChartSwiping = true;
+      let dampedDelta = deltaX;
+      if ((this.activeSlide() === 0 && deltaX > 0) || (this.activeSlide() === 1 && deltaX < 0)) {
+        dampedDelta = deltaX * 0.25;
+      }
+      this.chartSwipeOffset.set(dampedDelta);
+    }
+  }
+
+  onChartTouchEnd(e: TouchEvent) {
+    if (this.chartGestureDirection !== 'horizontal' || !this.isChartSwiping) {
+      this.chartGestureDirection = 'none';
+      this.isChartSwiping = false;
+      this.chartSwipeOffset.set(0);
+      return;
+    }
+
+    const offset = this.chartSwipeOffset();
+    this.chartGestureDirection = 'none';
+    this.isChartSwiping = false;
+    this.chartSwipeOffset.set(0);
+
+    if (offset < -45 && this.activeSlide() === 0) {
+      this.goToSlide(1);
+    } else if (offset > 45 && this.activeSlide() === 1) {
+      this.goToSlide(0);
+    }
+  }
+
+  onChartMouseDown(e: MouseEvent) {
+    if (this.selectedPeriod() === 'day') return;
+    this.isMouseDownOnChart = true;
+    this.chartMouseStartX = e.clientX;
+    this.chartSwipeOffset.set(0);
+  }
+
+  onChartMouseMove(e: MouseEvent) {
+    if (!this.isMouseDownOnChart || this.selectedPeriod() === 'day') return;
+    const deltaX = e.clientX - this.chartMouseStartX;
+    if (Math.abs(deltaX) > 5) {
+      this.isChartSwiping = true;
+      let dampedDelta = deltaX;
+      if ((this.activeSlide() === 0 && deltaX > 0) || (this.activeSlide() === 1 && deltaX < 0)) {
+        dampedDelta = deltaX * 0.25;
+      }
+      this.chartSwipeOffset.set(dampedDelta);
+    }
+  }
+
+  onChartMouseUp(e: MouseEvent) {
+    if (!this.isMouseDownOnChart) return;
+    this.isMouseDownOnChart = false;
+    if (this.isChartSwiping) {
+      const offset = this.chartSwipeOffset();
+      this.isChartSwiping = false;
+      this.chartSwipeOffset.set(0);
+      if (offset < -40 && this.activeSlide() === 0) {
+        this.goToSlide(1);
+      } else if (offset > 40 && this.activeSlide() === 1) {
+        this.goToSlide(0);
+      }
+    }
   }
 
   scrollToCurrentDay() {
@@ -224,40 +447,208 @@ export class Dashboard implements OnInit {
     }, 100);
   }
 
-  getSlideClass(slideIndex: number): string {
-    const anim = this.animatingSlide();
-    if (anim) {
-      if (slideIndex === anim.from) {
-        return anim.direction === 'next' ? 'slide-out-left z-10' : 'slide-out-right z-10';
+  isCardsSwiping = false;
+  cardsSwipeOffset = signal<number>(0);
+  isNavigatingPeriod = false;
+  private navPeriodTimeout: ReturnType<typeof setTimeout> | null = null;
+  private wasSwipeGesture = false;
+  private cardsTouchStartX = 0;
+  private cardsTouchStartY = 0;
+  private isMouseDownOnCards = false;
+  private cardsMouseStartX = 0;
+
+  getCardsTransform(): string {
+    const basePct = -this.currentPeriodIndex() * 100;
+    const offsetPx = this.cardsSwipeOffset();
+    if (offsetPx !== 0) {
+      return `translateX(calc(${basePct}% + ${offsetPx}px))`;
+    }
+    return `translateX(${basePct}%)`;
+  }
+
+  startPeriodNavLock(durationMs = 320) {
+    this.isNavigatingPeriod = true;
+    if (this.navPeriodTimeout) clearTimeout(this.navPeriodTimeout);
+    this.navPeriodTimeout = setTimeout(() => {
+      this.isNavigatingPeriod = false;
+    }, durationMs);
+  }
+
+  cardsGestureDirection: 'none' | 'horizontal' | 'vertical' = 'none';
+
+  onCardsTouchStart(e: TouchEvent) {
+    if (e.touches.length > 0) {
+      this.cardsTouchStartX = e.touches[0].clientX;
+      this.cardsTouchStartY = e.touches[0].clientY;
+      this.isCardsSwiping = false;
+      this.cardsSwipeOffset.set(0);
+      this.wasSwipeGesture = false;
+      this.cardsGestureDirection = 'none';
+    }
+  }
+
+  onCardsTouchMove(e: TouchEvent) {
+    if (e.touches.length === 0) return;
+    if (this.cardsGestureDirection === 'vertical') return;
+
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    const deltaX = currentX - this.cardsTouchStartX;
+    const deltaY = currentY - this.cardsTouchStartY;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    if (this.cardsGestureDirection === 'none') {
+      if (absX < 8 && absY < 8) return;
+
+      // If vertical motion is significant, lock into vertical page scroll
+      if (absY >= absX * 0.75) {
+        this.cardsGestureDirection = 'vertical';
+        this.isCardsSwiping = false;
+        this.cardsSwipeOffset.set(0);
+        return;
       }
-      if (slideIndex === anim.to) {
-        return anim.direction === 'next' ? 'slide-in-right z-20' : 'slide-in-left z-20';
+
+      // Only lock into horizontal swipe if movement is clearly horizontal
+      if (absX > 10 && absX > absY * 1.5) {
+        this.cardsGestureDirection = 'horizontal';
+        this.wasSwipeGesture = true;
+      } else {
+        return;
       }
-      return 'invisible opacity-0 pointer-events-none z-0';
     }
 
-    if (slideIndex === this.activeSlide()) {
-      return 'opacity-100 z-10 pointer-events-auto';
+    if (this.cardsGestureDirection === 'horizontal') {
+      this.isCardsSwiping = true;
+      let dampedDelta = deltaX;
+      const idx = this.currentPeriodIndex();
+      if ((idx === 0 && deltaX > 0) || (idx === this.periods.length - 1 && deltaX < 0)) {
+        dampedDelta = deltaX * 0.25;
+      }
+      this.cardsSwipeOffset.set(dampedDelta);
     }
-    return 'invisible opacity-0 pointer-events-none z-0';
   }
-  
-  // Track selected period and reset slide if needed
-  private _selectedPeriod = signal<string>('month');
-  get selectedPeriod() { return this._selectedPeriod; }
-  
+
+  onCardsTouchEnd(e: TouchEvent) {
+    if (this.cardsGestureDirection !== 'horizontal' || !this.isCardsSwiping) {
+      this.cardsGestureDirection = 'none';
+      this.isCardsSwiping = false;
+      this.cardsSwipeOffset.set(0);
+      setTimeout(() => {
+        this.wasSwipeGesture = false;
+      }, 200);
+      return;
+    }
+
+    const offset = this.cardsSwipeOffset();
+    this.cardsGestureDirection = 'none';
+    this.isCardsSwiping = false;
+    this.cardsSwipeOffset.set(0);
+    setTimeout(() => {
+      this.wasSwipeGesture = false;
+    }, 200);
+
+    // Limit to moving exactly one card!
+    if (offset < -45) {
+      this.startPeriodNavLock();
+      this.goToNextPeriod();
+    } else if (offset > 45) {
+      this.startPeriodNavLock();
+      this.goToPrevPeriod();
+    }
+  }
+
+  onCardsMouseDown(e: MouseEvent) {
+    this.isMouseDownOnCards = true;
+    this.cardsMouseStartX = e.clientX;
+    this.cardsSwipeOffset.set(0);
+    this.wasSwipeGesture = false;
+  }
+
+  onCardsMouseMove(e: MouseEvent) {
+    if (!this.isMouseDownOnCards) return;
+    const deltaX = e.clientX - this.cardsMouseStartX;
+    if (Math.abs(deltaX) > 5) {
+      this.isCardsSwiping = true;
+      this.wasSwipeGesture = true;
+      let dampedDelta = deltaX;
+      const idx = this.currentPeriodIndex();
+      if ((idx === 0 && deltaX > 0) || (idx === this.periods.length - 1 && deltaX < 0)) {
+        dampedDelta = deltaX * 0.25;
+      }
+      this.cardsSwipeOffset.set(dampedDelta);
+    }
+  }
+
+  onCardsMouseUp(e: MouseEvent) {
+    if (!this.isMouseDownOnCards) return;
+    this.isMouseDownOnCards = false;
+    if (this.isCardsSwiping) {
+      const offset = this.cardsSwipeOffset();
+      this.isCardsSwiping = false;
+      this.cardsSwipeOffset.set(0);
+      setTimeout(() => {
+        this.wasSwipeGesture = false;
+      }, 200);
+      if (offset < -40) {
+        this.startPeriodNavLock();
+        this.goToNextPeriod();
+      } else if (offset > 40) {
+        this.startPeriodNavLock();
+        this.goToPrevPeriod();
+      }
+    }
+  }
+
+  onCardPrevClick(event?: any) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (this.isNavigatingPeriod) return;
+    this.startPeriodNavLock();
+    this.goToPrevPeriod();
+  }
+
+  onCardNextClick(event?: any) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (this.isNavigatingPeriod) return;
+    this.startPeriodNavLock();
+    this.goToNextPeriod();
+  }
+
+  onCardClick(period: string) {
+    if (this.wasSwipeGesture || this.isNavigatingPeriod) return;
+    this.setPeriod(period);
+  }
+
+  onDotClick(period: string) {
+    if (this.isNavigatingPeriod || period === this.selectedPeriod()) return;
+    this.startPeriodNavLock();
+    this.setPeriod(period);
+  }
+
   setPeriod(period: string) {
     this._selectedPeriod.set(period);
     this.selectedTimelineBar.set(null);
     this.hoveredTimelineBar.set(null);
     if (period === 'day') {
-      if (this.animTimeout) {
-        clearTimeout(this.animTimeout);
-      }
       this.activeSlide.set(0);
-      this.animatingSlide.set(null);
     } else if (period === 'month' && this.activeSlide() === 1) {
       this.scrollToCurrentDay();
+    }
+  }
+
+  goToNextPeriod() {
+    const nextIdx = this.currentPeriodIndex() + 1;
+    if (nextIdx < this.periods.length) {
+      this.setPeriod(this.periods[nextIdx]);
+    }
+  }
+
+  goToPrevPeriod() {
+    const prevIdx = this.currentPeriodIndex() - 1;
+    if (prevIdx >= 0) {
+      this.setPeriod(this.periods[prevIdx]);
     }
   }
 
@@ -266,59 +657,7 @@ export class Dashboard implements OnInit {
     return p === 'day' ? 'Hoy' : p === 'week' ? 'Esta Semana' : p === 'month' ? 'Este Mes' : 'Este Año';
   }
 
-  hoveredCategory = signal<number | null>(null);
-  private hoverTimer: any = null;
-
-  onCategoryHover(catId: number) {
-    if (this.hoverTimer) clearTimeout(this.hoverTimer);
-    this.hoverTimer = setTimeout(() => {
-      this.hoveredCategory.set(catId);
-    }, 75);
-  }
-
-  onCategoryLeave() {
-    if (this.hoverTimer) clearTimeout(this.hoverTimer);
-    this.hoverTimer = setTimeout(() => {
-      this.hoveredCategory.set(null);
-    }, 75);
-  }
-
-  getHoveredInfo(): { name: string, amount: number, color?: string } {
-    const catId = this.hoveredCategory();
-    const period = this.selectedPeriod();
-    const report = this.generalReport();
-    
-    if (catId !== null) {
-      const breakdown = this.getCategoryBreakdown(period);
-      const cat = breakdown.find(c => c.id === catId);
-      if (cat) {
-        return { name: cat.name, amount: cat.amount, color: cat.color };
-      }
-    }
-    
-    return { 
-      name: period === 'day' ? 'Total Hoy' : period === 'week' ? 'Total Semana' : period === 'month' ? 'Total Mes' : 'Total Año', 
-      amount: report?.totals?.[period] || 0 
-    };
-  }
-
-  getCategoryBreakdownSVG(): any[] {
-    const breakdown = this.getCategoryBreakdown(this.selectedPeriod());
-    let cumulative = 0;
-    
-    return breakdown.map(cat => {
-      const offset = 100 - cumulative;
-      const item = {
-        ...cat,
-        dasharray: `${cat.pct} ${100 - cat.pct}`,
-        offset: offset
-      };
-      cumulative += cat.pct;
-      return item;
-    });
-  }
-
-  getTimelineData(): { label: string, fullLabel: string, amount: number, heightPct: number }[] {
+  timelineData = computed<TimelineBar[]>(() => {
     const report = this.generalReport();
     const period = this.selectedPeriod();
     if (!report || !report.timeline || period === 'day') return [];
@@ -326,7 +665,7 @@ export class Dashboard implements OnInit {
     const timeline = report.timeline[period];
     if (!timeline) return [];
 
-    let data: { label: string, fullLabel: string, amount: number, heightPct: number }[] = [];
+    let data: TimelineBar[] = [];
     let maxAmount = 0;
 
     if (period === 'week') {
@@ -360,25 +699,29 @@ export class Dashboard implements OnInit {
     }
 
     return data;
+  });
+
+  getTimelineData(): TimelineBar[] {
+    return this.timelineData();
   }
 
-  getTimelineAverage(): string {
+  timelineAverage = computed<string>(() => {
     const report = this.generalReport();
     const period = this.selectedPeriod();
     if (!report || period === 'day') return '';
 
-    const total = report.totals[period] || 0;
+    const total = report.totals?.[period] || 0;
     const now = new Date();
     
     if (period === 'week') {
       const jsDay = now.getDay();
       const elapsedDays = jsDay === 0 ? 7 : jsDay;
       const avg = total / elapsedDays;
-      return `$${avg.toLocaleString('es-AR', {maximumFractionDigits: 0})}/día`;
+      return `$${avg.toLocaleString('es-AR', { maximumFractionDigits: 0 })}/día`;
     } else if (period === 'month') {
       const elapsedDays = Math.max(1, now.getDate());
       const avg = total / elapsedDays;
-      return `$${avg.toLocaleString('es-AR', {maximumFractionDigits: 0})}/día`;
+      return `$${avg.toLocaleString('es-AR', { maximumFractionDigits: 0 })}/día`;
     } else if (period === 'year') {
       const yearTimeline = report.timeline?.year || {};
       const currentMonth = now.getMonth() + 1;
@@ -392,12 +735,16 @@ export class Dashboard implements OnInit {
         return '$0/mes';
       }
       const avg = total / activeMonths;
-      return `$${avg.toLocaleString('es-AR', {maximumFractionDigits: 0})}/mes`;
+      return `$${avg.toLocaleString('es-AR', { maximumFractionDigits: 0 })}/mes`;
     }
     return '';
+  });
+
+  getTimelineAverage(): string {
+    return this.timelineAverage();
   }
 
-  getTimelineAverageTooltip(): string {
+  timelineAverageTooltip = computed<string>(() => {
     const report = this.generalReport();
     const period = this.selectedPeriod();
     if (!report || period === 'day') return '';
@@ -424,10 +771,14 @@ export class Dashboard implements OnInit {
       return `Promedio sobre ${activeMonths} ${activeMonths === 1 ? 'mes con gastos' : 'meses con gastos'}`;
     }
     return '';
+  });
+
+  getTimelineAverageTooltip(): string {
+    return this.timelineAverageTooltip();
   }
 
-  selectedTimelineBar = signal<{ label: string, fullLabel: string, amount: number, heightPct: number } | null>(null);
-  hoveredTimelineBar = signal<{ label: string, fullLabel: string, amount: number, heightPct: number } | null>(null);
+  selectedTimelineBar = signal<TimelineBar | null>(null);
+  hoveredTimelineBar = signal<TimelineBar | null>(null);
 
   activeTimelineBar = computed(() => this.hoveredTimelineBar() ?? this.selectedTimelineBar());
 
@@ -468,7 +819,8 @@ export class Dashboard implements OnInit {
     }
   }
 
-  selectTimelineBar(bar: any, event?: Event) {
+  selectTimelineBar(bar: TimelineBar, event?: Event) {
+    if (this.isChartSwiping || Math.abs(this.chartSwipeOffset()) > 5) return;
     event?.stopPropagation();
     if (this.selectedTimelineBar()?.fullLabel === bar.fullLabel) {
       this.selectedTimelineBar.set(null);
@@ -478,7 +830,7 @@ export class Dashboard implements OnInit {
     this.hoveredTimelineBar.set(null);
   }
 
-  hoverTimelineBar(bar: any) {
+  hoverTimelineBar(bar: TimelineBar) {
     this.hoveredTimelineBar.set(bar);
   }
 
@@ -486,8 +838,8 @@ export class Dashboard implements OnInit {
     this.hoveredTimelineBar.set(null);
   }
 
-  getTimelinePeak(): { label: string, amount: number } | null {
-    const data = this.getTimelineData();
+  timelinePeak = computed<TimelinePeak | null>(() => {
+    const data = this.timelineData();
     if (!data.length) return null;
     let peak = data[0];
     for (const d of data) {
@@ -496,16 +848,24 @@ export class Dashboard implements OnInit {
       }
     }
     return peak.amount > 0 ? { label: peak.fullLabel, amount: peak.amount } : null;
+  });
+
+  getTimelinePeak(): TimelinePeak | null {
+    return this.timelinePeak();
   }
 
-  getTimelineActiveCount(): { active: number, total: number } {
-    const data = this.getTimelineData();
+  timelineActiveCount = computed<TimelineActiveCount>(() => {
+    const data = this.timelineData();
     const active = data.filter(d => d.amount > 0).length;
     return { active, total: data.length };
+  });
+
+  getTimelineActiveCount(): TimelineActiveCount {
+    return this.timelineActiveCount();
   }
 
-  getTimelineMonthRows(): { label: string, fullLabel: string, amount: number, heightPct: number }[][] {
-    const data = this.getTimelineData();
+  timelineMonthRows = computed<TimelineBar[][]>(() => {
+    const data = this.timelineData();
     if (this.selectedPeriod() !== 'month' || data.length <= 15) {
       return [data];
     }
@@ -513,5 +873,9 @@ export class Dashboard implements OnInit {
       data.slice(0, 15),
       data.slice(15)
     ];
+  });
+
+  getTimelineMonthRows(): TimelineBar[][] {
+    return this.timelineMonthRows();
   }
 }

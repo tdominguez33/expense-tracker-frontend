@@ -17,254 +17,182 @@
 
     
     @if (generalReport()) {
-      <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">Gastos Generales</h2>
-                <!-- Cards Selector -->
-        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-          
-          <!-- Dia -->
-          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
-               [class.ring]="selectedPeriod() === 'day'" [class.ring-primary]="selectedPeriod() === 'day'"
-               (click)="setPeriod('day')">
-            <div class="card-body p-5 overflow-visible">
-              <h3 class="card-title text-sm text-base-content/70">Hoy</h3>
-              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.day | number:'1.0-0' }}</p>
-              @if (getComparison('day'); as comp) {
-                <div class="relative group/comp inline-block self-start mt-1">
-                  <div class="flex items-center gap-1 text-xs">
+      <div class="mt-6 sm:mt-8">
+        <!-- Section Title -->
+        <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Gastos Generales</h2>
+
+        <!-- Reusable Period Card Template -->
+        <ng-template #periodCardTpl let-item>
+          <div class="card shadow-sm border cursor-pointer transition-all duration-200 overflow-visible h-full"
+               [ngClass]="selectedPeriod() === item.period ? 'bg-base-200/70 border-base-content/30 shadow-md' : 'bg-base-100 border-base-content/15 hover:bg-base-200/40'"
+               (click)="onCardClick(item.period)">
+            <div class="card-body p-3.5 sm:p-4 xl:p-5 overflow-visible">
+              <!-- Header with integrated mobile arrows -->
+              <div class="flex items-center justify-between sm:justify-start w-full mb-1 sm:mb-0">
+                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -ml-1 transition-all"
+                        [class.invisible]="item.period === 'day'"
+                        [disabled]="item.period === 'day' || isNavigatingPeriod || selectedPeriod() !== item.period"
+                        (click)="onCardPrevClick($event)"
+                        (touchstart)="$event.stopPropagation()"
+                        (touchmove)="$event.stopPropagation()"
+                        (touchend)="$event.stopPropagation()"
+                        (mousedown)="$event.stopPropagation()"
+                        (mouseup)="$event.stopPropagation()"
+                        aria-label="Período anterior"
+                        title="Período anterior">
+                  ❮
+                </button>
+
+                <span class="text-[11px] sm:text-sm font-semibold sm:font-medium text-base-content/60 sm:text-base-content/70 block uppercase sm:normal-case tracking-wider sm:tracking-normal">
+                  {{ item.label }}
+                </span>
+
+                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -mr-1 transition-all"
+                        [class.invisible]="item.period === 'year'"
+                        [disabled]="item.period === 'year' || isNavigatingPeriod || selectedPeriod() !== item.period"
+                        (click)="onCardNextClick($event)"
+                        (touchstart)="$event.stopPropagation()"
+                        (touchmove)="$event.stopPropagation()"
+                        (touchend)="$event.stopPropagation()"
+                        (mousedown)="$event.stopPropagation()"
+                        (mouseup)="$event.stopPropagation()"
+                        aria-label="Período siguiente"
+                        title="Período siguiente">
+                  ❯
+                </button>
+              </div>
+
+              <!-- Content: Amount and Comparison -->
+              <div class="flex flex-row sm:flex-col justify-between sm:justify-start items-end sm:items-start gap-2 mt-0.5 sm:mt-1">
+                <p class="text-[26px] sm:text-2xl xl:text-3xl font-extrabold sm:font-bold leading-tight truncate tracking-tight">
+                  ${{ generalReport().totals[item.period] | number:'1.0-0' }}
+                </p>
+                @if (getComparison(item.period); as comp) {
+                  <div class="relative group/comp inline-block shrink-0 self-end sm:self-start mb-0.5 sm:mb-0">
+                    <div class="flex items-center gap-1 text-xs">
+                      @if (comp.percentage !== null) {
+                        <span class="inline-flex items-center gap-0.5 font-semibold"
+                              [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
+                          @if (comp.percentage > 0) {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
+                            </svg>
+                            +{{ comp.percentage | number:'1.1-1' }}%
+                          } @else if (comp.percentage < 0) {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                            </svg>
+                            {{ comp.percentage | number:'1.1-1' }}%
+                          } @else {
+                            0%
+                          }
+                        </span>
+                        <span class="text-base-content/60">{{ item.vsLabel }}</span>
+                      } @else {
+                        <span class="text-base-content/60">{{ item.noDataLabel }}</span>
+                      }
+                    </div>
+
+                    <!-- Tooltip elaborado solo si hubo gastos previos -->
                     @if (comp.percentage !== null) {
-                      <span class="inline-flex items-center gap-0.5 font-semibold"
-                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
-                        @if (comp.percentage > 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
-                          </svg>
-                          +{{ comp.percentage | number:'1.1-1' }}%
-                        } @else if (comp.percentage < 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
-                          </svg>
-                          {{ comp.percentage | number:'1.1-1' }}%
-                        } @else {
-                          0%
-                        }
-                      </span>
-                      <span class="text-base-content/60">vs ayer</span>
-                    } @else {
-                      <span class="text-base-content/60">Sin gastos ayer</span>
+                      @if (getComparisonTooltip(item.period); as tip) {
+                        <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2 z-40
+                                    opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
+                                    transition-all duration-200 delay-150
+                                    bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
+                          <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
+                          <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
+                          <div class="absolute bottom-full right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
+                        </div>
+                      }
                     }
                   </div>
-
-                  <!-- Tooltip elaborado solo si hubo gastos previos -->
-                  @if (comp.percentage !== null) {
-                    @if (getComparisonTooltip('day'); as tip) {
-                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
-                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
-                                  transition-all duration-200 delay-150
-                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
-                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
-                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
-                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
-                      </div>
-                    }
-                  }
-                </div>
-              }
+                }
+              </div>
             </div>
           </div>
+        </ng-template>
 
-          <!-- Semana -->
-          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
-               [class.ring]="selectedPeriod() === 'week'" [class.ring-primary]="selectedPeriod() === 'week'"
-               (click)="setPeriod('week')">
-            <div class="card-body p-5 overflow-visible">
-              <h3 class="card-title text-sm text-base-content/70">Esta Semana</h3>
-              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.week | number:'1.0-0' }}</p>
-              @if (getComparison('week'); as comp) {
-                <div class="relative group/comp inline-block self-start mt-1">
-                  <div class="flex items-center gap-1 text-xs">
-                    @if (comp.percentage !== null) {
-                      <span class="inline-flex items-center gap-0.5 font-semibold"
-                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
-                        @if (comp.percentage > 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
-                          </svg>
-                          +{{ comp.percentage | number:'1.1-1' }}%
-                        } @else if (comp.percentage < 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
-                          </svg>
-                          {{ comp.percentage | number:'1.1-1' }}%
-                        } @else {
-                          0%
-                        }
-                      </span>
-                      <span class="text-base-content/60">vs sem. ant.</span>
-                    } @else {
-                      <span class="text-base-content/60">Sin gastos sem. ant.</span>
-                    }
-                  </div>
-
-                  <!-- Tooltip elaborado solo si hubo gastos previos -->
-                  @if (comp.percentage !== null) {
-                    @if (getComparisonTooltip('week'); as tip) {
-                      <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
-                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
-                                  transition-all duration-200 delay-150
-                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
-                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
-                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
-                        <div class="absolute bottom-full right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
-                      </div>
-                    }
-                  }
-                </div>
-              }
-            </div>
+        <!-- Mobile Cards Slider (1 card visible, smooth GPU slide, touch-drag, single-card step) -->
+        <div class="sm:hidden mb-3 select-none relative w-full overflow-hidden touch-pan-y"
+             (touchstart)="onCardsTouchStart($event)"
+             (touchmove)="onCardsTouchMove($event)"
+             (touchend)="onCardsTouchEnd($event)"
+             (mousedown)="onCardsMouseDown($event)"
+             (mousemove)="onCardsMouseMove($event)"
+             (mouseup)="onCardsMouseUp($event)"
+             (mouseleave)="onCardsMouseUp($event)">
+          <div class="flex w-full will-change-transform"
+               [style.transitionDuration]="isCardsSwiping ? '0ms' : '350ms'"
+               [style.transitionProperty]="'transform'"
+               [style.transitionTimingFunction]="'cubic-bezier(0.25, 1, 0.5, 1)'"
+               [style.transform]="getCardsTransform()">
+            @for (item of periodMetadata; track item.period) {
+              <div class="w-full shrink-0 px-0.5" [attr.data-period]="item.period">
+                <ng-container *ngTemplateOutlet="periodCardTpl; context: { $implicit: item }"></ng-container>
+              </div>
+            }
           </div>
 
-          <!-- Mes -->
-          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
-               [class.ring]="selectedPeriod() === 'month'" [class.ring-primary]="selectedPeriod() === 'month'"
-               (click)="setPeriod('month')">
-            <div class="card-body p-5 overflow-visible">
-              <h3 class="card-title text-sm text-base-content/70">Este Mes</h3>
-              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.month | number:'1.0-0' }}</p>
-              @if (getComparison('month'); as comp) {
-                <div class="relative group/comp inline-block self-start mt-1">
-                  <div class="flex items-center gap-1 text-xs">
-                    @if (comp.percentage !== null) {
-                      <span class="inline-flex items-center gap-0.5 font-semibold"
-                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
-                        @if (comp.percentage > 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
-                          </svg>
-                          +{{ comp.percentage | number:'1.1-1' }}%
-                        } @else if (comp.percentage < 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
-                          </svg>
-                          {{ comp.percentage | number:'1.1-1' }}%
-                        } @else {
-                          0%
-                        }
-                      </span>
-                      <span class="text-base-content/60">vs mes ant.</span>
-                    } @else {
-                      <span class="text-base-content/60">Sin gastos mes ant.</span>
-                    }
-                  </div>
-
-                  <!-- Tooltip elaborado solo si hubo gastos previos -->
-                  @if (comp.percentage !== null) {
-                    @if (getComparisonTooltip('month'); as tip) {
-                      <div class="pointer-events-none absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
-                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
-                                  transition-all duration-200 delay-150
-                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
-                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
-                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
-                        <div class="absolute bottom-full left-4 sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
-                      </div>
-                    }
-                  }
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Año -->
-          <div class="card bg-base-100 shadow-sm border border-base-content/20 cursor-pointer transition-colors hover:bg-base-200/50 overflow-visible"
-               [class.ring]="selectedPeriod() === 'year'" [class.ring-primary]="selectedPeriod() === 'year'"
-               (click)="setPeriod('year')">
-            <div class="card-body p-5 overflow-visible">
-              <h3 class="card-title text-sm text-base-content/70">Este Año</h3>
-              <p class="text-2xl md:text-3xl font-bold">${{ generalReport().totals.year | number:'1.0-0' }}</p>
-              @if (getComparison('year'); as comp) {
-                <div class="relative group/comp inline-block self-start mt-1">
-                  <div class="flex items-center gap-1 text-xs">
-                    @if (comp.percentage !== null) {
-                      <span class="inline-flex items-center gap-0.5 font-semibold"
-                            [ngClass]="comp.percentage > 0 ? 'text-error' : (comp.percentage < 0 ? 'text-success' : 'text-base-content/60')">
-                        @if (comp.percentage > 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
-                          </svg>
-                          +{{ comp.percentage | number:'1.1-1' }}%
-                        } @else if (comp.percentage < 0) {
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
-                          </svg>
-                          {{ comp.percentage | number:'1.1-1' }}%
-                        } @else {
-                          0%
-                        }
-                      </span>
-                      <span class="text-base-content/60">vs año ant.</span>
-                    } @else {
-                      <span class="text-base-content/60">Sin gastos año ant.</span>
-                    }
-                  </div>
-
-                  <!-- Tooltip elaborado solo si hubo gastos previos -->
-                  @if (comp.percentage !== null) {
-                    @if (getComparisonTooltip('year'); as tip) {
-                      <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2.5 z-40
-                                  opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
-                                  transition-all duration-200 delay-150
-                                  bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
-                        <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
-                        <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
-                        <div class="absolute bottom-full right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
-                      </div>
-                    }
-                  }
-                </div>
-              }
-            </div>
+          <!-- Pagination Dots Indicator -->
+          <div class="flex justify-center items-center gap-1.5 mt-2">
+            @for (item of periodMetadata; track item.period; let i = $index) {
+              <button (click)="onDotClick(item.period)"
+                      class="transition-all duration-300 rounded-full"
+                      [class]="selectedPeriod() === item.period ? 'w-5 h-1.5 bg-primary' : 'w-1.5 h-1.5 bg-base-content/25 hover:bg-base-content/40'"
+                      [attr.aria-label]="item.label"
+                      [title]="item.label">
+              </button>
+            }
           </div>
         </div>
 
-        <!-- Carousel Controls (Top Right) -->
-        <div class="flex justify-end gap-2 mb-3">
-          <button class="btn btn-circle btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
-                  [disabled]="selectedPeriod() === 'day'"
-                  (click)="prevSlide()">
-            ❮
-          </button>
-          <button class="btn btn-circle btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
-                  [disabled]="selectedPeriod() === 'day'"
-                  (click)="nextSlide()">
-            ❯
-          </button>
+        <!-- Desktop Cards Grid (All 4 cards in a row) -->
+        <div class="hidden sm:grid sm:grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-4 mb-3 sm:mb-4">
+          @for (item of periodMetadata; track item.period) {
+            <ng-container *ngTemplateOutlet="periodCardTpl; context: { $implicit: item }"></ng-container>
+          }
         </div>
 
-        <!-- Carousel Section -->
-        <div class="relative w-full overflow-hidden">
+        <!-- Carousel Section (Swipeable with touch/drag gestures) -->
+        <div class="relative w-full overflow-hidden rounded-2xl select-none doughnut-card-desktop touch-pan-y"
+             [style.--desktop-doughnut-min-h]="desktopDoughnutMinHeight()"
+             (touchstart)="onChartTouchStart($event)"
+             (touchmove)="onChartTouchMove($event)"
+             (touchend)="onChartTouchEnd($event)"
+             (mousedown)="onChartMouseDown($event)"
+             (mousemove)="onChartMouseMove($event)"
+             (mouseup)="onChartMouseUp($event)"
+             (mouseleave)="onChartMouseUp($event)">
           
-          <!-- Main Container: Grid layout where all slides occupy the same cell -->
-          <div class="grid grid-cols-1 w-full relative">
+          <!-- Main Container: Flex slider with GPU transform -->
+          <div class="flex w-full will-change-transform doughnut-card-desktop"
+               [class.transition-transform]="!isChartSwiping"
+               [class.duration-300]="!isChartSwiping"
+               [class.ease-out]="!isChartSwiping"
+               [style.transform]="getChartTransform()">
             
             <!-- Slide 1: Doughnut Chart -->
-            <div class="col-start-1 row-start-1 w-full" [ngClass]="getSlideClass(0)">
-              <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5 sm:p-6 lg:p-10 w-full h-full">
+            <div class="w-full shrink-0 flex flex-col doughnut-card-desktop">
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 px-5 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-5 w-full h-full flex flex-col justify-center doughnut-card-desktop">
                 <app-category-doughnut
-                  [breakdown]="getCategoryBreakdown(selectedPeriod())"
+                  class="w-full h-full flex flex-col justify-center"
+                  [breakdown]="currentCategoryBreakdown()"
                   [totalAmount]="generalReport()?.totals?.[selectedPeriod()] || 0"
-                  [periodTitle]="getPeriodTitle()">
+                  [periodTitle]="getPeriodTitle()"
+                  [maxAmount]="maxCategoryAmount()">
                 </app-category-doughnut>
               </div>
             </div>
 
-            <!-- Slide 2: Timeline Bar Chart -->
-            <div class="col-start-1 row-start-1 w-full" [ngClass]="getSlideClass(1)">
-              <div class="card bg-base-100 shadow-sm border border-base-content/20 p-5 sm:p-6 lg:p-10 w-full h-full">
+            <!-- Slide 2: Timeline Bar Chart (only when period is not 'day') -->
+            @if (selectedPeriod() !== 'day') {
+              <div class="w-full shrink-0 flex flex-col doughnut-card-desktop">
+                <div class="card bg-base-100 shadow-sm border border-base-content/20 px-5 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-5 w-full h-full doughnut-card-desktop">
                 <div class="flex flex-col justify-between h-full">
                   
                   <!-- Header -->
-                  <div class="mb-4 sm:mb-6 flex justify-between items-start">
+                  <div class="mb-2 sm:mb-3 flex justify-between items-start">
                     <div>
                       <h3 class="font-bold text-base sm:text-lg capitalize text-base-content/70">
                         {{ selectedPeriod() === 'week' ? 'Esta Semana' : selectedPeriod() === 'month' ? 'Este Mes' : 'Este Año' }}
@@ -282,8 +210,8 @@
                       </div>
                     </div>
                     <div class="text-right">
-                      <div class="text-base sm:text-xl font-bold cursor-default" [title]="getTimelineAverageTooltip()">
-                        {{ getTimelineAverage() }}
+                      <div class="text-base sm:text-xl font-bold cursor-default" [title]="timelineAverageTooltip()">
+                        {{ timelineAverage() }}
                       </div>
                       <div class="text-[11px] text-base-content/50">Promedio</div>
                     </div>
@@ -293,10 +221,10 @@
                   @if (selectedPeriod() === 'month') {
                     <!-- Mobile View (< md): Two stacked rows of 15 days each -->
                     <div class="flex flex-col gap-3 md:hidden w-full">
-                      @for (row of getTimelineMonthRows(); track $index; let rIdx = $index) {
+                      @for (row of timelineMonthRows(); track $index; let rIdx = $index) {
                         <div>
                           <div class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 mb-1">
-                            {{ rIdx === 0 ? 'Días 1 a 15' : 'Días 16 a ' + getTimelineData().length }}
+                            {{ rIdx === 0 ? 'Días 1 a 15' : 'Días 16 a ' + timelineData().length }}
                           </div>
                           <div class="h-24 flex items-end justify-between gap-1 px-0.5 w-full">
                             @for (bar of row; track bar.fullLabel) {
@@ -330,8 +258,8 @@
 
                     <!-- Desktop View (>= md): Single continuous row of all 30/31 days -->
                     <div class="hidden md:block w-full">
-                      <div class="h-56 md:h-64 flex items-end justify-between gap-1 md:gap-1.5 px-0.5 w-full">
-                        @for (bar of getTimelineData(); track bar.fullLabel) {
+                      <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1 md:gap-1.5 px-0.5 w-full">
+                        @for (bar of timelineData(); track bar.fullLabel) {
                           <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
                                data-timeline-bar="true"
                                (click)="selectTimelineBar(bar, $event)"
@@ -344,7 +272,7 @@
                             </div>
                             
                             <!-- Bar Background (capsule) -->
-                            <div class="w-full max-w-[40px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                            <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
                                  [class.ring-2]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.ring-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel">
                               <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
@@ -354,7 +282,7 @@
                             </div>
 
                             <!-- Label -->
-                            <div class="mt-2 text-xs font-semibold text-base-content/60 w-full text-center truncate transition-colors"
+                            <div class="mt-1.5 text-xs font-semibold text-base-content/60 w-full text-center truncate transition-colors shrink-0"
                                  [class.text-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.font-bold]="activeTimelineBar()?.fullLabel === bar.fullLabel">
                               {{ bar.label }}
@@ -367,8 +295,8 @@
                   } @else {
                     <!-- Week and Year: Single row across all screen sizes -->
                     <div class="w-full">
-                      <div class="h-44 sm:h-56 md:h-64 flex items-end justify-between gap-1.5 sm:gap-3 px-0.5 w-full">
-                        @for (bar of getTimelineData(); track bar.fullLabel) {
+                      <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1.5 sm:gap-3 px-0.5 w-full">
+                        @for (bar of timelineData(); track bar.fullLabel) {
                           <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
                                data-timeline-bar="true"
                                (click)="selectTimelineBar(bar, $event)"
@@ -381,7 +309,7 @@
                             </div>
                             
                             <!-- Bar Background (capsule) -->
-                            <div class="w-full max-w-[48px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                            <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
                                  [class.ring-2]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.ring-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel">
                               <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
@@ -391,7 +319,7 @@
                             </div>
 
                             <!-- Label -->
-                            <div class="mt-2 text-xs sm:text-sm font-semibold text-base-content/60 w-full text-center truncate transition-colors"
+                            <div class="mt-1.5 text-xs sm:text-sm font-semibold text-base-content/60 w-full text-center truncate transition-colors shrink-0"
                                  [class.text-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.font-bold]="activeTimelineBar()?.fullLabel === bar.fullLabel">
                               {{ bar.label }}
@@ -403,110 +331,177 @@
                     </div>
                   }
 
-                  <!-- Summary metrics footer -->
-                  @if (getTimelinePeak(); as peak) {
-                    @let count = getTimelineActiveCount();
-                    <div class="mt-4 pt-3 border-t border-base-content/10 flex items-center justify-between text-xs text-base-content/70">
-                      <div class="flex items-center gap-1.5 truncate">
-                        <span class="font-medium text-base-content/50">Pico:</span>
+                  <!-- Summary metrics footer (always present to preserve stable card structure) -->
+                  @let peak = timelinePeak();
+                  @let count = timelineActiveCount();
+                  <div class="mt-2 pt-2 border-t border-base-content/10 flex items-center justify-between text-xs text-base-content/70">
+                    <div class="flex items-center gap-1.5 truncate">
+                      <span class="font-medium text-base-content/50">Pico:</span>
+                      @if (peak) {
                         <span class="font-semibold text-base-content truncate">{{ peak.label }}</span>
                         <span class="font-bold text-error">(${{ peak.amount | number:'1.0-0' }})</span>
-                      </div>
-                      <div class="shrink-0">
-                        <span class="font-medium text-base-content/50">Días con gasto:</span>
-                        <span class="font-semibold text-base-content ml-1">{{ count.active }} de {{ count.total }}</span>
-                      </div>
+                      } @else {
+                        <span class="font-semibold text-base-content/50 truncate">Sin gastos ($0)</span>
+                      }
                     </div>
-                  }
+                    <div class="shrink-0">
+                      <span class="font-medium text-base-content/50">Días con gasto:</span>
+                      <span class="font-semibold text-base-content ml-1">{{ count.active }} de {{ count.total }}</span>
+                    </div>
+                  </div>
 
                 </div>
               </div>
             </div>
+          }
 
           </div>
 
         </div>
+
+        <!-- Chart Carousel Controls & Indicators (Below the chart card) -->
+        @if (selectedPeriod() !== 'day') {
+          <div class="flex justify-center items-center gap-3 mt-3 sm:mt-4 mb-6 sm:mb-8">
+            <button class="btn btn-circle btn-xs sm:btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+                    (click)="prevSlide()"
+                    title="Gráfico anterior"
+                    aria-label="Gráfico anterior">
+              ❮
+            </button>
+            
+            <div class="flex items-center gap-1.5">
+              <button (click)="goToSlide(0)" 
+                      class="text-xs px-3 py-1 rounded-full transition-all duration-200 border"
+                      [ngClass]="activeSlide() === 0 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
+                Categorías
+              </button>
+              <button (click)="goToSlide(1)" 
+                      class="text-xs px-3 py-1 rounded-full transition-all duration-200 border"
+                      [ngClass]="activeSlide() === 1 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
+                Evolución
+              </button>
+            </div>
+
+            <button class="btn btn-circle btn-xs sm:btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+                    (click)="nextSlide()"
+                    title="Gráfico siguiente"
+                    aria-label="Gráfico siguiente">
+              ❯
+            </button>
+          </div>
+        }
 
       </div>
     }
     
     @if (creditCards().length > 0) {
-      <div class="mt-8">
-        <h2 class="text-2xl font-bold mb-4">Tus Tarjetas</h2>
+      <div class="mt-6 sm:mt-8">
+        <h2 class="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Tus Tarjetas</h2>
         
-        <!-- Native DaisyUI Stats Block -->
-        <div class="stats stats-vertical md:stats-horizontal auto-cols-fr md:grid-cols-2 shadow w-full border border-base-content/20 mb-6">
-          <div class="stat">
+        <!-- Native DaisyUI Stats Block (compact on mobile) -->
+        <div class="stats stats-vertical sm:stats-horizontal shadow-sm w-full border border-base-content/20 mb-4 bg-base-100">
+          <div class="stat py-3 px-4 sm:p-4">
             <div class="stat-figure text-error">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-7 w-7 sm:h-8 sm:w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
             </div>
-            <div class="stat-title text-base-content/70">Deuda Global (Crédito)</div>
-            <div class="stat-value text-error">${{ globalDebt() | number:'1.0-0' }}</div>
-            <div class="stat-desc">Suma de todas las tarjetas</div>
+            <div class="stat-title text-xs sm:text-sm text-base-content/70 font-medium">Deuda Global (Crédito)</div>
+            <div class="stat-value text-error text-2xl sm:text-3xl font-extrabold tracking-tight">${{ globalDebt() | number:'1.0-0' }}</div>
+            <div class="stat-desc text-[11px] sm:text-xs">Suma de todas las tarjetas</div>
           </div>
           
-          <div class="stat">
+          <div class="stat py-3 px-4 sm:p-4">
             <div class="stat-figure text-success">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-7 w-7 sm:h-8 sm:w-8 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <div class="stat-title text-base-content/70">Límite Global Disponible</div>
-            <div class="stat-value text-success">${{ globalLimit() | number:'1.0-0' }}</div>
-            <div class="stat-desc">Remanente de tus tarjetas</div>
+            <div class="stat-title text-xs sm:text-sm text-base-content/70 font-medium">Límite Global Disponible</div>
+            <div class="stat-value text-success text-2xl sm:text-3xl font-extrabold tracking-tight">${{ globalLimit() | number:'1.0-0' }}</div>
+            <div class="stat-desc text-[11px] sm:text-xs">Remanente de tus tarjetas</div>
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
           @for (card of creditCards(); track card.id) {
-            @if (creditReports()[card.id]) {
-              <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1 basis-[100%] md:basis-[calc(50%-1.5rem)] lg:basis-[calc(33.33%-1.5rem)] min-w-[280px]">
-                <div class="card-body">
-                  <h3 class="card-title text-xl">{{ getEntityName(card.entity_id) }}{{ card.name }}</h3>
-                  
-                  <div class="divider my-1"></div>
-                  
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-base-content/70 font-medium">Gasto último resumen</span>
-                    <span class="font-bold text-xl">${{ creditReports()[card.id].last_statement_total | number:'1.0-0' }}</span>
+            @if (creditReports()[card.id]; as report) {
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 hover:border-base-content/35 transition-colors">
+                <div class="card-body p-3.5 sm:p-4">
+                  <!-- Card Header -->
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    </div>
+                    <h3 class="font-bold text-base sm:text-lg truncate text-base-content flex-1">
+                      {{ getEntityName(card.entity_id) }}{{ card.name }}
+                    </h3>
                   </div>
                   
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-base-content/70 font-medium">Variación anterior</span>
-                    <span class="font-medium flex items-center gap-1"
-                          [class.text-success]="creditReports()[card.id].variation_pct <= 0"
-                          [class.text-error]="creditReports()[card.id].variation_pct > 0">
-                      @if (creditReports()[card.id].variation_pct > 0) {
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                        +{{ creditReports()[card.id].variation_pct }}%
-                      } @else if (creditReports()[card.id].variation_pct < 0) {
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
-                        {{ creditReports()[card.id].variation_pct }}%
-                      } @else {
-                        0%
-                      }
-                    </span>
+                  <div class="border-t border-base-content/10 my-2"></div>
+                  
+                  <!-- Key Metrics Rows -->
+                  <div class="space-y-2 text-xs sm:text-sm">
+                    <div class="flex justify-between items-center">
+                      <span class="text-base-content/70 font-medium">Gasto último resumen</span>
+                      <span class="font-bold text-lg sm:text-xl text-base-content tracking-tight">${{ report.last_statement_total | number:'1.0-0' }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                      <span class="text-base-content/70 font-medium">Variación anterior</span>
+                      <span class="font-semibold text-xs sm:text-sm flex items-center gap-0.5"
+                            [class.text-success]="report.variation_pct <= 0"
+                            [class.text-error]="report.variation_pct > 0">
+                        @if (report.variation_pct > 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                          </svg>
+                          +{{ report.variation_pct }}%
+                        } @else if (report.variation_pct < 0) {
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                          </svg>
+                          {{ report.variation_pct }}%
+                        } @else {
+                          0%
+                        }
+                      </span>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                      <span class="text-base-content/70 font-medium">Cuotas futuras</span>
+                      <span class="font-semibold text-sm sm:text-base text-base-content/90">${{ report.future_statements_debt | number:'1.0-0' }}</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                      <span class="text-base-content/80 font-semibold">Deuda total actual</span>
+                      <span class="font-extrabold text-error text-lg sm:text-xl tracking-tight">${{ report.total_current_debt | number:'1.0-0' }}</span>
+                    </div>
                   </div>
 
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-base-content/70 font-medium">Cuotas futuras (flotantes)</span>
-                    <span class="font-medium text-lg">${{ creditReports()[card.id].future_statements_debt | number:'1.0-0' }}</span>
-                  </div>
-                  
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-base-content/70 font-medium">Deuda total actual</span>
-                    <span class="font-bold text-error text-xl">${{ creditReports()[card.id].total_current_debt | number:'1.0-0' }}</span>
-                  </div>
+                  <div class="border-t border-base-content/10 my-2"></div>
 
-                  <div class="divider my-1"></div>
+                  <!-- Limit Utilization & Free Limit -->
+                  <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-xs sm:text-sm">
+                      <span class="text-base-content/70 font-medium">Uso del límite</span>
+                      <span class="font-bold text-sm sm:text-base"
+                            [class.text-error]="report.utilization_pct > 80"
+                            [class.text-warning]="report.utilization_pct > 50 && report.utilization_pct <= 80"
+                            [class.text-base-content]="report.utilization_pct <= 50">
+                        {{ report.utilization_pct }}%
+                      </span>
+                    </div>
 
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-base-content/70 font-medium">Uso del Límite</span>
-                    <span class="font-bold text-lg">{{ creditReports()[card.id].utilization_pct }}%</span>
-                  </div>
-                  <progress class="progress progress-error w-full mb-1 h-3" 
-                            [value]="creditReports()[card.id].utilization_pct" max="100"></progress>
-                  <div class="text-right mt-2">
-                    <span class="text-base-content/70 font-medium text-lg mr-1">Libre:</span>
-                    <span class="font-black text-success text-2xl">${{ creditReports()[card.id].available_limit | number:'1.0-0' }}</span>
+                    <progress class="progress w-full h-2 rounded-full" 
+                              [class.progress-error]="report.utilization_pct > 80"
+                              [class.progress-warning]="report.utilization_pct > 50 && report.utilization_pct <= 80"
+                              [class.progress-primary]="report.utilization_pct <= 50"
+                              [value]="report.utilization_pct" max="100">
+                    </progress>
+
+                    <div class="flex justify-between items-center pt-1">
+                      <span class="text-xs sm:text-sm text-base-content/70 font-medium">Límite libre:</span>
+                      <span class="font-extrabold text-success text-lg sm:text-xl tracking-tight">${{ report.available_limit | number:'1.0-0' }}</span>
+                    </div>
                   </div>
                 </div>
               </div>

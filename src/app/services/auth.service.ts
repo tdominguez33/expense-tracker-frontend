@@ -42,7 +42,7 @@ export class AuthService {
 
     return this.http.post<{access_token: string, token_type: string}>(`${baseUrl}/token`, formData)
       .pipe(
-        timeout(6000),
+        timeout(4000),
         tap({
           next: (response) => {
             if (apiUrl) {

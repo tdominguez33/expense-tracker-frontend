@@ -1,7 +1,7 @@
-<div class="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-24">
+<div class="flex flex-col md:flex-row items-center md:items-center justify-center gap-6 lg:gap-16 xl:gap-24 w-full my-auto">
   
   <!-- Chart Container -->
-  <div class="flex-shrink-0 w-48 h-48 sm:w-64 sm:h-64 relative flex justify-center mt-1 sm:mt-2">
+  <div class="flex-shrink-0 w-48 h-48 sm:w-64 sm:h-64 relative flex justify-center mt-1 md:mt-0">
     
     <!-- SVG Doughnut -->
     <svg viewBox="0 0 42 42" class="absolute inset-0 w-full h-full -rotate-90 filter drop-shadow-sm pointer-events-none">
@@ -57,28 +57,79 @@
 
   <!-- Legend -->
   @if (showLegend()) {
-    <div class="flex-1 w-full">
+    <div class="flex-1 w-full min-w-0">
       @if (periodTitle()) {
-        <h3 class="font-bold text-base sm:text-lg mb-3 sm:mb-6 text-center md:text-left capitalize">{{ periodTitle() }}</h3>
+        <h3 class="font-bold text-base sm:text-lg mb-2 sm:mb-3 text-center md:text-left capitalize">{{ periodTitle() }}</h3>
       }
       @if (breakdown().length === 0) {
         <p class="text-base-content/50 italic text-center md:text-left">{{ emptyMessage() }}</p>
       } @else {
-        <ul class="grid grid-cols-2 gap-x-3 sm:gap-x-8 gap-y-1 sm:gap-y-2 max-h-52 sm:max-h-none overflow-y-auto sm:overflow-y-visible pr-1 sm:pr-0" (mouseleave)="onCategoryLeave()">
-          @for (cat of breakdown(); track cat.id; let i = $index) {
-            <li class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm md:text-base overflow-hidden py-1 sm:py-2 transition-opacity duration-300 cursor-pointer select-none"
-                [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
-                (mouseenter)="onCategoryHover(cat.id)"
-                (click)="onCategoryClick(cat.id, $event)"
-                [attr.data-category-id]="cat.id">
-              <span class="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0 transition-transform duration-200" 
+        <!-- Reusable Category Item Template -->
+        <ng-template #categoryItem let-cat="cat">
+          <li class="flex items-center justify-between gap-2.5 text-xs sm:text-sm py-1.5 sm:py-1 px-2 rounded-lg transition-all duration-200 cursor-pointer select-none hover:bg-base-200/50 active:bg-base-200/80"
+              [class.bg-base-200/60]="activeCategoryId() === cat.id"
+              [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
+              (mouseenter)="onCategoryHover(cat.id)"
+              (click)="onCategoryClick(cat.id, $event)"
+              [attr.data-category-id]="cat.id">
+            
+            <!-- Left: Bullet and Name -->
+            <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+              <span class="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full flex-shrink-0 transition-transform duration-200" 
                     [class.scale-125]="activeCategoryId() === cat.id"
                     [style.background-color]="cat.color"></span>
-              <span class="font-medium text-base-content/70 truncate transition-colors"
+              <span class="font-medium text-base-content/80 truncate transition-colors"
                     [class.text-base-content]="activeCategoryId() === cat.id"
-                    [class.font-bold]="activeCategoryId() === cat.id">{{ cat.pct }}% - {{ cat.name }}</span>
-              <span class="font-bold flex-shrink-0 ml-auto"
-                    [class.text-base-content]="activeCategoryId() === cat.id">${{ cat.amount | number:'1.0-0' }}</span>
+                    [class.font-bold]="activeCategoryId() === cat.id">{{ cat.name }}</span>
+            </div>
+
+            <!-- Right: Percentage and Amount -->
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+              <span class="w-10 sm:w-11 text-center text-[11px] sm:text-xs font-semibold text-base-content/60 bg-base-200/80 px-1 py-0.5 rounded transition-colors tabular-nums shrink-0"
+                    [class.text-base-content/90]="activeCategoryId() === cat.id"
+                    [class.bg-base-300/90]="activeCategoryId() === cat.id">{{ cat.pct }}%</span>
+              <span class="font-bold text-xs sm:text-sm text-base-content text-right tabular-nums whitespace-nowrap shrink-0 transition-colors"
+                    [style.min-width.ch]="amountMinWidthCh()"
+                    [class.text-primary]="activeCategoryId() === cat.id">${{ cat.amount | number:'1.0-0' }}</span>
+            </div>
+
+          </li>
+        </ng-template>
+
+        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-1.5" (mouseleave)="onCategoryLeave()">
+          <!-- Top 5 categories (always visible) -->
+          @for (cat of topCategories(); track cat.id) {
+            <ng-container *ngTemplateOutlet="categoryItem; context: { cat: cat }"></ng-container>
+          }
+
+          <!-- Categories beyond top 5 (animated accordion on mobile, inline grid on desktop) -->
+          @if (extraCategories().length > 0) {
+            <li class="col-span-1 sm:contents list-none">
+              <div class="expand-grid"
+                   [class.expanded]="isExpanded()">
+                <div class="expand-grid-inner min-h-0 overflow-hidden flex flex-col gap-y-1">
+                  @for (cat of extraCategories(); track cat.id) {
+                    <ng-container *ngTemplateOutlet="categoryItem; context: { cat: cat }"></ng-container>
+                  }
+                </div>
+              </div>
+            </li>
+
+            <!-- Mobile Toggle "Ver más / Ver menos" Button -->
+            <li class="sm:hidden pt-1 list-none col-span-1">
+              <button type="button"
+                      (click)="toggleExpand($event)"
+                      (touchstart)="$event.stopPropagation()"
+                      (mousedown)="$event.stopPropagation()"
+                      class="btn btn-ghost btn-xs w-full text-xs font-semibold text-primary hover:bg-primary/10 gap-1.5 h-8 min-h-0 normal-case rounded-lg transition-all duration-200">
+                <span>{{ isExpanded() ? 'Ver menos' : 'Ver más (' + extraCategories().length + ' más)' }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="h-3.5 w-3.5 transition-transform duration-300 ease-out"
+                     [class.rotate-180]="isExpanded()"
+                     viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
             </li>
           }
         </ul>
