@@ -15,7 +15,7 @@
           </div>
           <input type="text" 
                  class="input input-bordered w-full pl-9 pr-8 text-base sm:text-sm" 
-                 placeholder="Buscar gasto..." 
+                 [placeholder]="isMobile() ? 'Buscar' : 'Buscar gasto...'" 
                  [ngModel]="searchTerm()" 
                  (ngModelChange)="onSearchChange($event)" />
           @if (searchTerm()) {
@@ -218,13 +218,13 @@
 
 <!-- Modal Nuevo Gasto -->
 <dialog id="tx_modal" class="modal">
-  <div class="modal-box w-11/12 max-w-2xl bg-base-100 overflow-x-hidden">
-    <h3 class="font-bold text-2xl mb-6">{{ editingTxId() ? 'Editar Gasto' : 'Nuevo Gasto' }}</h3>
+  <div class="modal-box w-11/12 max-w-2xl bg-base-100 overflow-x-hidden p-5 sm:p-6">
+    <h3 tabindex="-1" autofocus class="font-bold text-xl sm:text-2xl mb-3 sm:mb-5 outline-none">{{ editingTxId() ? 'Editar Gasto' : 'Nuevo Gasto' }}</h3>
     
-    <form [formGroup]="txForm" (ngSubmit)="onSubmit()" class="space-y-4">
+    <form [formGroup]="txForm" (ngSubmit)="onSubmit()" class="space-y-3 sm:space-y-4">
       
       <div class="form-control w-full">
-        <label class="label"><span class="label-text font-medium">Monto</span></label>
+        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Monto</span></label>
         <label class="input input-bordered flex items-center gap-2">
           $
           <input type="text" formControlName="total_amount" class="grow" placeholder="0,00" />
@@ -232,45 +232,43 @@
       </div>
       
       <div class="form-control w-full">
-        <label class="label"><span class="label-text font-medium">Descripción (Opcional)</span></label>
+        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Descripción (Opcional)</span></label>
         <input type="text" formControlName="description" class="input input-bordered w-full" placeholder="Ej: Supermercado..." />
       </div>
 
-      <div class="grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
-        <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Cuenta</span></label>
-          <div class="relative w-full min-w-0">
-            <select formControlName="account_id" class="select select-bordered w-full min-w-0 max-w-full text-sm pl-3 pr-8 opacity-0 absolute inset-0 z-10 cursor-pointer peer">
-              <option value="" disabled class="pr-4 pl-3">Selecciona una cuenta</option>
-              @for (acc of accounts(); track acc.id) {
-                <option [value]="acc.id" class="pr-4 pl-3">
-                  {{ getEntityName(acc.entity_id) }} - {{ acc.name }}&nbsp;&nbsp;
-                </option>
-              }
-            </select>
-            <div class="select select-bordered w-full min-w-0 flex items-center text-sm pl-3 pr-8 pointer-events-none peer-focus:outline peer-focus:outline-2 peer-focus:outline-offset-2 peer-focus:outline-primary">
-              <span class="truncate" [class.text-base-content/50]="!txForm.get('account_id')?.value">
-                {{ getSelectedAccountDisplay() }}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div class="form-control w-full">
+        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Categoría</span></label>
+        <select formControlName="category_id" class="select select-bordered w-full text-sm pl-3 pr-8">
+          <option value="" disabled class="pr-4 pl-3">Selecciona una categoría</option>
+          @for (cat of categories(); track cat.id) {
+            <option [value]="cat.id" class="pr-4 pl-3">{{ cat.name }}&nbsp;&nbsp;</option>
+          }
+        </select>
+      </div>
 
-        <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Categoría</span></label>
-          <select formControlName="category_id" class="select select-bordered w-full min-w-0 max-w-full text-sm pl-3 pr-8">
-            <option value="" disabled class="pr-4 pl-3">Selecciona una categoría</option>
-            @for (cat of categories(); track cat.id) {
-              <option [value]="cat.id" class="pr-4 pl-3">{{ cat.name }}&nbsp;&nbsp;</option>
+      <div class="form-control w-full">
+        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Cuenta</span></label>
+        <div class="relative w-full">
+          <select formControlName="account_id" class="select select-bordered w-full text-sm pl-3 pr-8 opacity-0 absolute inset-0 z-10 cursor-pointer peer">
+            <option value="" disabled class="pr-4 pl-3">Selecciona una cuenta</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.id" class="pr-4 pl-3">
+                {{ getEntityName(acc.entity_id) }} - {{ acc.name }}&nbsp;&nbsp;
+              </option>
             }
           </select>
+          <div class="select select-bordered w-full flex items-center text-sm pl-3 pr-8 pointer-events-none peer-focus:outline peer-focus:outline-2 peer-focus:outline-offset-2 peer-focus:outline-primary">
+            <span class="truncate" [class.text-base-content/50]="!txForm.get('account_id')?.value">
+              {{ getSelectedAccountDisplay() }}
+            </span>
+          </div>
         </div>
       </div>
 
       @if (showInstallments()) {
         <div class="grid grid-cols-2 gap-3 sm:gap-4 animate-fade-in min-w-0">
           <div class="form-control w-full min-w-0">
-            <label class="label"><span class="label-text font-medium">Cantidad de cuotas</span></label>
+            <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Cantidad de cuotas</span></label>
             <div class="join w-full">
               <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepInstallments(-1)">-</button>
               <input type="text" inputmode="numeric" formControlName="installments_count" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
@@ -279,10 +277,10 @@
           </div>
           
           <div class="form-control w-full min-w-0">
-            <label class="label"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+            <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
             <label class="input input-bordered flex items-center gap-2">
               $
-              <input type="text" formControlName="real_amount" class="grow min-w-0" placeholder="Monto total..." />
+              <input type="text" formControlName="real_amount" class="grow min-w-0" [placeholder]="isMobile() ? 'Total' : 'Monto total...'" />
             </label>
           </div>
         </div>
@@ -290,11 +288,11 @@
 
       <div class="grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
         <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Fecha</span></label>
+          <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Fecha</span></label>
           <input type="date" formControlName="transaction_date" class="input input-bordered w-full min-w-0 text-sm px-2 sm:px-4" />
         </div>
         <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Hora <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+          <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Hora <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
           @if (isMobile()) {
             <input type="time" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm text-center px-2" />
           } @else {
@@ -304,12 +302,12 @@
       </div>
 
       @if (formError()) {
-        <div role="alert" class="alert alert-error mt-4 py-2">
+        <div role="alert" class="alert alert-error mt-3 py-2.5">
           <span>{{ formError() }}</span>
         </div>
       }
 
-      <div class="modal-action mt-6">
+      <div class="modal-action mt-4 sm:mt-6">
         <button type="button" class="btn btn-ghost" (click)="closeModal()">Cancelar</button>
         <button type="submit" class="btn btn-primary" [disabled]="txForm.invalid || isSubmitting()">
           @if (isSubmitting()) {

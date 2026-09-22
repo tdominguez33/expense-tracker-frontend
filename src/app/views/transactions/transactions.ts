@@ -439,8 +439,8 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     const modal = document.getElementById('tx_modal') as HTMLDialogElement;
     modal.showModal();
     
-    // Evitar que se abra el teclado en móvil al editar
-    if (this.isMobile() && tx) {
+    // Evitar que se abra el teclado en móvil automáticamente al crear o editar
+    if (this.isMobile()) {
       setTimeout(() => {
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
@@ -462,9 +462,6 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     if (!val) return 'Selecciona una cuenta';
     const acc = this.accounts().find(a => a.id == val);
     if (!acc) return 'Selecciona una cuenta';
-    if (this.isMobile()) {
-      return acc.name;
-    }
     return `${this.getEntityName(acc.entity_id)} - ${acc.name}`;
   }
 

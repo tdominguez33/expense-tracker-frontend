@@ -131,7 +131,7 @@ describe('Transactions', () => {
     expect(component.txForm.get('transaction_time')?.value).toBe('14:30');
   });
 
-  it('should render full entity-account in dropdown options, and adapt field display for mobile vs desktop', () => {
+  it('should render full entity-account in dropdown options and in selected display for both mobile and desktop', () => {
     component.entities.set([{ id: 1, name: 'Santander' }]);
     component.accounts.set([{ id: 10, name: 'Visa Gold', entity_id: 1 }]);
     component.txForm.patchValue({ account_id: 10 });
@@ -142,16 +142,15 @@ describe('Transactions', () => {
     const options = accountSelect.querySelectorAll('option');
     expect(options[1].textContent).toContain('Santander - Visa Gold');
 
-    // Mobile display in closed field: only account name
+    // Both mobile and desktop now show full entity and account name
     component.isMobile.set(true);
-    expect(component.getSelectedAccountDisplay()).toBe('Visa Gold');
+    expect(component.getSelectedAccountDisplay()).toBe('Santander - Visa Gold');
 
-    // Desktop display in closed field: full entity and account
     component.isMobile.set(false);
     expect(component.getSelectedAccountDisplay()).toBe('Santander - Visa Gold');
   });
 
-  it('should display "Todos" on mobile and "Todas las categorías" on desktop in category filter', () => {
+  it('should display "Todos" on mobile and "Todas las categorías" on desktop in category filter, and adapt search placeholder', () => {
     // 1. Mobile
     component.isMobile.set(true);
     fixture.detectChanges();
@@ -159,9 +158,28 @@ describe('Transactions', () => {
     const firstOption = select.querySelector('option[value="all"]');
     expect(firstOption.textContent.trim()).toBe('Todos');
 
+    const searchInput = fixture.nativeElement.querySelector('input[type="text"]:not([formControlName])');
+    expect(searchInput.getAttribute('placeholder')).toBe('Buscar');
+
     // 2. Desktop
     component.isMobile.set(false);
     fixture.detectChanges();
     expect(firstOption.textContent.trim()).toBe('Todas las categorías');
+    expect(searchInput.getAttribute('placeholder')).toBe('Buscar gasto...');
+  });
+
+  it('should display "Total" on mobile and "Monto total..." on desktop for real_amount placeholder in transaction modal', () => {
+    component.showInstallments.set(true);
+
+    // Mobile
+    component.isMobile.set(true);
+    fixture.detectChanges();
+    const realAmountInput = fixture.nativeElement.querySelector('input[formControlName="real_amount"]');
+    expect(realAmountInput.getAttribute('placeholder')).toBe('Total');
+
+    // Desktop
+    component.isMobile.set(false);
+    fixture.detectChanges();
+    expect(realAmountInput.getAttribute('placeholder')).toBe('Monto total...');
   });
 });
