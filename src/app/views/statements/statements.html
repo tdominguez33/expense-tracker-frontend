@@ -2,8 +2,8 @@
   @if (!routeId() && !routeAccountId()) {
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-4xl font-bold mb-2">Resúmenes</h1>
-        <p class="text-base-content/70">Tus tarjetas de crédito y sus últimos resúmenes.</p>
+        <h1 class="text-3xl sm:text-4xl font-bold mb-1 sm:mb-2">Resúmenes</h1>
+        <p class="text-base-content/70 text-sm sm:text-base">Tus tarjetas de crédito y sus últimos resúmenes.</p>
       </div>
     </div>
     
@@ -19,15 +19,34 @@
       </div>
     } @else {
       @for (acc of accounts(); track acc.id) {
-        <div class="mb-10">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-            <h2 class="text-2xl font-bold text-base-content">{{ getEntityName(acc.entity_id) }}{{ acc.name }}</h2>
-            <div class="flex gap-2">
-              <button class="btn btn-sm btn-primary shadow-sm" (click)="openModal(undefined, acc.id)">
+        <div class="mb-12 sm:mb-16 pb-8 sm:pb-12 border-b border-base-content/10 last:border-b-0 last:pb-0 last:mb-0">
+          @let entityOnly = getEntityOnlyName(acc.entity_id);
+          <div class="flex items-center justify-between gap-3 mb-5 sm:mb-6">
+            <div class="min-w-0 cursor-pointer group" (click)="viewAccount(acc.id)">
+              @if (entityOnly) {
+                <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-base-content leading-tight tracking-tight group-hover:text-primary transition-colors">
+                  {{ entityOnly }}
+                </h2>
+                <p class="text-sm sm:text-base md:text-lg font-semibold text-base-content/75 mt-0.5">
+                  {{ acc.name }}
+                </p>
+              } @else {
+                <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-base-content leading-tight tracking-tight group-hover:text-primary transition-colors">
+                  {{ acc.name }}
+                </h2>
+              }
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button class="hidden sm:inline-flex btn btn-sm btn-primary shadow-sm" (click)="openModal(undefined, acc.id)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                 Nuevo Resumen
               </button>
-              <button class="btn btn-sm btn-outline" (click)="viewAccount(acc.id)">Ver más</button>
+              <button class="btn btn-sm btn-outline gap-1" (click)="viewAccount(acc.id)">
+                <span>Ver más</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 opacity-40 -mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             </div>
           </div>
           
@@ -37,13 +56,14 @@
               <p class="text-md font-medium">No hay resúmenes para esta tarjeta</p>
             </div>
           } @else {
-            <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+            <!-- Vista Desktop (>= md): Tabla completa -->
+            <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
               <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
                 <thead>
                   <tr>
                     <th class="w-[22%]">Periodo</th>
-                    <th class="w-[14%]">Cierre</th>
-                    <th class="w-[14%]">Vencimiento</th>
+                    <th class="w-[14%] text-right">Cierre</th>
+                    <th class="w-[14%] text-right">Vencimiento</th>
                     <th class="w-[16%]">Total</th>
                     <th class="w-[22%]">Estado</th>
                     <th class="w-[12%]">Acciones</th>
@@ -53,8 +73,8 @@
                   @for (st of recentSts; track st.id) {
                     <tr class="hover cursor-pointer" (click)="viewStatement(st)">
                       <td class="font-medium truncate">{{ getStatementPeriod(st.start_date, st.closing_date) }}</td>
-                      <td>{{ st.closing_date }}</td>
-                      <td>{{ st.due_date }}</td>
+                      <td class="text-right whitespace-nowrap">{{ st.closing_date | date:'dd-MM-yyyy':'UTC' }}</td>
+                      <td class="text-right whitespace-nowrap">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</td>
                       <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
                       <td>
                         @let stState = getStatementState(st);
@@ -80,28 +100,95 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Vista Mobile (< md): Lista de tarjetas verticales sin scroll horizontal -->
+            <div class="md:hidden flex flex-col gap-3">
+              @for (st of recentSts; track st.id) {
+                @let stState = getStatementState(st);
+                <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
+                     (click)="viewStatement(st)">
+                  <!-- Encabezado de tarjeta: Período y Estado -->
+                  <div class="flex items-center justify-between gap-2 mb-2.5">
+                    <span class="font-bold text-base text-base-content tracking-tight">
+                      {{ getStatementPeriod(st.start_date, st.closing_date) }}
+                    </span>
+                    <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
+                         [class.badge-success]="stState === 'PAID'"
+                         [class.badge-warning]="stState === 'CLOSED'"
+                         [class.badge-info]="stState === 'OPEN'">
+                      {{ translateState(stState) }}
+                    </div>
+                  </div>
+
+                  <!-- Fechas y Monto Total -->
+                  <div class="flex items-end justify-between gap-3 pt-2.5 border-t border-base-content/10">
+                    <div class="space-y-1 text-xs text-base-content/70">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-base-content/50">Cierre:</span>
+                        <span class="font-medium text-base-content/90">{{ st.closing_date | date:'dd-MM-yyyy':'UTC' }}</span>
+                      </div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-base-content/50">Vencimiento:</span>
+                        <span class="font-medium text-base-content/90">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</span>
+                      </div>
+                    </div>
+
+                    <div class="text-right shrink-0">
+                      <span class="text-[10px] uppercase tracking-wider text-base-content/50 font-bold block">Total</span>
+                      <span class="text-lg font-bold text-error tracking-tight">
+                        ${{ (st.total_amount || 0) | number:'1.0-0' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Pie de tarjeta: Indicador "Ver detalle" y Botones de acción -->
+                  <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-base-content/10">
+                    <div class="flex items-center text-xs font-semibold text-primary">
+                      <span>Ver detalle</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                    <div class="flex gap-1" (click)="$event.stopPropagation()">
+                      <button type="button" class="btn btn-sm btn-circle btn-ghost text-info" (click)="openModal(st); $event.stopPropagation()" title="Editar" aria-label="Editar resumen">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button type="button" class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDelete(st); $event.stopPropagation()" title="Eliminar" aria-label="Eliminar resumen">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
           }
         </div>
       }
     }
   } @else if (!routeId() && routeAccountId()) {
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <div class="flex items-center gap-4">
-        <button class="btn btn-circle btn-ghost" (click)="closeView()" [disabled]="isLoading()">
+      <div class="flex items-start gap-2 sm:gap-3">
+        <button class="btn btn-circle btn-ghost shrink-0 -ml-2 -mt-1 sm:-mt-0.5" (click)="closeView()" [disabled]="isLoading()">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>
           @if (isLoading()) {
-            <div class="skeleton h-10 w-64 mb-2"></div>
+            <div class="skeleton h-8 sm:h-10 w-48 sm:w-64 mb-2"></div>
           } @else {
             @let acc = accounts().find(a => a.id === routeAccountId());
-            <h1 class="text-4xl font-bold mb-2">{{ getEntityName(acc?.entity_id) }}{{ acc?.name }}</h1>
+            @let entityOnly = getEntityOnlyName(acc?.entity_id);
+            @if (entityOnly) {
+              <h1 class="text-2xl sm:text-4xl font-bold text-base-content leading-tight">{{ entityOnly }}</h1>
+              <p class="text-base sm:text-xl font-medium text-base-content/70 mt-0.5">{{ acc?.name }}</p>
+            } @else {
+              <h1 class="text-2xl sm:text-4xl font-bold text-base-content mb-1 sm:mb-2 leading-tight">{{ acc?.name }}</h1>
+            }
           }
-          <p class="text-base-content/70">Historial completo de resúmenes de esta tarjeta.</p>
+          <p class="text-base-content/50 text-xs sm:text-sm mt-1">Historial completo de resúmenes de esta tarjeta.</p>
         </div>
       </div>
       
-      <button class="btn btn-primary shadow-sm" (click)="openModal()" [disabled]="isLoading()">
+      <button class="btn btn-primary shadow-sm w-full sm:w-auto" (click)="openModal()" [disabled]="isLoading()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
         Nuevo Resumen
       </button>
@@ -118,13 +205,14 @@
         <p class="text-sm mt-1">Crea tu primer resumen.</p>
       </div>
     } @else {
-      <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+      <!-- Vista Desktop (>= md): Tabla completa -->
+      <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
         <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
           <thead>
             <tr>
               <th class="w-[22%]">Periodo</th>
-              <th class="w-[14%]">Cierre</th>
-              <th class="w-[14%]">Vencimiento</th>
+              <th class="w-[14%] text-right">Cierre</th>
+              <th class="w-[14%] text-right">Vencimiento</th>
               <th class="w-[16%]">Total</th>
               <th class="w-[22%]">Estado</th>
               <th class="w-[12%]">Acciones</th>
@@ -134,8 +222,8 @@
             @for (st of filteredStatements(); track st.id) {
               <tr class="hover cursor-pointer" (click)="viewStatement(st)">
                 <td class="font-medium truncate">{{ getStatementPeriod(st.start_date, st.closing_date) }}</td>
-                <td>{{ st.closing_date }}</td>
-                <td>{{ st.due_date }}</td>
+                <td class="text-right whitespace-nowrap">{{ st.closing_date | date:'dd-MM-yyyy':'UTC' }}</td>
+                <td class="text-right whitespace-nowrap">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</td>
                 <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
                 <td>
                   @let stState = getStatementState(st);
@@ -161,30 +249,93 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Vista Mobile (< md): Lista de tarjetas verticales sin scroll horizontal -->
+      <div class="md:hidden flex flex-col gap-3">
+        @for (st of filteredStatements(); track st.id) {
+          @let stState = getStatementState(st);
+          <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
+               (click)="viewStatement(st)">
+            <!-- Encabezado de tarjeta: Período y Estado -->
+            <div class="flex items-center justify-between gap-2 mb-2.5">
+              <span class="font-bold text-base text-base-content tracking-tight">
+                {{ getStatementPeriod(st.start_date, st.closing_date) }}
+              </span>
+              <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
+                   [class.badge-success]="stState === 'PAID'"
+                   [class.badge-warning]="stState === 'CLOSED'"
+                   [class.badge-info]="stState === 'OPEN'">
+                {{ translateState(stState) }}
+              </div>
+            </div>
+
+            <!-- Fechas y Monto Total -->
+            <div class="flex items-end justify-between gap-3 pt-2.5 border-t border-base-content/10">
+              <div class="space-y-1 text-xs text-base-content/70">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-base-content/50">Cierre:</span>
+                  <span class="font-medium text-base-content/90">{{ st.closing_date | date:'dd-MM-yyyy':'UTC' }}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-base-content/50">Vencimiento:</span>
+                  <span class="font-medium text-base-content/90">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</span>
+                </div>
+              </div>
+
+              <div class="text-right shrink-0">
+                <span class="text-[10px] uppercase tracking-wider text-base-content/50 font-bold block">Total</span>
+                <span class="text-lg font-bold text-error tracking-tight">
+                  ${{ (st.total_amount || 0) | number:'1.0-0' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Pie de tarjeta: Indicador "Ver detalle" y Botones de acción -->
+            <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-base-content/10">
+              <div class="flex items-center text-xs font-semibold text-primary">
+                <span>Ver detalle</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+              <div class="flex gap-1" (click)="$event.stopPropagation()">
+                <button type="button" class="btn btn-sm btn-circle btn-ghost text-info" (click)="openModal(st); $event.stopPropagation()" title="Editar" aria-label="Editar resumen">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button type="button" class="btn btn-sm btn-circle btn-ghost text-error" (click)="confirmDelete(st); $event.stopPropagation()" title="Eliminar" aria-label="Eliminar resumen">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
     }
   } @else {
     <!-- DETAIL VIEW -->
-    <div class="flex items-center gap-4 mb-6">
-      <button class="btn btn-circle btn-ghost" (click)="closeView()" [disabled]="isLoading()">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-      </button>
-      <div class="flex-grow">
-        <h1 class="text-4xl font-bold mb-2">Detalle del Resumen</h1>
-        @if (isLoading()) {
-          <div class="skeleton h-5 w-48 mt-1"></div>
-        } @else {
-          <p class="text-base-content/70">{{ getStatementPeriod(viewingStatement()?.start_date, viewingStatement()?.closing_date) }}</p>
-        }
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div class="flex items-start gap-2 sm:gap-3">
+        <button class="btn btn-circle btn-ghost shrink-0 -ml-2 -mt-1 sm:-mt-0.5" (click)="closeView()" [disabled]="isLoading()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+        </button>
+        <div class="flex-grow">
+          <h1 class="text-2xl sm:text-4xl font-bold mb-1 sm:mb-2">Detalle del Resumen</h1>
+          @if (isLoading()) {
+            <div class="skeleton h-5 w-48 mt-1"></div>
+          } @else {
+            <p class="text-base-content/70">{{ getStatementPeriod(viewingStatement()?.start_date, viewingStatement()?.closing_date) }}</p>
+          }
+        </div>
       </div>
       <div>
         @let stStateDetail = getStatementState(viewingStatement());
         @if (stStateDetail === 'CLOSED') {
-          <button class="btn btn-success" (click)="markAsPaid(viewingStatement())" [disabled]="isLoading()">
+          <button class="btn btn-success w-full sm:w-auto" (click)="markAsPaid(viewingStatement())" [disabled]="isLoading()">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
             Marcar como pago
           </button>
         } @else if (stStateDetail === 'PAID') {
-          <button class="btn btn-outline btn-error" (click)="markAsUnpaid(viewingStatement())" [disabled]="isLoading()">
+          <button class="btn btn-outline btn-error w-full sm:w-auto" (click)="markAsUnpaid(viewingStatement())" [disabled]="isLoading()">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             Marcar como no pago
           </button>
@@ -198,11 +349,13 @@
       </div>
     } @else {
     <!-- STATS CARDS -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Vista Desktop (>= md): Gasto Total (50%) y Fechas apiladas Cierre sobre Vencimiento (50%) -->
+    <div class="hidden md:grid md:grid-cols-2 gap-6 mb-8">
+      <!-- Columna 1: Gasto Total (50%) -->
       <div class="card bg-base-100 shadow-sm border border-base-content/20">
-        <div class="card-body">
+        <div class="card-body flex flex-col justify-center">
           <h3 class="text-base-content/70 font-medium">Gasto Total</h3>
-          <p class="text-3xl font-bold text-error">${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}</p>
+          <p class="text-4xl font-bold text-error mt-1">${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}</p>
           @if (viewingStatement().tax_percentage > 0) {
             <div class="text-sm text-base-content/60 mt-1">
               ${{ getStatementSubtotal(viewingStatement()) | number:'1.0-0' }} + ${{ getStatementTaxAmount(viewingStatement()) | number:'1.0-0' }} (Impuestos)
@@ -210,23 +363,88 @@
           }
         </div>
       </div>
-      <div class="card bg-base-100 shadow-sm border border-base-content/20">
-        <div class="card-body">
-          <h3 class="text-base-content/70 font-medium">Fecha de Cierre</h3>
-          <p class="text-3xl font-bold">{{ viewingStatement().closing_date }}</p>
+
+      <!-- Columna 2: Cierre arriba de Vencimiento (50%) -->
+      <div class="flex flex-col gap-4">
+        <!-- Fecha de Cierre (arriba) -->
+        <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1">
+          <div class="card-body py-4 px-6 flex flex-row justify-between items-center">
+            <h3 class="text-base-content/70 font-medium">Fecha de Cierre</h3>
+            <p class="text-2xl font-bold text-base-content text-right">{{ viewingStatement().closing_date | date:'dd-MM-yyyy':'UTC' }}</p>
+          </div>
         </div>
-      </div>
-      <div class="card bg-base-100 shadow-sm border border-base-content/20">
-        <div class="card-body">
-          <h3 class="text-base-content/70 font-medium">Fecha de Vencimiento</h3>
-          <p class="text-3xl font-bold">{{ viewingStatement().due_date }}</p>
+        <!-- Fecha de Vencimiento (abajo) -->
+        <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1">
+          <div class="card-body py-4 px-6 flex flex-row justify-between items-center">
+            <h3 class="text-base-content/70 font-medium">Fecha de Vencimiento</h3>
+            <p class="text-2xl font-bold text-base-content text-right">{{ viewingStatement().due_date | date:'dd-MM-yyyy':'UTC' }}</p>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Vista Mobile (< md): Las 3 apiladas en formato ultra compacto para ahorrar espacio -->
+    <div class="md:hidden bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden mb-6">
+      <!-- 1. Gasto Total -->
+      <div class="p-3.5 bg-base-200/30">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-base-content/60 uppercase tracking-wider">Gasto Total</span>
+          <span class="text-2xl font-bold text-error tracking-tight">
+            ${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}
+          </span>
+        </div>
+        @if (viewingStatement().tax_percentage > 0) {
+          <div class="text-right text-xs text-base-content/60 mt-1">
+            ${{ getStatementSubtotal(viewingStatement()) | number:'1.0-0' }} + ${{ getStatementTaxAmount(viewingStatement()) | number:'1.0-0' }} (Impuestos)
+          </div>
+        }
+      </div>
+
+      <!-- 2. Fecha de Cierre -->
+      <div class="px-3.5 py-2.5 flex justify-between items-center">
+        <span class="text-xs font-medium text-base-content/70">Fecha de Cierre</span>
+        <span class="text-sm font-bold text-base-content">{{ viewingStatement().closing_date | date:'dd-MM-yyyy':'UTC' }}</span>
+      </div>
+
+      <!-- 3. Fecha de Vencimiento -->
+      <div class="px-3.5 py-2.5 flex justify-between items-center">
+        <span class="text-xs font-medium text-base-content/70">Fecha de Vencimiento</span>
+        <span class="text-sm font-bold text-base-content">{{ viewingStatement().due_date | date:'dd-MM-yyyy':'UTC' }}</span>
+      </div>
+    </div>
+
     <!-- TRANSACTIONS LIST -->
-    <div class="overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
-      <table class="table table-zebra table-md w-full">
+    <!-- Header de Gastos y Botón Especial de Ordenamiento (compartido para Desktop y Mobile) -->
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <h2 class="text-base sm:text-lg font-bold text-base-content">
+          Gastos<span class="hidden sm:inline"> del resumen</span>
+        </h2>
+        @if (getViewingDetails().length > 0) {
+          <span class="badge badge-sm badge-neutral font-semibold">{{ getViewingDetails().length }}</span>
+        }
+      </div>
+
+      <!-- Botón especial de ordenamiento -->
+      <button 
+        type="button" 
+        class="btn btn-sm bg-base-100 hover:bg-base-200 border border-base-content/20 shadow-sm normal-case font-normal shrink-0 gap-1.5"
+        (click)="toggleExpensesSort()"
+        [disabled]="getViewingDetails().length === 0"
+        [title]="expensesSort() === 'oldest' ? 'Cambiar orden a: Monto' : 'Cambiar orden a: Fecha'">
+        <span class="hidden sm:inline text-xs text-base-content/70">Ordenar:&nbsp;</span>
+        <span class="text-xs font-bold text-base-content">
+          {{ expensesSort() === 'oldest' ? 'Fecha' : 'Monto' }}
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-base-content/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Vista Desktop (>= md): Tabla completa -->
+    <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
+      <table class="table table-zebra table-md w-full [&_td]:py-3.5 [&_th]:py-3.5">
         <thead>
           <tr>
             <th>Concepto</th>
@@ -253,23 +471,37 @@
               <td class="font-bold text-error">
                 ${{ tx.installment_amount | number:'1.0-0' }}
               </td>
-              <td>{{ tx.transaction_date }}</td>
-              <td>
+              <td>{{ tx.transaction_date | date:'dd-MM-yyyy':'UTC' }}</td>
+              <td class="whitespace-nowrap">
                 @if (tx.installments_count > 1) {
-                  <div class="badge badge-outline">Cuota {{ tx.installment_number }} de {{ tx.installments_count }}</div>
+                  <div class="badge badge-outline text-xs whitespace-nowrap">
+                    <span class="hidden xl:inline">Cuota {{ tx.installment_number }} de {{ tx.installments_count }}</span>
+                    <span class="hidden lg:inline xl:hidden">{{ tx.installment_number }} de {{ tx.installments_count }}</span>
+                    <span class="lg:hidden">{{ tx.installment_number }}/{{ tx.installments_count }}</span>
+                  </div>
                 } @else {
-                  <span class="text-base-content/50 text-sm">Pago único</span>
+                  <span class="text-base-content/50 text-xs sm:text-sm whitespace-nowrap">Pago único</span>
                 }
               </td>
               <td>
                 @if (canPostpone(tx, viewingStatement())) {
-                  <button class="btn btn-xs btn-outline btn-primary" (click)="postponeTransaction(tx, true)" title="Mover todas las cuotas al siguiente mes">
-                    Mover a siguiente resumen
+                  <button class="btn btn-xs btn-outline btn-primary h-auto min-h-[1.75rem] py-1 px-2.5 gap-1.5 inline-flex items-center justify-center flex-wrap leading-tight text-center" 
+                          (click)="postponeTransaction(tx, true)" 
+                          title="Mover todas las cuotas al siguiente mes">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    <span>Mover<span class="hidden min-[1380px]:inline"> a siguiente resumen</span></span>
                   </button>
                 }
                 @if (canRevertPostpone(tx, viewingStatement())) {
-                  <button class="btn btn-xs btn-outline btn-warning" (click)="postponeTransaction(tx, false)" title="Devolver las cuotas al resumen original">
-                    Devolver a resumen original
+                  <button class="btn btn-xs btn-outline btn-warning h-auto min-h-[1.75rem] py-1 px-2.5 gap-1.5 inline-flex items-center justify-center flex-wrap leading-tight text-center" 
+                          (click)="postponeTransaction(tx, false)" 
+                          title="Devolver las cuotas al resumen original">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>Devolver<span class="hidden min-[1380px]:inline"> a resumen original</span></span>
                   </button>
                 }
               </td>
@@ -307,6 +539,81 @@
           </tfoot>
         }
       </table>
+    </div>
+
+    <!-- Vista Mobile (< md): Lista de gastos vertical sin scroll horizontal -->
+    <div class="md:hidden space-y-4">
+      @if (getViewingDetails().length === 0) {
+        <div class="flex flex-col items-center justify-center py-12 text-base-content/50 bg-base-200/30 rounded-box border border-base-content/20 border-dashed">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <p class="text-lg font-medium">No hay gastos en este resumen</p>
+        </div>
+      } @else {
+        <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden">
+          @for (tx of getViewingDetails(); track tx.id) {
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <div class="font-medium text-base text-base-content truncate">{{ tx.description || 'Sin descripción' }}</div>
+                  <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span class="badge font-bold border-0 text-xs" 
+                          [style.backgroundColor]="getCategoryColor(tx.category_id)"
+                          [style.color]="getTextColorForBackground(getCategoryColor(tx.category_id))">
+                      {{ getCategoryName(tx.category_id) }}
+                    </span>
+                    @if (tx.installments_count > 1) {
+                      <div class="badge badge-outline text-xs">Cuota {{ tx.installment_number }} de {{ tx.installments_count }}</div>
+                    } @else {
+                      <span class="text-xs text-base-content/50">Pago único</span>
+                    }
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="font-bold text-error text-base">
+                    ${{ tx.installment_amount | number:'1.0-0' }}
+                  </div>
+                  <div class="text-[11px] text-base-content/50 mt-0.5">
+                    {{ tx.transaction_date | date:'dd-MM-yyyy':'UTC' }}
+                  </div>
+                </div>
+              </div>
+
+              @if (canPostpone(tx, viewingStatement()) || canRevertPostpone(tx, viewingStatement())) {
+                <div class="flex justify-end gap-1.5 pt-1">
+                  @if (canPostpone(tx, viewingStatement())) {
+                    <button class="btn btn-xs btn-outline btn-primary" (click)="postponeTransaction(tx, true)" title="Mover todas las cuotas al siguiente mes">
+                      Mover a siguiente resumen
+                    </button>
+                  }
+                  @if (canRevertPostpone(tx, viewingStatement())) {
+                    <button class="btn btn-xs btn-outline btn-warning" (click)="postponeTransaction(tx, false)" title="Devolver las cuotas al resumen original">
+                      Devolver a resumen original
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Mobile Summary Card for Subtotal / Tax / Total -->
+        <div class="card bg-base-100 border border-base-content/20 shadow-sm p-4 space-y-2">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-base-content/70 font-medium">Subtotal:</span>
+            <span class="font-bold text-base-content">${{ getStatementSubtotal(viewingStatement()) | number:'1.0-0' }}</span>
+          </div>
+          @if (viewingStatement().tax_percentage > 0) {
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-base-content/70 font-medium">Impuestos ({{ viewingStatement().tax_percentage }}%):</span>
+              <span class="font-bold text-error">${{ getStatementTaxAmount(viewingStatement()) | number:'1.0-0' }}</span>
+            </div>
+          }
+          <div class="flex justify-between items-center text-base pt-2 border-t border-base-content/10 font-bold">
+            <span class="text-base-content">Total:</span>
+            <span class="text-error text-xl">${{ getStatementTotal(viewingStatement()) | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      }
     </div>
     }
   }

@@ -32,6 +32,28 @@ export class Statements implements OnInit {
   routeId = signal<number | null>(null);
   routeAccountId = signal<number | null>(null);
   viewingDetailsData = signal<{ items: any[], subtotal: number, tax_amount: number, total_amount: number } | null>(null);
+  expensesSort = signal<'oldest' | 'amount'>('oldest');
+
+  sortedViewingDetails = computed(() => {
+    const items = this.viewingDetailsData()?.items;
+    if (!items || items.length === 0) return [];
+
+    const sort = this.expensesSort();
+    return [...items].sort((a, b) => {
+      if (sort === 'amount') {
+        const amtA = Number(a.installment_amount) || 0;
+        const amtB = Number(b.installment_amount) || 0;
+        if (amtB !== amtA) return amtB - amtA;
+        return (a.transaction_date || '').localeCompare(b.transaction_date || '');
+      } else {
+        const dateA = a.transaction_date || '';
+        const dateB = b.transaction_date || '';
+        const cmp = dateA.localeCompare(dateB);
+        if (cmp !== 0) return cmp;
+        return (a.id || 0) - (b.id || 0);
+      }
+    });
+  });
   
   viewingStatement = computed(() => {
     const id = this.routeId();
@@ -99,6 +121,7 @@ export class Statements implements OnInit {
         const id = parseInt(idStr, 10);
         this.routeId.set(id);
         this.routeAccountId.set(null);
+        this.expensesSort.set('oldest');
         this.loadStatementItems(id);
       } else if (accIdStr) {
         this.routeId.set(null);
@@ -319,6 +342,12 @@ export class Statements implements OnInit {
     return ent ? `${ent.name} - ` : '';
   }
 
+  getEntityOnlyName(entityId?: number | null): string {
+    if (!entityId) return '';
+    const ent = this.entities().find(e => e.id === entityId);
+    return ent ? ent.name : '';
+  }
+
   getStatementPeriod(startDateStr: string | undefined, closingDateStr: string | undefined): string {
     if (!startDateStr || !closingDateStr) return '';
     
@@ -353,7 +382,12 @@ export class Statements implements OnInit {
     return `${months[parseInt(m)]} ${y}`;
   }
 
+  toggleExpensesSort() {
+    this.expensesSort.update(curr => curr === 'oldest' ? 'amount' : 'oldest');
+  }
+
   viewStatement(st: any) {
+    this.expensesSort.set('oldest');
     this.loadStatementItems(st.id);
     this.router.navigate(['/statements', st.id]);
   }
@@ -363,7 +397,7 @@ export class Statements implements OnInit {
   }
 
   getViewingDetails() {
-    return this.viewingDetailsData()?.items || [];
+    return this.sortedViewingDetails();
   }
 
   getStatementSubtotal(st: any): number {

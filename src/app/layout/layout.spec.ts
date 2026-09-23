@@ -140,4 +140,24 @@ describe('Layout', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('should not intercept touches or start edge swipe when touching an interactive button near the screen edge', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const preventDefaultMock = vi.fn();
+
+    const button = document.createElement('button');
+    button.className = 'btn btn-circle';
+
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 15, clientY: 150 }],
+      target: button,
+      cancelable: true,
+      preventDefault: preventDefaultMock
+    } as any);
+
+    expect(preventDefaultMock).not.toHaveBeenCalled();
+    expect(component['isEdgeSwiping']).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
 });

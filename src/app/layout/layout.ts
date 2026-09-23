@@ -94,6 +94,13 @@ export class Layout implements OnInit, OnDestroy {
         return;
       }
 
+      // Excluir elementos interactivos (botones, enlaces, etc.) para permitir clics normales sin interferencia de swipe
+      const isInteractive = target?.closest('button, a, input, select, textarea, [role="button"], .btn');
+      if (isInteractive) {
+        this.isEdgeSwiping = false;
+        return;
+      }
+
       // Touch starts near the left edge (within 35px) below the navbar
       if (touch.clientX <= 35) {
         this.isEdgeSwiping = true;
