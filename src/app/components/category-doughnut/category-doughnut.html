@@ -66,7 +66,7 @@
       } @else {
         <!-- Reusable Category Item Template -->
         <ng-template #categoryItem let-cat="cat">
-          <li class="flex items-center justify-between gap-2.5 text-xs sm:text-sm py-1.5 sm:py-1 px-2 rounded-lg transition-all duration-200 cursor-pointer select-none hover:bg-base-200/50 active:bg-base-200/80"
+          <li class="flex items-center justify-between gap-2.5 text-xs sm:text-sm py-1.5 sm:py-1 px-2 rounded-lg transition-all duration-200 cursor-pointer select-none hover:bg-base-200/50 active:bg-base-200/80 sm:pointer-events-auto"
               [class.bg-base-200/60]="activeCategoryId() === cat.id"
               [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
               (mouseenter)="onCategoryHover(cat.id)"

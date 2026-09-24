@@ -273,4 +273,103 @@ describe('CategoryDoughnut', () => {
     expect(component.isExpanded()).toBe(false);
     expect(expandGrid.classList.contains('expanded')).toBe(false);
   });
+
+  it('should support hovering and selecting all categories when there are 10 categories (5 top, 5 extra)', () => {
+    const tenCategories = Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      name: `Cat ${i + 1}`,
+      color: `#${i}${i}0000`,
+      amount: (10 - i) * 100,
+      pct: 10
+    }));
+
+    fixture.componentRef.setInput('breakdown', tenCategories);
+    fixture.componentRef.setInput('totalAmount', 5500);
+    fixture.detectChanges();
+
+    const items = fixture.nativeElement.querySelectorAll('li[data-category-id]');
+    expect(items.length).toBe(10);
+
+    // Verify template applies pointer-events class for desktop support
+    for (const item of items) {
+      expect(item.classList.contains('sm:pointer-events-auto')).toBe(true);
+    }
+
+    // Hover category 1 (top category, col 1 row 1)
+    items[0].dispatchEvent(new MouseEvent('mouseenter'));
+    expect(component.hoveredCategory()).toBe(null); // debounced
+    component.onCategoryHover(1);
+
+    // Test direct selection on extra categories (e.g. #6, #8, #10)
+    component.onCategoryClick(6);
+    expect(component.selectedCategory()).toBe(6);
+    expect(component.activeCategoryId()).toBe(6);
+
+    component.onCategoryClick(10);
+    expect(component.selectedCategory()).toBe(10);
+    expect(component.activeCategoryId()).toBe(10);
+  });
+
+  it('should auto-collapse when deselecting an extra category that auto-expanded the list', () => {
+    const eightCategories = Array.from({ length: 8 }, (_, i) => ({
+      id: i + 1,
+      name: `Cat ${i + 1}`,
+      color: `#${i}${i}0000`,
+      amount: (10 - i) * 100,
+      pct: 12.5
+    }));
+
+    fixture.componentRef.setInput('breakdown', eightCategories);
+    fixture.componentRef.setInput('totalAmount', 5500);
+    fixture.detectChanges();
+
+    expect(component.isExpanded()).toBe(false);
+
+    // 1. Select extra category #7 (idx 6) -> should auto-expand
+    component.onCategoryClick(7);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+    expect(component.selectedCategory()).toBe(7);
+
+    // 2. Click category #7 again to deselect -> should auto-collapse
+    component.onCategoryClick(7);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+    expect(component.selectedCategory()).toBe(null);
+
+    // 3. Select extra category #8 -> should auto-expand
+    component.onCategoryClick(8);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+
+    // Deselect via clearSelection (e.g. clicking outside) -> should auto-collapse
+    component.clearSelection();
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+
+    // 4. Select extra category #8 -> auto-expands
+    component.onCategoryClick(8);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+
+    // Select top category #1 -> should auto-collapse back
+    component.onCategoryClick(1);
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(false);
+    expect(component.selectedCategory()).toBe(1);
+
+    // 5. If manually expanded via toggleExpand, deselecting does NOT collapse
+    component.toggleExpand();
+    fixture.detectChanges();
+    expect(component.isExpanded()).toBe(true);
+
+    component.onCategoryClick(7);
+    expect(component.selectedCategory()).toBe(7);
+
+    component.onCategoryClick(7); // Deselect
+    fixture.detectChanges();
+    expect(component.selectedCategory()).toBe(null);
+    expect(component.isExpanded()).toBe(true); // Should remain expanded because user opened it manually
+  });
 });
+

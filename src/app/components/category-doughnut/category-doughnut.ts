@@ -38,9 +38,12 @@ export interface CategoryBreakdownItem {
     @media (min-width: 640px) {
       .expand-grid {
         display: contents !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
       }
       .expand-grid-inner {
         display: contents !important;
+        pointer-events: auto !important;
       }
     }
   `]
@@ -76,6 +79,7 @@ export class CategoryDoughnut implements OnDestroy {
   });
 
   isExpanded = signal<boolean>(false);
+  autoExpandedBySelection = signal<boolean>(false);
   private previousBreakdownKey: string | null = null;
 
   constructor() {
@@ -86,6 +90,7 @@ export class CategoryDoughnut implements OnDestroy {
       const currentKey = `${title}|${items.map(i => i.id).join(',')}`;
       if (this.previousBreakdownKey !== null && this.previousBreakdownKey !== currentKey) {
         this.isExpanded.set(false);
+        this.autoExpandedBySelection.set(false);
         this.deselectIfHidden();
       }
       this.previousBreakdownKey = currentKey;
@@ -94,6 +99,7 @@ export class CategoryDoughnut implements OnDestroy {
 
   toggleExpand(event?: Event) {
     event?.stopPropagation();
+    this.autoExpandedBySelection.set(false);
     const nextExpanded = !this.isExpanded();
     this.isExpanded.set(nextExpanded);
     if (!nextExpanded) {
@@ -151,8 +157,16 @@ export class CategoryDoughnut implements OnDestroy {
     this.selectedCategory.set(catId);
     this.hoveredCategory.set(null);
     const idx = this.breakdown().findIndex(c => c.id === catId);
-    if (idx >= 5 && !this.isExpanded()) {
-      this.isExpanded.set(true);
+    if (idx >= 5) {
+      if (!this.isExpanded()) {
+        this.isExpanded.set(true);
+        this.autoExpandedBySelection.set(true);
+      }
+    } else {
+      if (this.autoExpandedBySelection()) {
+        this.isExpanded.set(false);
+        this.autoExpandedBySelection.set(false);
+      }
     }
   }
 
@@ -168,6 +182,10 @@ export class CategoryDoughnut implements OnDestroy {
     if (this.hoverTimer) clearTimeout(this.hoverTimer);
     this.selectedCategory.set(null);
     this.hoveredCategory.set(null);
+    if (this.autoExpandedBySelection()) {
+      this.isExpanded.set(false);
+      this.autoExpandedBySelection.set(false);
+    }
   }
 
   @HostListener('document:click', ['$event'])

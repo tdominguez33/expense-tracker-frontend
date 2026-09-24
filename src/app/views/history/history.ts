@@ -2,7 +2,8 @@ import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener } 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
-import { CategoryDoughnut, CategoryBreakdownItem } from '../../components/category-doughnut/category-doughnut';
+import { CategoryBreakdownItem } from '../../components/category-doughnut/category-doughnut';
+import { PeriodCharts } from '../../components/period-charts/period-charts';
 import { DEFAULT_PAGE_SIZE } from '../transactions/transactions';
 import { getContrastColor } from '../../utils/color';
 
@@ -14,7 +15,7 @@ export type SortDirection = 'asc' | 'desc';
 @Component({
   selector: 'app-history',
   standalone: true,
-  imports: [CommonModule, FormsModule, CategoryDoughnut],
+  imports: [CommonModule, FormsModule, PeriodCharts],
   templateUrl: './history.html',
   styleUrl: './history.css'
 })
@@ -36,7 +37,7 @@ export class HistoryView implements OnInit, OnDestroy {
   selectedMonth = signal<number | null>(null);
 
   reportData = signal<any>(null);
-  availableYears = signal<number[]>([]);
+  availableYears = signal<number[]>([new Date().getFullYear()]);
   availableMonths = signal<number[]>([]);
   availablePeriods = signal<{ [year: number]: number[] }>({});
 
@@ -79,6 +80,7 @@ export class HistoryView implements OnInit, OnDestroy {
     }
     this.selectedYear.set(defYear);
     this.selectedMonth.set(defMonth);
+    this.availableYears.set([defYear]);
   }
 
   loadReport() {
@@ -502,48 +504,18 @@ export class HistoryView implements OnInit, OnDestroy {
     return cat ? cat.name : 'Categoría seleccionada';
   }
 
-  onBarClick(bar: any, index: number, event?: MouseEvent) {
-    if (bar.amount > 0) {
-      if (event) {
-        event.stopPropagation();
-      }
-      this.hoveredBarIndex.set(index);
-      this.toggleDateFilter(bar.dateKey);
-      this.scrollToTransactions();
-    }
+  getTimelineAverageText(): string {
+    const report = this.reportData();
+    if (!report) return '';
+    const isMonth = this.selectedMonth() !== null;
+    const avg = isMonth ? report.average_per_day : report.average_per_month;
+    const formatted = Math.round(avg || 0).toLocaleString('es-AR');
+    return `$${formatted}/${isMonth ? 'día' : 'mes'}`;
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
-    if (!this.dateFilter()) return;
-
-    const target = event.target as HTMLElement | null;
-    if (!target) return;
-
-    // El click para deseleccionar solamente puede ocurrir adentro de la card de evolución en el tiempo
-    const isInsideTimelineCard = target.closest('#timeline-card');
-    if (!isInsideTimelineCard) {
-      return;
-    }
-
-    const isControl = target.closest(
-      'button, input, select, textarea, a, label, [data-timeline-bar]'
-    );
-
-    if (isControl) {
-      return;
-    }
-
-    this.clearDateFilter();
-  }
-
-  scrollToTransactions() {
-    setTimeout(() => {
-      const el = document.getElementById('transactions-section');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 50);
+  getTimelineAverageTooltip(): string {
+    const isMonth = this.selectedMonth() !== null;
+    return isMonth ? 'Promedio diario en el mes' : 'Promedio mensual en el año';
   }
 
   toggleDateFilter(dateKey: string) {
@@ -570,11 +542,6 @@ export class HistoryView implements OnInit, OnDestroy {
     this.searchQuery.set('');
     this.dateFilter.set('');
     this.currentPage.set(1);
-  }
-
-  isBarSelected(bar: { dateKey: string }): boolean {
-    const current = this.dateFilter();
-    return !!current && current === bar.dateKey;
   }
 
   getMinDate(): string {

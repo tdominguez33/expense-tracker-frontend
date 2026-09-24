@@ -1,0 +1,271 @@
+<div class="relative w-full">
+  <!-- Carousel Section (Swipeable with touch/drag gestures) -->
+  <div class="relative w-full overflow-hidden rounded-2xl select-none touch-pan-y period-charts-slide-card"
+       [style.--desktop-chart-min-h]="minHeight()"
+       (touchstart)="onChartTouchStart($event)"
+       (touchmove)="onChartTouchMove($event)"
+       (touchend)="onChartTouchEnd($event)"
+       (mousedown)="onChartMouseDown($event)"
+       (mousemove)="onChartMouseMove($event)"
+       (mouseup)="onChartMouseUp($event)"
+       (mouseleave)="onChartMouseUp($event)">
+    
+    <!-- Main Slider Container: Flex slider with GPU transform -->
+    <div class="flex w-full will-change-transform period-charts-slide-card"
+         [class.transition-transform]="!isSwiping"
+         [class.duration-300]="!isSwiping"
+         [class.ease-out]="!isSwiping"
+         [style.transform]="getChartTransform()">
+      
+      <!-- Slide 1: Category Doughnut Chart -->
+      <div class="w-full shrink-0 flex flex-col period-charts-slide-card">
+        <div class="card bg-base-100 shadow-sm border border-base-content/20 px-5 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 w-full h-full flex flex-col justify-between period-charts-slide-card">
+          
+          <!-- Doughnut Header -->
+          <div class="mb-2 sm:mb-3 flex justify-between items-start">
+            <div class="min-w-0 pr-2">
+              <h3 class="font-bold text-base sm:text-lg text-base-content/70 truncate">
+                {{ categoriesTitle() }}
+              </h3>
+              <p class="text-[11px] sm:text-xs text-base-content/50 truncate">
+                {{ categoriesSubtitle() || periodTitle() }}
+              </p>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-base sm:text-xl font-bold">
+                ${{ totalAmount() | number:'1.0-0' }}
+              </div>
+              <div class="text-[11px] text-base-content/50">Total gastado</div>
+            </div>
+          </div>
+
+          <!-- Doughnut Content -->
+          <div class="w-full flex-1 flex flex-col justify-center my-auto min-h-0">
+            <app-category-doughnut
+              class="w-full h-full flex flex-col justify-center"
+              [breakdown]="breakdown()"
+              [totalAmount]="totalAmount()"
+              [periodTitle]="periodTitle()"
+              [maxAmount]="maxCategoryAmount()"
+              [emptyMessage]="emptyMessage()">
+            </app-category-doughnut>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Slide 2: Timeline Bar Chart -->
+      <div class="w-full shrink-0 flex flex-col period-charts-slide-card">
+        <div id="timeline-card" class="card bg-base-100 shadow-sm border border-base-content/20 px-5 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 w-full h-full flex flex-col justify-between period-charts-slide-card">
+          
+          <!-- Timeline Header -->
+          <div class="mb-2 sm:mb-3 flex justify-between items-start">
+            <div class="min-w-0 pr-2">
+              <h3 class="font-bold text-base sm:text-lg text-base-content/70 truncate">
+                {{ timelineTitle() }}
+              </h3>
+              <div class="h-5 flex items-center mt-0.5">
+                @if (activeBar(); as bar) {
+                  <div class="text-xs sm:text-sm font-semibold text-primary truncate">
+                    {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
+                    @if (bar.count !== undefined && bar.count !== null && bar.count > 0) {
+                      <span class="text-xs font-normal text-base-content/60 ml-1">({{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }})</span>
+                    }
+                  </div>
+                } @else {
+                  <div class="text-[11px] sm:text-xs text-base-content/40 truncate">
+                    {{ timelineSubtitle() || 'Seleccioná una barra para ver detalle' }}
+                  </div>
+                }
+              </div>
+            </div>
+            @if (averageText()) {
+              <div class="text-right shrink-0">
+                <div class="text-base sm:text-xl font-bold cursor-default" [title]="averageTooltip()">
+                  {{ averageText() }}
+                </div>
+                <div class="text-[11px] text-base-content/50">Promedio</div>
+              </div>
+            }
+          </div>
+
+          <!-- Chart Area with responsive layout -->
+          @if (isMonthView() && processedTimelineData().length > 15) {
+            <!-- Mobile View (< md): Two stacked rows of 15 days each -->
+            <div class="flex flex-col gap-3 md:hidden w-full my-auto">
+              @for (row of timelineMonthRows(); track $index; let rIdx = $index) {
+                <div>
+                  <div class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 mb-1">
+                    {{ rIdx === 0 ? 'Días 1 a 15' : 'Días 16 a ' + processedTimelineData().length }}
+                  </div>
+                  <div class="h-24 flex items-end justify-between gap-1 px-0.5 w-full">
+                    @for (bar of row; track bar.fullLabel) {
+                      @let selected = isBarActive(bar);
+                      <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-0.5"
+                           data-timeline-bar="true"
+                           (click)="onBarClick(bar, $event)">
+                        
+                        <!-- Bar Track (capsule) -->
+                        <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                             [class.ring-2]="selected"
+                             [class.ring-primary]="selected">
+                          <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50" 
+                               [class.brightness-125]="selected"
+                               [style.height]="bar.heightPct + '%'">
+                          </div>
+                        </div>
+
+                        <!-- Label -->
+                        <div class="mt-1 text-[10px] font-semibold text-base-content/60 w-full text-center truncate transition-colors"
+                             [class.text-primary]="selected"
+                             [class.font-bold]="selected">
+                          {{ bar.label }}
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Desktop View (>= md): Single continuous row of all 30/31 days -->
+            <div class="hidden md:block w-full my-auto">
+              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1 md:gap-1.5 px-0.5 w-full">
+                @for (bar of processedTimelineData(); track bar.fullLabel) {
+                  @let selected = isBarActive(bar);
+                  <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
+                       data-timeline-bar="true"
+                       (click)="onBarClick(bar, $event)"
+                       (mouseenter)="hoverBar(bar)"
+                       (mouseleave)="leaveBar()">
+                    
+                    <!-- Tooltip (desktop) -->
+                    <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 whitespace-nowrap bg-neutral text-neutral-content text-xs px-2.5 py-1.5 rounded-lg shadow-lg">
+                      {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
+                      @if (bar.count !== undefined && bar.count !== null && bar.count > 0) {
+                        <span class="opacity-75 ml-1">({{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }})</span>
+                      }
+                    </div>
+                    
+                    <!-- Bar Track (capsule) -->
+                    <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                         [class.ring-2]="selected"
+                         [class.ring-primary]="selected">
+                      <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                           [class.brightness-125]="selected"
+                           [style.height]="bar.heightPct + '%'">
+                      </div>
+                    </div>
+
+                    <!-- Label -->
+                    <div class="mt-1.5 text-xs font-semibold text-base-content/60 w-full text-center truncate transition-colors shrink-0"
+                         [class.text-primary]="selected"
+                         [class.font-bold]="selected">
+                      {{ bar.label }}
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- Year or short period: Single row across all screen sizes -->
+            <div class="w-full my-auto">
+              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1.5 sm:gap-3 px-0.5 w-full">
+                @for (bar of processedTimelineData(); track bar.fullLabel) {
+                  @let selected = isBarActive(bar);
+                  <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
+                       data-timeline-bar="true"
+                       (click)="onBarClick(bar, $event)"
+                       (mouseenter)="hoverBar(bar)"
+                       (mouseleave)="leaveBar()">
+                    
+                    <!-- Tooltip (desktop) -->
+                    <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 whitespace-nowrap bg-neutral text-neutral-content text-xs px-2.5 py-1.5 rounded-lg shadow-lg hidden sm:block">
+                      {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
+                      @if (bar.count !== undefined && bar.count !== null && bar.count > 0) {
+                        <span class="opacity-75 ml-1">({{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }})</span>
+                      }
+                    </div>
+                    
+                    <!-- Bar Track (capsule) -->
+                    <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                         [class.ring-2]="selected"
+                         [class.ring-primary]="selected">
+                      <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                           [class.brightness-125]="selected"
+                           [style.height]="bar.heightPct + '%'">
+                      </div>
+                    </div>
+
+                    <!-- Label -->
+                    <div class="mt-1.5 text-xs sm:text-sm font-semibold text-base-content/60 w-full text-center truncate transition-colors shrink-0"
+                         [class.text-primary]="selected"
+                         [class.font-bold]="selected">
+                      {{ bar.label }}
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Summary metrics footer -->
+          @let peak = timelinePeak();
+          @let count = timelineActiveCount();
+          <div class="mt-2 pt-2 border-t border-base-content/10 flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between text-xs text-base-content/70">
+            <div class="flex items-center justify-between gap-2 md:justify-start md:gap-1.5 truncate">
+              <span class="font-medium text-base-content/50 shrink-0">Pico:</span>
+              <div class="flex items-center gap-1.5 truncate text-right md:text-left">
+                @if (peak) {
+                  <span class="font-semibold text-base-content truncate">{{ peak.label }}</span>
+                  <span class="font-bold text-error">(${{ peak.amount | number:'1.0-0' }})</span>
+                } @else {
+                  <span class="font-semibold text-base-content/50 truncate">Sin gastos ($0)</span>
+                }
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2 md:justify-end md:gap-1 shrink-0">
+              <span class="font-medium text-base-content/50 shrink-0">{{ isMonthView() ? 'Días con gasto:' : 'Meses con gasto:' }}</span>
+              <span class="font-semibold text-base-content text-right md:text-left md:ml-1">{{ count.active }} de {{ count.total }}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Chart Carousel Controls & Indicators (Below the chart card) -->
+  @if (showControls() && processedTimelineData().length > 0) {
+    <div class="flex justify-center items-center gap-3 mt-3 sm:mt-4 mb-4 sm:mb-6">
+      <button class="btn btn-circle btn-xs sm:btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+              (click)="prevSlide()"
+              title="Gráfico anterior"
+              aria-label="Gráfico anterior">
+        ❮
+      </button>
+      
+      <div class="flex items-center gap-1.5">
+        <button (click)="goToSlide(0)" 
+                class="text-xs px-3 py-1 rounded-full transition-all duration-200 border cursor-pointer select-none"
+                [ngClass]="activeSlide() === 0 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
+          Categorías
+        </button>
+        <button (click)="goToSlide(1)" 
+                class="text-xs px-3 py-1 rounded-full transition-all duration-200 border cursor-pointer select-none"
+                [ngClass]="activeSlide() === 1 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
+          Evolución
+        </button>
+      </div>
+
+      <button class="btn btn-circle btn-xs sm:btn-sm btn-ghost border border-base-content/20 shadow-sm bg-base-100" 
+              (click)="nextSlide()"
+              title="Gráfico siguiente"
+              aria-label="Gráfico siguiente">
+        ❯
+      </button>
+    </div>
+  }
+</div>

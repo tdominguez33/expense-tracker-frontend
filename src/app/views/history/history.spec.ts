@@ -74,6 +74,13 @@ describe('HistoryView', () => {
     expect(component.selectedMonth()).toBe(expectedMonth);
   });
 
+  it('should pre-populate availableYears with default year to prevent layout shift during loading', () => {
+    component.availableYears.set([]);
+    component.initDefaultPeriod();
+    expect(component.availableYears().length).toBeGreaterThan(0);
+    expect(component.availableYears()).toContain(component.selectedYear());
+  });
+
   it('should load report data and populate available years/months', () => {
     expect(mockApiService.getHistoryReport).toHaveBeenCalled();
     expect(component.reportData()).toEqual(mockReport);
@@ -180,70 +187,18 @@ describe('HistoryView', () => {
     expect(component.filteredTransactions().length).toBe(2);
   });
 
-  it('should toggle date filter when clicking timeline bars', () => {
-    const timeline = component.getTimelineData();
-    expect(timeline.length).toBe(2);
-    const barWithData = timeline[0]; // Day 1, amount 50000, dateKey: 2026-08-01
-    const barZero = timeline[1];     // Day 2, amount 0
+  it('should toggle and clear date filter via manual methods', () => {
+    component.toggleDateFilter('2026-08-01');
+    expect(component.dateFilter()).toBe('2026-08-01');
 
-    // Clicking zero amount bar does nothing
-    component.onBarClick(barZero, 1);
+    component.toggleDateFilter('2026-08-01');
     expect(component.dateFilter()).toBe('');
 
-    // Clicking bar with data sets dateFilter and hoveredBarIndex
-    component.onBarClick(barWithData, 0);
-    expect(component.dateFilter()).toBe(barWithData.dateKey);
-    expect(component.isBarSelected(barWithData)).toBe(true);
-    expect(component.hoveredBarIndex()).toBe(0);
+    component.onDateFilterChange('2026-08-15');
+    expect(component.dateFilter()).toBe('2026-08-15');
 
-    // Clicking same bar again toggles it off
-    component.onBarClick(barWithData, 0);
+    component.clearDateFilter();
     expect(component.dateFilter()).toBe('');
-    expect(component.isBarSelected(barWithData)).toBe(false);
-  });
-
-  it('should clear date selection when clicking inside timeline card only (and outside controls)', () => {
-    component.dateFilter.set('2026-08-01');
-
-    const timelineCard = document.createElement('div');
-    timelineCard.id = 'timeline-card';
-    document.body.appendChild(timelineCard);
-
-    const outsideDiv = document.createElement('div');
-    document.body.appendChild(outsideDiv);
-
-    // Clicking anywhere OUTSIDE timeline-card should NOT clear dateFilter
-    component.onDocumentClick({ target: outsideDiv } as any);
-    expect(component.dateFilter()).toBe('2026-08-01');
-
-    // Clicking a button inside timeline-card should NOT clear dateFilter
-    const btn = document.createElement('button');
-    timelineCard.appendChild(btn);
-    component.onDocumentClick({ target: btn } as any);
-    expect(component.dateFilter()).toBe('2026-08-01');
-
-    // Clicking an input inside timeline-card should NOT clear dateFilter
-    const input = document.createElement('input');
-    timelineCard.appendChild(input);
-    component.onDocumentClick({ target: input } as any);
-    expect(component.dateFilter()).toBe('2026-08-01');
-
-    // Clicking a timeline bar inside timeline-card should NOT clear dateFilter
-    const barEl = document.createElement('div');
-    barEl.setAttribute('data-timeline-bar', 'true');
-    timelineCard.appendChild(barEl);
-    component.onDocumentClick({ target: barEl } as any);
-    expect(component.dateFilter()).toBe('2026-08-01');
-
-    // Clicking neutral space INSIDE timeline-card SHOULD clear dateFilter
-    const insideDiv = document.createElement('div');
-    timelineCard.appendChild(insideDiv);
-    component.onDocumentClick({ target: insideDiv } as any);
-    expect(component.dateFilter()).toBe('');
-
-    // Cleanup
-    timelineCard.remove();
-    outsideDiv.remove();
   });
 
   it('should render clear button inside date input and clear filter when clicked', () => {
@@ -531,5 +486,18 @@ describe('HistoryView', () => {
     amountTh.click();
     expect(component.sortColumn()).toBeNull();
     expect(component.sortDirection()).toBeNull();
+  });
+
+  it('should support timeline average formatting', () => {
+    // Timeline average calculation
+    const avgText = component.getTimelineAverageText();
+    expect(avgText).toContain('/día');
+    expect(component.getTimelineAverageTooltip()).toBe('Promedio diario en el mes');
+
+    // Year view average
+    component.selectedMonth.set(null);
+    const yearAvgText = component.getTimelineAverageText();
+    expect(yearAvgText).toContain('/mes');
+    expect(component.getTimelineAverageTooltip()).toBe('Promedio mensual en el año');
   });
 });

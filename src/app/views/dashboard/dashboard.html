@@ -77,12 +77,12 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                               <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
                             </svg>
-                            +{{ comp.percentage | number:'1.1-1' }}%
+                            +{{ comp.percentage | number:'1.0-0' }}%
                           } @else if (comp.percentage < 0) {
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                               <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
                             </svg>
-                            {{ comp.percentage | number:'1.1-1' }}%
+                            {{ comp.percentage | number:'1.0-0' }}%
                           } @else {
                             0%
                           }
@@ -334,19 +334,21 @@
                   <!-- Summary metrics footer (always present to preserve stable card structure) -->
                   @let peak = timelinePeak();
                   @let count = timelineActiveCount();
-                  <div class="mt-2 pt-2 border-t border-base-content/10 flex items-center justify-between text-xs text-base-content/70">
-                    <div class="flex items-center gap-1.5 truncate">
-                      <span class="font-medium text-base-content/50">Pico:</span>
-                      @if (peak) {
-                        <span class="font-semibold text-base-content truncate">{{ peak.label }}</span>
-                        <span class="font-bold text-error">(${{ peak.amount | number:'1.0-0' }})</span>
-                      } @else {
-                        <span class="font-semibold text-base-content/50 truncate">Sin gastos ($0)</span>
-                      }
+                  <div class="mt-2 pt-2 border-t border-base-content/10 flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between text-xs text-base-content/70">
+                    <div class="flex items-center justify-between gap-2 md:justify-start md:gap-1.5 truncate">
+                      <span class="font-medium text-base-content/50 shrink-0">Pico:</span>
+                      <div class="flex items-center gap-1.5 truncate text-right md:text-left">
+                        @if (peak) {
+                          <span class="font-semibold text-base-content truncate">{{ peak.label }}</span>
+                          <span class="font-bold text-error">(${{ peak.amount | number:'1.0-0' }})</span>
+                        } @else {
+                          <span class="font-semibold text-base-content/50 truncate">Sin gastos ($0)</span>
+                        }
+                      </div>
                     </div>
-                    <div class="shrink-0">
-                      <span class="font-medium text-base-content/50">Días con gasto:</span>
-                      <span class="font-semibold text-base-content ml-1">{{ count.active }} de {{ count.total }}</span>
+                    <div class="flex items-center justify-between gap-2 md:justify-end md:gap-1 shrink-0">
+                      <span class="font-medium text-base-content/50 shrink-0">{{ selectedPeriod() === 'year' ? 'Meses con gasto:' : 'Días con gasto:' }}</span>
+                      <span class="font-semibold text-base-content text-right md:text-left md:ml-1">{{ count.active }} de {{ count.total }}</span>
                     </div>
                   </div>
 
