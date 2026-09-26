@@ -170,8 +170,27 @@ export class CategoryDoughnut implements OnDestroy {
     }
   }
 
+  isTouchInteraction(event?: Event): boolean {
+    if (event && 'pointerType' in event) {
+      const pt = (event as PointerEvent).pointerType;
+      if (pt === 'touch' || pt === 'pen') return true;
+      if (pt === 'mouse') return false;
+    }
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const isDesktopCursor = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (isDesktopCursor) return false;
+    }
+    return true;
+  }
+
   onCategoryClick(catId: number, event?: Event) {
     event?.stopPropagation();
+
+    // On desktop PC with cursor/hover, clicking does not fix/select the category
+    if (!this.isTouchInteraction(event)) {
+      return;
+    }
+
     if (Date.now() - this.lastTouchHandledTime < 500) {
       return;
     }

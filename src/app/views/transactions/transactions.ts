@@ -57,7 +57,10 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
         acc[date] = { date, total: 0, items: [] };
       }
       acc[date].items.push(tx);
-      acc[date].total += tx.total_amount;
+      const effectiveAmount = (tx.real_amount !== null && tx.real_amount !== undefined)
+        ? Number(tx.real_amount)
+        : Number(tx.total_amount);
+      acc[date].total += effectiveAmount;
       return acc;
     }, {} as Record<string, { date: string, total: number, items: any[] }>);
     

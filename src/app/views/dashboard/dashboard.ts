@@ -829,9 +829,28 @@ export class Dashboard implements OnInit {
     }
   }
 
+  isTouchInteraction(event?: Event): boolean {
+    if (event && 'pointerType' in event) {
+      const pt = (event as PointerEvent).pointerType;
+      if (pt === 'touch' || pt === 'pen') return true;
+      if (pt === 'mouse') return false;
+    }
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const isDesktopCursor = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (isDesktopCursor) return false;
+    }
+    return true;
+  }
+
   selectTimelineBar(bar: TimelineBar, event?: Event) {
     if (this.isChartSwiping || Math.abs(this.chartSwipeOffset()) > 5) return;
     event?.stopPropagation();
+
+    // On desktop PC with cursor/hover, clicking does not fix/select the bar
+    if (!this.isTouchInteraction(event)) {
+      return;
+    }
+
     if (this.selectedTimelineBar()?.fullLabel === bar.fullLabel) {
       this.selectedTimelineBar.set(null);
     } else {

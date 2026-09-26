@@ -35,7 +35,7 @@ describe('HistoryView', () => {
     ],
     transactions: [
       { id: 101, transaction_date: '2026-08-15', description: 'Zapatillas', amount: 916112, category_id: 10, category_name: 'Ropa', category_color: '#EDBB99', account_name: 'Visa', installments_count: 3 },
-      { id: 102, transaction_date: '2026-08-10', description: 'Coto', amount: 300000, category_id: 1, category_name: 'Super', category_color: '#10B981', account_name: 'Débito', installments_count: 1 }
+      { id: 102, transaction_date: '2026-08-10', description: 'Coto', amount: 300000, real_amount: 300000, total_amount: 350000, category_id: 1, category_name: 'Super', category_color: '#10B981', account_name: 'Débito', installments_count: 1 }
     ],
     available_years: [2025, 2026],
     available_months: [7, 8, 9]
@@ -62,16 +62,21 @@ describe('HistoryView', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should default to previous month on init', () => {
+  it('should default to latest month on init', () => {
     const now = new Date();
-    let expectedMonth = now.getMonth();
-    let expectedYear = now.getFullYear();
-    if (expectedMonth === 0) {
-      expectedMonth = 12;
-      expectedYear -= 1;
-    }
-    expect(component.selectedYear()).toBe(expectedYear);
-    expect(component.selectedMonth()).toBe(expectedMonth);
+    expect(component.selectedYear()).toBe(now.getFullYear());
+    expect(component.selectedMonth()).toBe(now.getMonth() + 1);
+  });
+
+  it('should fallback to last available month on initial load if current month has no data', () => {
+    const testFixture = TestBed.createComponent(HistoryView);
+    const testComp = testFixture.componentInstance;
+    mockApiService.getHistoryReport.mockReturnValue(of({
+      ...mockReport,
+      available_months: [1, 2, 3]
+    }));
+    testComp.ngOnInit();
+    expect(testComp.selectedMonth()).toBe(3);
   });
 
   it('should pre-populate availableYears with default year to prevent layout shift during loading', () => {
@@ -499,5 +504,46 @@ describe('HistoryView', () => {
     const yearAvgText = component.getTimelineAverageText();
     expect(yearAvgText).toContain('/mes');
     expect(component.getTimelineAverageTooltip()).toBe('Promedio mensual en el año');
+  });
+
+  it('should render Detalle de Gastos list occupying full width without an inner card wrapper', () => {
+    fixture.detectChanges();
+    const section = fixture.nativeElement.querySelector('#transactions-section');
+    expect(section).toBeTruthy();
+
+    // Verify the mobile list container is not wrapped in an inner card
+    const mobileList = section.querySelector('.md\\:hidden');
+    expect(mobileList).toBeTruthy();
+    expect(mobileList.classList.contains('card')).toBe(false);
+    expect(mobileList.classList.contains('rounded-xl')).toBe(false);
+    expect(mobileList.classList.contains('shadow-sm')).toBe(false);
+    expect(mobileList.classList.contains('divide-y')).toBe(true);
+    expect(mobileList.classList.contains('border-t')).toBe(true);
+
+    // Verify desktop table container
+    const desktopTableWrapper = section.querySelector('.hidden.md\\:block');
+    expect(desktopTableWrapper).toBeTruthy();
+    expect(desktopTableWrapper.classList.contains('border-t')).toBe(true);
+  });
+
+  it('should render original amount in the second row next to installments in mobile view without stretching row 1', () => {
+    fixture.detectChanges();
+    const section = fixture.nativeElement.querySelector('#transactions-section');
+    const mobileRows = section.querySelectorAll('.md\\:hidden > div');
+    expect(mobileRows.length).toBeGreaterThan(0);
+
+    const rowWithDiscount = Array.from(mobileRows).find((el: any) => el.querySelector('.line-through')) as HTMLElement;
+    expect(rowWithDiscount).toBeTruthy();
+
+    const row1 = rowWithDiscount.children[0];
+    const row2 = rowWithDiscount.children[1];
+
+    // Row 1 should not contain the line-through amount
+    expect(row1.querySelector('.line-through')).toBeNull();
+
+    // Row 2 should contain the line-through amount
+    const originalAmountSpan = row2.querySelector('.line-through');
+    expect(originalAmountSpan).toBeTruthy();
+    expect(originalAmountSpan?.textContent).toContain('350');
   });
 });

@@ -92,7 +92,7 @@
           <!-- Chart Area with responsive layout -->
           @if (isMonthView() && processedTimelineData().length > 15) {
             <!-- Mobile View (< md): Two stacked rows of 15 days each -->
-            <div class="flex flex-col gap-3 md:hidden w-full my-auto">
+            <div class="flex flex-col gap-3 md:hidden w-full my-auto" (mouseleave)="leaveBar()">
               @for (row of timelineMonthRows(); track $index; let rIdx = $index) {
                 <div>
                   <div class="text-[10px] font-semibold uppercase tracking-wider text-base-content/40 mb-1">
@@ -103,7 +103,8 @@
                       @let selected = isBarActive(bar);
                       <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-0.5"
                            data-timeline-bar="true"
-                           (click)="onBarClick(bar, $event)">
+                           (click)="onBarClick(bar, $event)"
+                           (mouseenter)="hoverBar(bar)">
                         
                         <!-- Bar Track (capsule) -->
                         <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
@@ -130,22 +131,14 @@
 
             <!-- Desktop View (>= md): Single continuous row of all 30/31 days -->
             <div class="hidden md:block w-full my-auto">
-              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1 md:gap-1.5 px-0.5 w-full">
+              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1 md:gap-1.5 px-0.5 w-full"
+                   (mouseleave)="leaveBar()">
                 @for (bar of processedTimelineData(); track bar.fullLabel) {
                   @let selected = isBarActive(bar);
                   <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
                        data-timeline-bar="true"
                        (click)="onBarClick(bar, $event)"
-                       (mouseenter)="hoverBar(bar)"
-                       (mouseleave)="leaveBar()">
-                    
-                    <!-- Tooltip (desktop) -->
-                    <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 whitespace-nowrap bg-neutral text-neutral-content text-xs px-2.5 py-1.5 rounded-lg shadow-lg">
-                      {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
-                      @if (bar.count !== undefined && bar.count !== null && bar.count > 0) {
-                        <span class="opacity-75 ml-1">({{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }})</span>
-                      }
-                    </div>
+                       (mouseenter)="hoverBar(bar)">
                     
                     <!-- Bar Track (capsule) -->
                     <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
@@ -170,22 +163,14 @@
           } @else {
             <!-- Year or short period: Single row across all screen sizes -->
             <div class="w-full my-auto">
-              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1.5 sm:gap-3 px-0.5 w-full">
+              <div class="h-44 sm:h-48 md:h-52 flex items-end justify-between gap-1.5 sm:gap-3 px-0.5 w-full"
+                   (mouseleave)="leaveBar()">
                 @for (bar of processedTimelineData(); track bar.fullLabel) {
                   @let selected = isBarActive(bar);
                   <div class="relative flex flex-col items-center w-full h-full justify-end group cursor-pointer select-none py-1"
                        data-timeline-bar="true"
                        (click)="onBarClick(bar, $event)"
-                       (mouseenter)="hoverBar(bar)"
-                       (mouseleave)="leaveBar()">
-                    
-                    <!-- Tooltip (desktop) -->
-                    <div class="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 whitespace-nowrap bg-neutral text-neutral-content text-xs px-2.5 py-1.5 rounded-lg shadow-lg hidden sm:block">
-                      {{ bar.fullLabel }}: ${{ bar.amount | number:'1.0-0' }}
-                      @if (bar.count !== undefined && bar.count !== null && bar.count > 0) {
-                        <span class="opacity-75 ml-1">({{ bar.count }} {{ bar.count === 1 ? 'gasto' : 'gastos' }})</span>
-                      }
-                    </div>
+                       (mouseenter)="hoverBar(bar)">
                     
                     <!-- Bar Track (capsule) -->
                     <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"

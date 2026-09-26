@@ -359,12 +359,21 @@ export class Settings implements OnInit, OnDestroy {
       clearTimeout(this.longPressTimeout);
       this.longPressTimeout = null;
     }
+    if (this.longPressEntTimeout) {
+      clearTimeout(this.longPressEntTimeout);
+      this.longPressEntTimeout = null;
+    }
+    if (this.longPressAccTimeout) {
+      clearTimeout(this.longPressAccTimeout);
+      this.longPressAccTimeout = null;
+    }
   }
 
   // -- Drag & Drop Entities --
   draggedEntIndex = signal<number | null>(null);
 
   onDragStartEnt(index: number, event: DragEvent) {
+    if (this.entities().length <= 1) return;
     this.draggedEntIndex.set(index);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -398,10 +407,101 @@ export class Settings implements OnInit, OnDestroy {
     this.draggedEntIndex.set(null);
   }
 
+  // -- Touch Drag & Drop Entities (Mobile Long-Press) --
+  touchDraggedEntIndex = signal<number | null>(null);
+  private touchStartEntX = 0;
+  private touchStartEntY = 0;
+  private longPressEntTimeout: any = null;
+  private isTouchDraggingEnt = false;
+
+  onTouchStartEnt(index: number, event: TouchEvent) {
+    if (this.entities().length <= 1) return;
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    this.touchStartEntX = touch.clientX;
+    this.touchStartEntY = touch.clientY;
+    this.isTouchDraggingEnt = false;
+
+    if (this.longPressEntTimeout) {
+      clearTimeout(this.longPressEntTimeout);
+    }
+
+    this.longPressEntTimeout = setTimeout(() => {
+      this.isTouchDraggingEnt = true;
+      this.touchDraggedEntIndex.set(index);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate?.(40);
+        } catch {}
+      }
+    }, 280);
+  }
+
+  onTouchMoveEnt(event: TouchEvent) {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+
+    if (!this.isTouchDraggingEnt) {
+      const moveDistance = Math.hypot(touch.clientX - this.touchStartEntX, touch.clientY - this.touchStartEntY);
+      if (moveDistance > 8) {
+        if (this.longPressEntTimeout) {
+          clearTimeout(this.longPressEntTimeout);
+          this.longPressEntTimeout = null;
+        }
+      }
+      return;
+    }
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    const currentIdx = this.touchDraggedEntIndex();
+    if (currentIdx === null) return;
+
+    if (typeof document !== 'undefined') {
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetDiv = elem?.closest('[data-ent-index]');
+      if (targetDiv) {
+        const targetIdx = parseInt(targetDiv.getAttribute('data-ent-index') || '', 10);
+        if (!isNaN(targetIdx) && targetIdx !== currentIdx && targetIdx >= 0 && targetIdx < this.entities().length) {
+          const ents = [...this.entities()];
+          const [movedItem] = ents.splice(currentIdx, 1);
+          ents.splice(targetIdx, 0, movedItem);
+          this.entities.set(ents);
+          this.touchDraggedEntIndex.set(targetIdx);
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            try {
+              navigator.vibrate?.(20);
+            } catch {}
+          }
+        }
+      }
+    }
+  }
+
+  onTouchEndEnt() {
+    if (this.longPressEntTimeout) {
+      clearTimeout(this.longPressEntTimeout);
+      this.longPressEntTimeout = null;
+    }
+
+    if (this.isTouchDraggingEnt) {
+      this.isTouchDraggingEnt = false;
+      this.touchDraggedEntIndex.set(null);
+      const orders = this.entities().map((ent, idx) => ({ id: ent.id, sort_order: idx }));
+      this.api.reorderEntities(orders).subscribe({
+        next: () => this.loadData()
+      });
+    }
+  }
+
   // -- Drag & Drop Accounts (per Entity) --
   draggedAccIndex = signal<{entityName: string, index: number} | null>(null);
 
   onDragStartAcc(entityName: string, index: number, event: DragEvent) {
+    const entityAccounts = this.accountsByEntity()[entityName]?.accounts || [];
+    if (entityAccounts.length <= 1) return;
     this.draggedAccIndex.set({entityName, index});
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -439,6 +539,109 @@ export class Settings implements OnInit, OnDestroy {
   
   onDragEndAcc() {
     this.draggedAccIndex.set(null);
+  }
+
+  // -- Touch Drag & Drop Accounts (Mobile Long-Press) --
+  touchDraggedAcc = signal<{ entityName: string; index: number } | null>(null);
+  private touchStartAccX = 0;
+  private touchStartAccY = 0;
+  private longPressAccTimeout: any = null;
+  private isTouchDraggingAcc = false;
+
+  onTouchStartAcc(entityName: string, index: number, event: TouchEvent) {
+    const entityAccounts = this.accountsByEntity()[entityName]?.accounts || [];
+    if (entityAccounts.length <= 1) return;
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    this.touchStartAccX = touch.clientX;
+    this.touchStartAccY = touch.clientY;
+    this.isTouchDraggingAcc = false;
+
+    if (this.longPressAccTimeout) {
+      clearTimeout(this.longPressAccTimeout);
+    }
+
+    this.longPressAccTimeout = setTimeout(() => {
+      this.isTouchDraggingAcc = true;
+      this.touchDraggedAcc.set({ entityName, index });
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate?.(40);
+        } catch {}
+      }
+    }, 280);
+  }
+
+  onTouchMoveAcc(event: TouchEvent) {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+
+    if (!this.isTouchDraggingAcc) {
+      const moveDistance = Math.hypot(touch.clientX - this.touchStartAccX, touch.clientY - this.touchStartAccY);
+      if (moveDistance > 8) {
+        if (this.longPressAccTimeout) {
+          clearTimeout(this.longPressAccTimeout);
+          this.longPressAccTimeout = null;
+        }
+      }
+      return;
+    }
+
+    if (event.cancelable) {
+      event.preventDefault();
+    }
+
+    const dragged = this.touchDraggedAcc();
+    if (!dragged) return;
+
+    if (typeof document !== 'undefined') {
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetLi = elem?.closest('[data-acc-index]');
+      if (targetLi) {
+        const targetEntity = targetLi.getAttribute('data-acc-entity');
+        const targetIdx = parseInt(targetLi.getAttribute('data-acc-index') || '', 10);
+        if (targetEntity === dragged.entityName && !isNaN(targetIdx) && targetIdx !== dragged.index) {
+          const byEnt = { ...this.accountsByEntity() };
+          const entityData = byEnt[dragged.entityName];
+          if (entityData && entityData.accounts) {
+            const entityAccounts = [...entityData.accounts];
+            if (targetIdx >= 0 && targetIdx < entityAccounts.length) {
+              const [movedItem] = entityAccounts.splice(dragged.index, 1);
+              entityAccounts.splice(targetIdx, 0, movedItem);
+              byEnt[dragged.entityName] = { ...entityData, accounts: entityAccounts };
+              this.accountsByEntity.set(byEnt);
+              this.touchDraggedAcc.set({ entityName: dragged.entityName, index: targetIdx });
+              if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                try {
+                  navigator.vibrate?.(20);
+                } catch {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  onTouchEndAcc() {
+    if (this.longPressAccTimeout) {
+      clearTimeout(this.longPressAccTimeout);
+      this.longPressAccTimeout = null;
+    }
+
+    if (this.isTouchDraggingAcc) {
+      this.isTouchDraggingAcc = false;
+      const dragged = this.touchDraggedAcc();
+      this.touchDraggedAcc.set(null);
+      if (dragged) {
+        const byEnt = this.accountsByEntity();
+        const entityAccounts = byEnt[dragged.entityName]?.accounts || [];
+        const orders = entityAccounts.map((acc: any, idx: number) => ({ id: acc.id, sort_order: idx }));
+        this.api.reorderAccounts(orders).subscribe({
+          next: () => this.loadData()
+        });
+      }
+    }
   }
 
   

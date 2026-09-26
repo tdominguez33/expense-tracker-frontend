@@ -158,18 +158,34 @@
         </div>
       } @else {
         <div class="flex flex-col gap-6 min-w-0">
+          @let canDragEnt = entities().length > 1;
           @for (ent of entities(); track ent.id; let i = $index) {
           @let entName = ent.name;
           @if (accountsByEntity()[entName]) {
-            <div draggable="true"
-                 (dragstart)="onDragStartEnt(i, $event)"
-                 (dragover)="onDragOverEnt($event)"
-                 (drop)="onDropEnt(i, $event)"
-                 (dragend)="onDragEndEnt()"
-                 class="transition-opacity duration-300 min-w-0"
-                 [class.opacity-40]="draggedEntIndex() === i && draggedEntIndex() !== null">
-              <div class="flex items-center justify-between mb-2 sm:mb-3 pl-1 sm:pl-2 pr-[5px] cursor-grab active:cursor-grabbing min-w-0">
+            <div [attr.draggable]="canDragEnt ? 'true' : null"
+                 [attr.data-ent-index]="canDragEnt ? i : null"
+                 (dragstart)="canDragEnt ? onDragStartEnt(i, $event) : null"
+                 (dragover)="canDragEnt ? onDragOverEnt($event) : null"
+                 (drop)="canDragEnt ? onDropEnt(i, $event) : null"
+                 (dragend)="canDragEnt ? onDragEndEnt() : null"
+                 class="transition-all duration-150 min-w-0 rounded-2xl p-1"
+                 [class.opacity-40]="canDragEnt && draggedEntIndex() === i && draggedEntIndex() !== null"
+                 [class.shadow-xl]="canDragEnt && touchDraggedEntIndex() === i"
+                 [class.scale-[1.02]]="canDragEnt && touchDraggedEntIndex() === i"
+                 [class.bg-base-100]="canDragEnt && touchDraggedEntIndex() === i"
+                 [class.border]="canDragEnt && touchDraggedEntIndex() === i"
+                 [class.border-primary]="canDragEnt && touchDraggedEntIndex() === i"
+                 [class.border-transparent]="!canDragEnt || touchDraggedEntIndex() !== i"
+                 [class.z-20]="canDragEnt && touchDraggedEntIndex() === i">
+              <div class="flex items-center justify-between mb-2 sm:mb-3 pl-1 sm:pl-2 pr-[5px] min-w-0 select-none"
+                   [class.cursor-grab]="canDragEnt"
+                   [class.active:cursor-grabbing]="canDragEnt"
+                   (touchstart)="canDragEnt ? onTouchStartEnt(i, $event) : null"
+                   (touchmove)="canDragEnt ? onTouchMoveEnt($event) : null"
+                   (touchend)="canDragEnt ? onTouchEndEnt() : null"
+                   (touchcancel)="canDragEnt ? onTouchEndEnt() : null">
                 <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 pointer-events-none min-w-0 flex-1 truncate">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" [class.invisible]="!canDragEnt" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 opacity-70 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
                   <span class="truncate">{{ entName }}</span>
                 </h3>
@@ -189,15 +205,31 @@
                 </div>
               } @else {
                 <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
+                  @let canDragAcc = accountsByEntity()[entName].accounts.length > 1;
                   @for (acc of accountsByEntity()[entName].accounts; track acc.id; let j = $index) {
-                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 transition-opacity duration-300 min-w-0 flex-nowrap"
-                        draggable="true"
-                        (dragstart)="onDragStartAcc(entName, j, $event)"
-                        (dragover)="onDragOverAcc(entName, $event)"
-                        (drop)="onDropAcc(entName, j, $event)"
-                        (dragend)="onDragEndAcc()"
-                        [class.opacity-40]="draggedAccIndex()?.entityName === entName && draggedAccIndex()?.index === j">
-                      <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 cursor-grab active:cursor-grabbing pointer-events-none">
+                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 select-none transition-all duration-150 rounded-lg min-w-0 flex-nowrap"
+                        [class.cursor-grab]="canDragAcc"
+                        [class.active:cursor-grabbing]="canDragAcc"
+                        [attr.data-acc-index]="canDragAcc ? j : null"
+                        [attr.data-acc-entity]="canDragAcc ? entName : null"
+                        [attr.draggable]="canDragAcc ? 'true' : null"
+                        (dragstart)="canDragAcc ? onDragStartAcc(entName, j, $event) : null"
+                        (dragover)="canDragAcc ? onDragOverAcc(entName, $event) : null"
+                        (drop)="canDragAcc ? onDropAcc(entName, j, $event) : null"
+                        (dragend)="canDragAcc ? onDragEndAcc() : null"
+                        (touchstart)="canDragAcc ? onTouchStartAcc(entName, j, $event) : null"
+                        (touchmove)="canDragAcc ? onTouchMoveAcc($event) : null"
+                        (touchend)="canDragAcc ? onTouchEndAcc() : null"
+                        (touchcancel)="canDragAcc ? onTouchEndAcc() : null"
+                        [class.opacity-40]="canDragAcc && draggedAccIndex()?.entityName === entName && draggedAccIndex()?.index === j"
+                        [class.shadow-xl]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
+                        [class.scale-[1.02]]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
+                        [class.bg-base-100]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
+                        [class.border]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
+                        [class.border-primary]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
+                        [class.z-20]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j">
+                      <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" [class.invisible]="!canDragAcc" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-1 min-w-0 gap-0.5 sm:gap-2">
                           <span class="font-medium text-sm sm:text-base truncate">{{ acc.name }}</span>

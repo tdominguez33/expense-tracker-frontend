@@ -164,4 +164,60 @@ describe('PeriodCharts', () => {
     component.onDocTouchEnd({ changedTouches: [{ clientX: 51, clientY: 51 }], target: document.body } as any);
     expect(component.selectedBar()).toBeNull();
   });
+
+  it('should allow hovering and clicking bars with 0 expenses and switch directly between bars', () => {
+    const barZero: TimelineBarItem = {
+      label: '10',
+      fullLabel: '10 de Agosto',
+      amount: 0,
+      count: 0,
+      dateKey: '2026-08-10'
+    };
+
+    const barWithAmount: TimelineBarItem = {
+      label: '11',
+      fullLabel: '11 de Agosto',
+      amount: 5000,
+      count: 1,
+      dateKey: '2026-08-11'
+    };
+
+    // Hover bar with 0 expenses
+    component.hoverBar(barZero);
+    expect(component.hoveredBar()).toEqual(barZero);
+    expect(component.activeBar()?.fullLabel).toBe('10 de Agosto');
+    expect(component.activeBar()?.amount).toBe(0);
+
+    // Transition directly to another bar without clearing in between
+    component.hoverBar(barWithAmount);
+    expect(component.hoveredBar()).toEqual(barWithAmount);
+    expect(component.activeBar()?.fullLabel).toBe('11 de Agosto');
+    expect(component.activeBar()?.amount).toBe(5000);
+
+    // Click bar with 0 expenses to select it
+    component.onBarClick(barZero);
+    expect(component.selectedBar()).toEqual(barZero);
+    expect(component.activeBar()?.fullLabel).toBe('10 de Agosto');
+  });
+
+  it('should not lock bar selection when clicked with mouse cursor, but lock when touched', () => {
+    const bar: TimelineBarItem = {
+      label: '1',
+      fullLabel: '1 de Septiembre',
+      amount: 1000,
+      count: 1,
+      dateKey: '2026-09-01'
+    };
+
+    // 1. Mouse click: does NOT set selectedBar
+    const mouseEvent = { pointerType: 'mouse', stopPropagation: vi.fn() } as any;
+    component.onBarClick(bar, mouseEvent);
+    expect(component.selectedBar()).toBeNull();
+
+    // 2. Touch tap: DOES set selectedBar
+    const touchEvent = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
+    component.onBarClick(bar, touchEvent);
+    expect(component.selectedBar()).toEqual(bar);
+  });
 });
+

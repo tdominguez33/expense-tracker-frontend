@@ -182,4 +182,43 @@ describe('Transactions', () => {
     fixture.detectChanges();
     expect(realAmountInput.getAttribute('placeholder')).toBe('Monto total...');
   });
+
+  it('should calculate daily total in groupedTransactions using real_amount when present and total_amount otherwise', () => {
+    component.transactions.set([
+      {
+        id: 1,
+        description: 'Compra con descuento',
+        total_amount: 10000,
+        real_amount: 7500,
+        transaction_date: '2026-09-26'
+      },
+      {
+        id: 2,
+        description: 'Compra normal',
+        total_amount: 2500,
+        real_amount: null,
+        transaction_date: '2026-09-26'
+      },
+      {
+        id: 3,
+        description: 'Compra día anterior',
+        total_amount: 5000,
+        real_amount: 4000,
+        transaction_date: '2026-09-25'
+      }
+    ]);
+
+    const groups = component.groupedTransactions();
+    expect(groups.length).toBe(2);
+
+    const groupToday = groups.find(g => g.date === '2026-09-26');
+    expect(groupToday).toBeDefined();
+    // 7500 (real_amount) + 2500 (total_amount) = 10000, instead of 10000 + 2500 = 12500
+    expect(groupToday?.total).toBe(10000);
+
+    const groupYesterday = groups.find(g => g.date === '2026-09-25');
+    expect(groupYesterday).toBeDefined();
+    expect(groupYesterday?.total).toBe(4000);
+  });
 });
+

@@ -229,95 +229,98 @@
     </app-period-charts>
 
     <!-- Detalle de Gastos (Transactions Table) -->
-    <div id="transactions-section" class="card bg-base-100 shadow-sm border border-base-content/20 p-6 scroll-mt-6">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div>
-          <h2 class="text-xl font-bold">Detalle de Gastos</h2>
-          <p class="text-sm text-base-content/60">Listado de operaciones registradas en {{ getPeriodLabel() }}</p>
-        </div>
-
-        <!-- Controls: Date filter & Search -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <!-- Date Filter Input -->
-          <div class="relative w-full sm:w-44">
-            <svg xmlns="http://www.w3.org/2000/svg" 
-                 class="h-4 w-4 absolute left-3 top-2 text-base-content/40 pointer-events-none" 
-                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            @if (selectedMonth() !== null) {
-              <input type="date" 
-                     [ngModel]="dateFilter()" 
-                     (ngModelChange)="onDateFilterChange($event)"
-                     [min]="getMinDate()"
-                     [max]="getMaxDate()"
-                     class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
-                     title="Filtrar por fecha" />
-            } @else {
-              <input type="month" 
-                     [ngModel]="dateFilter()" 
-                     (ngModelChange)="onDateFilterChange($event)"
-                     [min]="getMinDate()"
-                     [max]="getMaxDate()"
-                     class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
-                     title="Filtrar por mes" />
-            }
-            @if (dateFilter()) {
-              <button type="button" 
-                      class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold z-10"
-                      (click)="clearDateFilter()" 
-                      title="Limpiar fecha">
-                ✕
-              </button>
-            }
+    <div id="transactions-section" class="card bg-base-100 shadow-sm border border-base-content/20 scroll-mt-6 overflow-hidden">
+      <!-- Card Header & Filters -->
+      <div class="p-4 sm:p-6 pb-3 sm:pb-4 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold">Detalle de Gastos</h2>
+            <p class="text-sm text-base-content/60">Listado de operaciones registradas en {{ getPeriodLabel() }}</p>
           </div>
 
-          <!-- Search Controls -->
-          <div class="relative w-full sm:w-56">
-            <input type="text" 
-                   [(ngModel)]="searchQuery" 
-                   (ngModelChange)="currentPage.set(1)"
-                   placeholder="Buscar en el período..." 
-                   class="input input-bordered input-sm w-full pl-9 pr-8" />
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            @if (searchQuery()) {
-              <button class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold"
-                      type="button"
-                      (click)="searchQuery.set(''); currentPage.set(1)"
-                      title="Limpiar búsqueda">
-                ✕
-              </button>
-            }
+          <!-- Controls: Date filter & Search -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <!-- Date Filter Input -->
+            <div class="relative w-full sm:w-44">
+              <svg xmlns="http://www.w3.org/2000/svg" 
+                   class="h-4 w-4 absolute left-3 top-2 text-base-content/40 pointer-events-none" 
+                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              @if (selectedMonth() !== null) {
+                <input type="date" 
+                       [ngModel]="dateFilter()" 
+                       (ngModelChange)="onDateFilterChange($event)"
+                       [min]="getMinDate()"
+                       [max]="getMaxDate()"
+                       class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
+                       title="Filtrar por fecha" />
+              } @else {
+                <input type="month" 
+                       [ngModel]="dateFilter()" 
+                       (ngModelChange)="onDateFilterChange($event)"
+                       [min]="getMinDate()"
+                       [max]="getMaxDate()"
+                       class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
+                       title="Filtrar por mes" />
+              }
+              @if (dateFilter()) {
+                <button type="button" 
+                        class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold z-10"
+                        (click)="clearDateFilter()" 
+                        title="Limpiar fecha">
+                  ✕
+                </button>
+              }
+            </div>
+
+            <!-- Search Controls -->
+            <div class="relative w-full sm:w-56">
+              <input type="text" 
+                     [(ngModel)]="searchQuery" 
+                     (ngModelChange)="currentPage.set(1)"
+                     placeholder="Buscar en el período..." 
+                     class="input input-bordered input-sm w-full pl-9 pr-8" />
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              @if (searchQuery()) {
+                <button class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-base-content/40 hover:text-base-content text-xs font-bold"
+                        type="button"
+                        (click)="searchQuery.set(''); currentPage.set(1)"
+                        title="Limpiar búsqueda">
+                  ✕
+                </button>
+              }
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Quick category filter pills -->
-      <div class="flex items-center gap-1.5 flex-wrap mb-4 pb-3 border-b border-base-content/10 w-full">
-        <span class="text-xs font-medium text-base-content/60 w-full sm:w-auto mr-1 mb-0.5 sm:mb-0">Filtrar por:</span>
-        <button type="button" 
-                class="btn btn-xs h-7 min-h-[1.75rem] px-2.5 flex-auto sm:flex-none justify-center max-w-full"
-                [ngClass]="categoryFilter() === null ? 'btn-neutral' : 'btn-ghost border border-base-content/20 text-base-content/70'"
-                (click)="clearCategoryFilter()">
-          <span class="py-0.5 leading-normal">Todas ({{ report.transactions.length }})</span>
-        </button>
-
-        @for (c of report.by_category; track c.id) {
+        <!-- Quick category filter pills -->
+        <div class="flex items-center gap-1.5 flex-wrap w-full">
+          <span class="text-xs font-medium text-base-content/60 w-full sm:w-auto mr-1 mb-0.5 sm:mb-0">Filtrar por:</span>
           <button type="button" 
-                  class="btn btn-xs h-7 min-h-[1.75rem] px-2.5 gap-1.5 flex-auto sm:flex-none justify-center max-w-full"
-                  [ngClass]="categoryFilter() === c.id ? 'btn-primary' : 'btn-ghost border border-base-content/20 text-base-content/80'"
-                  (click)="toggleCategoryFilter(c.id)">
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="c.color"></span>
-            <span class="truncate py-0.5 leading-normal">{{ c.name }} ({{ c.count }})</span>
+                  class="btn btn-xs h-7 min-h-[1.75rem] px-2.5 flex-auto sm:flex-none justify-center max-w-full"
+                  [ngClass]="categoryFilter() === null ? 'btn-neutral' : 'btn-ghost border border-base-content/20 text-base-content/70'"
+                  (click)="clearCategoryFilter()">
+            <span class="py-0.5 leading-normal">Todas ({{ report.transactions.length }})</span>
           </button>
-        }
+
+          @for (c of report.by_category; track c.id) {
+            <button type="button" 
+                    class="btn btn-xs h-7 min-h-[1.75rem] px-2.5 gap-1.5 flex-auto sm:flex-none justify-center max-w-full"
+                    [ngClass]="categoryFilter() === c.id ? 'btn-primary' : 'btn-ghost border border-base-content/20 text-base-content/80'"
+                    (click)="toggleCategoryFilter(c.id)">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.backgroundColor]="c.color"></span>
+              <span class="truncate py-0.5 leading-normal">{{ c.name }} ({{ c.count }})</span>
+            </button>
+          }
+        </div>
       </div>
 
-      <!-- Table -->
+      <!-- Table / List Content -->
       @let txList = paginatedTransactions();
       @let totalCount = totalItems();
       @if (totalCount === 0) {
-        <div class="text-center py-12 text-base-content/50 italic space-y-3">
+        <div class="text-center py-12 px-4 text-base-content/50 italic space-y-3 border-t border-base-content/10">
           <p>No se encontraron gastos con los filtros aplicados.</p>
           @if (dateFilter() || categoryFilter() !== null || searchQuery()) {
             <div>
@@ -328,28 +331,23 @@
           }
         </div>
       } @else {
-        <!-- Mobile View (< md): Compact card list without horizontal scroll -->
-        <div class="md:hidden divide-y divide-base-content/10 bg-base-100 rounded-xl border border-base-content/20 overflow-hidden shadow-sm">
+        <!-- Mobile View (< md): Compact card list spanning full width of the main card without nested card borders -->
+        <div class="md:hidden divide-y divide-base-content/10 border-t border-base-content/10">
           @for (t of txList; track t.id) {
-            <div class="p-3 hover:bg-base-200/40 transition-colors flex flex-col gap-1.5">
+            <div class="px-4 py-3 hover:bg-base-200/40 active:bg-base-200/60 transition-colors flex flex-col gap-1.5">
               <!-- Row 1: Description & Amount -->
-              <div class="flex items-start justify-between gap-3 min-w-0">
+              <div class="flex items-center justify-between gap-3 min-w-0">
                 <span class="font-medium text-sm text-base-content truncate flex-1" [title]="t.description || '-'">
                   {{ t.description || '-' }}
                 </span>
                 <div class="text-right shrink-0">
-                  <span class="font-bold text-sm text-base-content">
+                  <span class="font-bold text-sm text-base-content tabular-nums">
                     ${{ t.amount | number:'1.2-2' }}
                   </span>
-                  @if (t.real_amount !== null && t.real_amount !== t.total_amount) {
-                    <span class="text-[10px] text-base-content/50 block line-through font-normal">
-                      ${{ t.total_amount | number:'1.2-2' }}
-                    </span>
-                  }
                 </div>
               </div>
 
-              <!-- Row 2: Metadata Badges & Date -->
+              <!-- Row 2: Metadata Badges & Date (Left) | Original Amount & Installments (Right) -->
               <div class="flex items-center justify-between gap-2 text-xs text-base-content/60 min-w-0">
                 <div class="flex items-center gap-1.5 truncate min-w-0">
                   <!-- Date -->
@@ -373,8 +371,13 @@
                   </span>
                 </div>
 
-                <!-- Installments Badge -->
-                <div class="shrink-0 text-right">
+                <!-- Right: Original amount (if modified) and Installments badge -->
+                <div class="shrink-0 text-right flex items-center justify-end gap-1.5">
+                  @if (t.real_amount !== null && t.real_amount !== t.total_amount) {
+                    <span class="text-[11px] text-base-content/50 line-through font-normal tabular-nums" title="Monto original">
+                      ${{ t.total_amount | number:'1.2-2' }}
+                    </span>
+                  }
                   @if (t.installments_count > 1) {
                     <span class="badge badge-outline badge-sm text-xs text-primary font-medium">
                       {{ t.installments_count }} cuotas
@@ -386,9 +389,9 @@
           }
         </div>
 
-        <!-- Desktop View (>= md): Full Table -->
-        <div class="hidden md:block overflow-x-auto">
-          <table class="table table-zebra table-sm w-full table-fixed min-w-[760px]">
+        <!-- Desktop View (>= md): Full Table occupying full width of the main card -->
+        <div class="hidden md:block overflow-x-auto border-t border-base-content/10">
+          <table class="table table-zebra table-sm w-full table-fixed min-w-[760px] [&_th:first-child]:pl-6 [&_td:first-child]:pl-6 [&_th:last-child]:pr-6 [&_td:last-child]:pr-6">
             <colgroup>
               <col class="w-[115px]">
               <col>
@@ -560,7 +563,7 @@
         </div>
 
         <!-- Pagination Controls Footer -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mt-4 pt-4 border-t border-base-content/10 text-center sm:text-left">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 border-t border-base-content/10 text-center sm:text-left">
           <div class="text-xs text-base-content/60">
             Mostrando <span class="font-semibold">{{ (currentPage() - 1) * pageSize() + 1 }}</span> a 
             <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), totalCount) }}</span> de 

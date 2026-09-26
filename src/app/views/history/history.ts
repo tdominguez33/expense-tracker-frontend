@@ -72,12 +72,8 @@ export class HistoryView implements OnInit, OnDestroy {
 
   initDefaultPeriod() {
     const now = new Date();
-    let defYear = now.getFullYear();
-    let defMonth = now.getMonth(); // 0 is January; in September, getMonth() is 8 (August in 1-indexed)
-    if (defMonth === 0) {
-      defMonth = 12;
-      defYear -= 1;
-    }
+    const defYear = now.getFullYear();
+    const defMonth = now.getMonth() + 1; // 1-indexed (e.g. 9 for September)
     this.selectedYear.set(defYear);
     this.selectedMonth.set(defMonth);
     this.availableYears.set([defYear]);
@@ -122,9 +118,31 @@ export class HistoryView implements OnInit, OnDestroy {
         const availMonths = data.available_months || [];
         this.availableMonths.set(availMonths);
 
-        // Si el mes seleccionado actualmente no tiene gastos en este año, buscar el último disponible
         const currMonth = this.selectedMonth();
-        if (currMonth !== null && availMonths.length > 0 && !availMonths.includes(currMonth)) {
+
+        // En la primera carga, asegurarse de que se abra el último mes disponible
+        if (!this.hasLoadedOnce()) {
+          if (availMonths.length > 0) {
+            const lastAvailMonth = availMonths[availMonths.length - 1];
+            if (currMonth !== lastAvailMonth) {
+              this.selectedMonth.set(lastAvailMonth);
+              this.loadReport();
+              return;
+            }
+          } else if (data.available_years && data.available_years.length > 0) {
+            const lastYear = data.available_years[data.available_years.length - 1];
+            if (lastYear !== this.selectedYear()) {
+              this.selectedYear.set(lastYear);
+              const periods = data.available_periods || {};
+              const months = periods[lastYear] || [];
+              if (months.length > 0) {
+                this.selectedMonth.set(months[months.length - 1]);
+              }
+              this.loadReport();
+              return;
+            }
+          }
+        } else if (currMonth !== null && availMonths.length > 0 && !availMonths.includes(currMonth)) {
           const fallbackMonth = availMonths[availMonths.length - 1];
           this.selectedMonth.set(fallbackMonth);
           this.loadReport();

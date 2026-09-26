@@ -302,30 +302,45 @@ export class PeriodCharts {
     }
   }
 
+  isTouchInteraction(event?: Event): boolean {
+    if (event && 'pointerType' in event) {
+      const pt = (event as PointerEvent).pointerType;
+      if (pt === 'touch' || pt === 'pen') return true;
+      if (pt === 'mouse') return false;
+    }
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const isDesktopCursor = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (isDesktopCursor) return false;
+    }
+    return true;
+  }
+
   // Bar click & hover
   onBarClick(bar: TimelineBarItem, event?: Event) {
     if (this.isSwiping || Math.abs(this.swipeOffset()) > 5) return;
     event?.stopPropagation();
 
-    if (bar.amount > 0) {
-      const isCurrentlySelected =
-        this.selectedBar()?.fullLabel === bar.fullLabel ||
-        (bar.dateKey && this.selectedBarKey() === bar.dateKey);
+    // On desktop PC with cursor/hover, clicking does not fix/select the bar
+    if (!this.isTouchInteraction(event)) {
+      this.barClick.emit(bar);
+      return;
+    }
 
-      if (isCurrentlySelected) {
-        this.selectedBar.set(null);
-      } else {
-        this.selectedBar.set(bar);
-      }
+    const isCurrentlySelected =
+      this.selectedBar()?.fullLabel === bar.fullLabel ||
+      (bar.dateKey && this.selectedBarKey() === bar.dateKey);
+
+    if (isCurrentlySelected) {
+      this.selectedBar.set(null);
+    } else {
+      this.selectedBar.set(bar);
     }
     this.hoveredBar.set(null);
     this.barClick.emit(bar);
   }
 
   hoverBar(bar: TimelineBarItem) {
-    if (bar.amount > 0) {
-      this.hoveredBar.set(bar);
-    }
+    this.hoveredBar.set(bar);
   }
 
   leaveBar() {

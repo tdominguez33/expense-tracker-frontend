@@ -318,4 +318,19 @@ describe('Dashboard', () => {
     ]);
     expect(component.creditCardsGridClass()).toBe('grid-cols-1 md:grid-cols-2 xl:grid-cols-3');
   });
+
+  it('should not lock timeline bar selection on mouse click, but lock on touch tap', () => {
+    const mockBar = { label: '10', fullLabel: 'Día 10', amount: 3000, heightPct: 50 };
+
+    // 1. Mouse click: does NOT set selectedTimelineBar
+    const mouseEvent = { pointerType: 'mouse', stopPropagation: vi.fn() } as any;
+    component.selectTimelineBar(mockBar, mouseEvent);
+    expect(component.selectedTimelineBar()).toBeNull();
+
+    // 2. Touch tap: DOES set selectedTimelineBar
+    const touchEvent = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
+    component.selectTimelineBar(mockBar, touchEvent);
+    expect(component.selectedTimelineBar()).toEqual(mockBar);
+  });
 });
+
