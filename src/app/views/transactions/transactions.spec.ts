@@ -176,11 +176,18 @@ describe('Transactions', () => {
     fixture.detectChanges();
     const realAmountInput = fixture.nativeElement.querySelector('input[formControlName="real_amount"]');
     expect(realAmountInput.getAttribute('placeholder')).toBe('Total');
+    expect(realAmountInput.getAttribute('inputmode')).toBe('decimal');
 
     // Desktop
     component.isMobile.set(false);
     fixture.detectChanges();
     expect(realAmountInput.getAttribute('placeholder')).toBe('Monto total...');
+  });
+
+  it('should have inputmode="decimal" on total_amount input for numeric keypad on mobile devices', () => {
+    const totalAmountInput = fixture.nativeElement.querySelector('input[formControlName="total_amount"]');
+    expect(totalAmountInput).toBeTruthy();
+    expect(totalAmountInput.getAttribute('inputmode')).toBe('decimal');
   });
 
   it('should calculate daily total in groupedTransactions using real_amount when present and total_amount otherwise', () => {

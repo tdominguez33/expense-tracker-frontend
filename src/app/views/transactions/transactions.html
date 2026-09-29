@@ -227,7 +227,7 @@
         <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Monto</span></label>
         <label class="input input-bordered flex items-center gap-2">
           $
-          <input type="text" formControlName="total_amount" class="grow" placeholder="0,00" />
+          <input type="text" inputmode="decimal" formControlName="total_amount" class="grow" placeholder="0,00" />
         </label>
       </div>
       
@@ -280,7 +280,7 @@
             <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
             <label class="input input-bordered flex items-center gap-2">
               $
-              <input type="text" formControlName="real_amount" class="grow min-w-0" [placeholder]="isMobile() ? 'Total' : 'Monto total...'" />
+              <input type="text" inputmode="decimal" formControlName="real_amount" class="grow min-w-0" [placeholder]="isMobile() ? 'Total' : 'Monto total...'" />
             </label>
           </div>
         </div>
