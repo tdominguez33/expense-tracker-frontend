@@ -43,8 +43,11 @@ export class LoginView {
       return [clean];
     }
 
-    // Si la web corre sobre HTTPS, los navegadores bloquean peticiones HTTP (Mixed Content)
-    const isHttpsPage = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+    // Si la web corre sobre HTTPS (producción web), los navegadores bloquean peticiones HTTP (Mixed Content).
+    // En entornos de escritorio como Tauri (tauri.localhost), no forzamos HTTPS indiscriminadamente.
+    const isHttpsPage = typeof window !== 'undefined' && 
+      window.location?.protocol === 'https:' && 
+      !window.location.hostname.includes('localhost');
     if (isHttpsPage) {
       return [`https://${clean}`];
     }
