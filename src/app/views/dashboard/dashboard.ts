@@ -183,7 +183,7 @@ export class Dashboard implements OnInit {
   }
 
   getCategoryColor(catId: any): string {
-    if (catId == 0) return '#6b7280'; // gray for "Sin categoría"
+    if (catId == 0) return '#6b7280'; // Gray for uncategorized category (ID 0)
     const cat = this.categories().find(c => c.id == catId);
     return cat ? cat.color : '#6b7280';
   }

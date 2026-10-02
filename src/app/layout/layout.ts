@@ -71,7 +71,7 @@ export class Layout implements OnInit, OnDestroy {
     this.currentTouchY = touch.clientY;
 
     if (!this.isDrawerOpen()) {
-      // Excluir la zona superior de la navbar para permitir tocar el botón de menú sin interferencias
+      // Exclude top navbar area to allow tapping the menu button without interference
       let isTopNavbar = false;
       const target = e.target as HTMLElement | null;
       if (target?.closest('.navbar, label[for="my-drawer-2"]')) {
@@ -94,7 +94,7 @@ export class Layout implements OnInit, OnDestroy {
         return;
       }
 
-      // Excluir elementos interactivos (botones, enlaces, etc.) para permitir clics normales sin interferencia de swipe
+      // Exclude interactive elements (buttons, links, etc.) to allow normal clicks without swipe interference
       const isInteractive = target?.closest('button, a, input, select, textarea, [role="button"], .btn');
       if (isInteractive) {
         this.isEdgeSwiping = false;

@@ -56,7 +56,7 @@
               <p class="text-md font-medium">No hay resúmenes para esta tarjeta</p>
             </div>
           } @else {
-            <!-- Vista Desktop (>= md): Tabla completa -->
+            <!-- Desktop View (>= md): Full table -->
             <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
               <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
                 <thead>
@@ -101,13 +101,13 @@
               </table>
             </div>
 
-            <!-- Vista Mobile (< md): Lista de tarjetas verticales sin scroll horizontal -->
+            <!-- Mobile View (< md): Vertical card list without horizontal scroll -->
             <div class="md:hidden flex flex-col gap-3">
               @for (st of recentSts; track st.id) {
                 @let stState = getStatementState(st);
                 <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
                      (click)="viewStatement(st)">
-                  <!-- Encabezado de tarjeta: Período y Estado -->
+                  <!-- Card Header: Period and Status -->
                   <div class="flex items-center justify-between gap-2 mb-2.5">
                     <span class="font-bold text-base text-base-content tracking-tight">
                       {{ getStatementPeriod(st.start_date, st.closing_date) }}
@@ -120,7 +120,7 @@
                     </div>
                   </div>
 
-                  <!-- Fechas y Monto Total -->
+                  <!-- Dates and Total Amount -->
                   <div class="flex items-end justify-between gap-3 pt-2.5 border-t border-base-content/10">
                     <div class="space-y-1 text-xs text-base-content/70">
                       <div class="flex items-center gap-1.5">
@@ -141,7 +141,7 @@
                     </div>
                   </div>
 
-                  <!-- Pie de tarjeta: Indicador "Ver detalle" y Botones de acción -->
+                  <!-- Card Footer: "View details" indicator and action buttons -->
                   <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-base-content/10">
                     <div class="flex items-center text-xs font-semibold text-primary">
                       <span>Ver detalle</span>
@@ -205,7 +205,7 @@
         <p class="text-sm mt-1">Crea tu primer resumen.</p>
       </div>
     } @else {
-      <!-- Vista Desktop (>= md): Tabla completa -->
+      <!-- Desktop View (>= md): Full table -->
       <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
         <table class="table table-zebra table-md w-full table-fixed min-w-[680px]">
           <thead>
@@ -250,13 +250,13 @@
         </table>
       </div>
 
-      <!-- Vista Mobile (< md): Lista de tarjetas verticales sin scroll horizontal -->
+      <!-- Mobile View (< md): Vertical card list without horizontal scroll -->
       <div class="md:hidden flex flex-col gap-3">
         @for (st of filteredStatements(); track st.id) {
           @let stState = getStatementState(st);
           <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
                (click)="viewStatement(st)">
-            <!-- Encabezado de tarjeta: Período y Estado -->
+            <!-- Card Header: Period and Status -->
             <div class="flex items-center justify-between gap-2 mb-2.5">
               <span class="font-bold text-base text-base-content tracking-tight">
                 {{ getStatementPeriod(st.start_date, st.closing_date) }}
@@ -269,7 +269,7 @@
               </div>
             </div>
 
-            <!-- Fechas y Monto Total -->
+            <!-- Dates and Total Amount -->
             <div class="flex items-end justify-between gap-3 pt-2.5 border-t border-base-content/10">
               <div class="space-y-1 text-xs text-base-content/70">
                 <div class="flex items-center gap-1.5">
@@ -290,7 +290,7 @@
               </div>
             </div>
 
-            <!-- Pie de tarjeta: Indicador "Ver detalle" y Botones de acción -->
+            <!-- Card Footer: "View details" indicator and action buttons -->
             <div class="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-base-content/10">
               <div class="flex items-center text-xs font-semibold text-primary">
                 <span>Ver detalle</span>
@@ -349,9 +349,9 @@
       </div>
     } @else {
     <!-- STATS CARDS -->
-    <!-- Vista Desktop (>= md): Gasto Total (50%) y Fechas apiladas Cierre sobre Vencimiento (50%) -->
+    <!-- Desktop View (>= md): Total Expense (50%) and Stacked Closing/Due Dates (50%) -->
     <div class="hidden md:grid md:grid-cols-2 gap-6 mb-8">
-      <!-- Columna 1: Gasto Total (50%) -->
+      <!-- Column 1: Total Expense (50%) -->
       <div class="card bg-base-100 shadow-sm border border-base-content/20">
         <div class="card-body flex flex-col justify-center">
           <h3 class="text-base-content/70 font-medium">Gasto Total</h3>
@@ -364,16 +364,16 @@
         </div>
       </div>
 
-      <!-- Columna 2: Cierre arriba de Vencimiento (50%) -->
+      <!-- Column 2: Closing above Due Date (50%) -->
       <div class="flex flex-col gap-4">
-        <!-- Fecha de Cierre (arriba) -->
+        <!-- Closing Date (top) -->
         <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1">
           <div class="card-body py-4 px-6 flex flex-row justify-between items-center">
             <h3 class="text-base-content/70 font-medium">Fecha de Cierre</h3>
             <p class="text-2xl font-bold text-base-content text-right">{{ viewingStatement().closing_date | date:'dd-MM-yyyy':'UTC' }}</p>
           </div>
         </div>
-        <!-- Fecha de Vencimiento (abajo) -->
+        <!-- Due Date (bottom) -->
         <div class="card bg-base-100 shadow-sm border border-base-content/20 flex-1">
           <div class="card-body py-4 px-6 flex flex-row justify-between items-center">
             <h3 class="text-base-content/70 font-medium">Fecha de Vencimiento</h3>
@@ -383,9 +383,9 @@
       </div>
     </div>
 
-    <!-- Vista Mobile (< md): Las 3 apiladas en formato ultra compacto para ahorrar espacio -->
+    <!-- Mobile View (< md): All 3 stacked in ultra-compact format to save space -->
     <div class="md:hidden bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden mb-6">
-      <!-- 1. Gasto Total -->
+      <!-- 1. Total Expense -->
       <div class="p-3.5 bg-base-200/30">
         <div class="flex justify-between items-center">
           <span class="text-xs font-bold text-base-content/60 uppercase tracking-wider">Gasto Total</span>
@@ -400,13 +400,13 @@
         }
       </div>
 
-      <!-- 2. Fecha de Cierre -->
+      <!-- 2. Closing Date -->
       <div class="px-3.5 py-2.5 flex justify-between items-center">
         <span class="text-xs font-medium text-base-content/70">Fecha de Cierre</span>
         <span class="text-sm font-bold text-base-content">{{ viewingStatement().closing_date | date:'dd-MM-yyyy':'UTC' }}</span>
       </div>
 
-      <!-- 3. Fecha de Vencimiento -->
+      <!-- 3. Due Date -->
       <div class="px-3.5 py-2.5 flex justify-between items-center">
         <span class="text-xs font-medium text-base-content/70">Fecha de Vencimiento</span>
         <span class="text-sm font-bold text-base-content">{{ viewingStatement().due_date | date:'dd-MM-yyyy':'UTC' }}</span>
@@ -414,7 +414,7 @@
     </div>
 
     <!-- TRANSACTIONS LIST -->
-    <!-- Header de Gastos y Botón Especial de Ordenamiento (compartido para Desktop y Mobile) -->
+    <!-- Expenses Header and Special Sort Button (shared for Desktop and Mobile) -->
     <div class="flex items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-2">
         <h2 class="text-base sm:text-lg font-bold text-base-content">
@@ -425,7 +425,7 @@
         }
       </div>
 
-      <!-- Botón especial de ordenamiento -->
+      <!-- Special sort button -->
       <button 
         type="button" 
         class="btn btn-sm bg-base-100 hover:bg-base-200 border border-base-content/20 shadow-sm normal-case font-normal shrink-0 gap-1.5"
@@ -442,7 +442,7 @@
       </button>
     </div>
 
-    <!-- Vista Desktop (>= md): Tabla completa -->
+    <!-- Desktop View (>= md): Full table -->
     <div class="hidden md:block overflow-x-auto bg-base-100 rounded-box border border-base-content/20 shadow-sm">
       <table class="table table-zebra table-md w-full [&_td]:py-3.5 [&_th]:py-3.5">
         <thead>
@@ -541,7 +541,7 @@
       </table>
     </div>
 
-    <!-- Vista Mobile (< md): Lista de gastos vertical sin scroll horizontal -->
+    <!-- Mobile View (< md): Vertical expense list without horizontal scroll -->
     <div class="md:hidden space-y-4">
       @if (getViewingDetails().length === 0) {
         <div class="flex flex-col items-center justify-center py-12 text-base-content/50 bg-base-200/30 rounded-box border border-base-content/20 border-dashed">

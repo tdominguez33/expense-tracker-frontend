@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Expense Tracker",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "identifier": "com.expensetracker.desktop",
   "build": {
     "frontendDist": "../dist/frontend-angular/browser",
@@ -15,8 +15,12 @@
         "title": "Expense Tracker",
         "width": 1500,
         "height": 800,
+        "minWidth": 375,
+        "minHeight": 500,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "decorations": false,
+        "shadow": true
       }
     ],
     "security": {

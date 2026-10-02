@@ -120,7 +120,7 @@ export class HistoryView implements OnInit, OnDestroy {
 
         const currMonth = this.selectedMonth();
 
-        // En la primera carga, asegurarse de que se abra el último mes disponible
+        // On initial load, ensure the latest available month is opened
         if (!this.hasLoadedOnce()) {
           if (availMonths.length > 0) {
             const lastAvailMonth = availMonths[availMonths.length - 1];
@@ -479,15 +479,15 @@ export class HistoryView implements OnInit, OnDestroy {
     if (this.sortColumn() === col) {
       const initialDir: SortDirection = (col === 'date' || col === 'amount') ? 'desc' : 'asc';
       if (this.sortDirection() === initialDir) {
-        // Segundo click: invertir dirección
+        // Second click: reverse direction
         this.sortDirection.set(initialDir === 'desc' ? 'asc' : 'desc');
       } else {
-        // Tercer click: quitar todo el ordenamiento
+        // Third click: clear sorting
         this.sortColumn.set(null);
         this.sortDirection.set(null);
       }
     } else {
-      // Primer click: activar orden con dirección inicial
+      // First click: activate sorting with initial direction
       this.sortColumn.set(col);
       this.sortDirection.set(col === 'date' || col === 'amount' ? 'desc' : 'asc');
     }

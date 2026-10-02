@@ -93,7 +93,7 @@ describe('Transactions', () => {
     const mobileItem = mobileListContainer.querySelector('.cursor-pointer');
     expect(mobileItem).toBeTruthy();
     expect(mobileItem.textContent).toContain('Supermercado Día');
-    // Ensure cuotas are not rendered in mobile item
+    // Ensure installment badges are not rendered in mobile item
     expect(mobileItem.textContent).not.toContain('cuotas');
 
     mobileItem.click();

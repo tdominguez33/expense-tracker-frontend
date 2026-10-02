@@ -31,20 +31,20 @@ export class LoginView {
   }
 
   /**
-   * Genera las URLs candidatas a probar basándose en si se especificó protocolo,
-   * si es una dirección local/puerto o un dominio, y el contexto HTTP/HTTPS de la página.
+   * Generates candidate URLs to test based on whether a protocol was specified,
+   * whether it is a local address/port or a domain, and the page's HTTP/HTTPS context.
    */
   public getCandidateUrls(input: string): string[] {
     const clean = input.trim().replace(/\/+$/, '');
     if (!clean) return [];
 
-    // Si el usuario especificó explícitamente http:// o https://, respetarlo
+    // If the user explicitly specified http:// or https://, respect it
     if (/^https?:\/\//i.test(clean)) {
       return [clean];
     }
 
-    // Si la web corre sobre HTTPS (producción web), los navegadores bloquean peticiones HTTP (Mixed Content).
-    // En entornos de escritorio como Tauri (tauri.localhost), no forzamos HTTPS indiscriminadamente.
+    // If the web runs over HTTPS (production web), browsers block HTTP requests (Mixed Content).
+    // In desktop environments like Tauri (tauri.localhost), do not force HTTPS indiscriminately.
     const isHttpsPage = typeof window !== 'undefined' && 
       window.location?.protocol === 'https:' && 
       !window.location.hostname.includes('localhost');
@@ -64,7 +64,7 @@ export class LoginView {
       return [`http://${clean}`, `https://${clean}`];
     }
 
-    // Dominio público sin puerto o puertos no habituales: priorizar https y fallback a http
+    // Public domain without port or non-standard ports: prioritize https and fallback to http
     return [`https://${clean}`, `http://${clean}`];
   }
 
@@ -119,7 +119,7 @@ export class LoginView {
         const isTimeout = err.name === 'TimeoutError';
         const isNetworkError = err.status === 0;
 
-        // Si falló por red o timeout y queda otro protocolo candidato
+        // If it failed due to network or timeout and there is another candidate protocol
         if ((isTimeout || isNetworkError) && index + 1 < candidates.length) {
           console.warn(`No se pudo conectar a ${currentUrl}, intentando con ${candidates[index + 1]}...`);
           this.tryLogin(candidates, index + 1);

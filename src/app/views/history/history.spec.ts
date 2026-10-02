@@ -125,8 +125,8 @@ describe('HistoryView', () => {
   });
 
   it('should not allow selecting months with no expenses and disable their buttons', () => {
-    // mockReport.available_months has [7, 8, 9] (Jul, Ago, Sep)
-    // Month 1 (Ene) has no data
+    // mockReport.available_months has [7, 8, 9] (Jul, Aug, Sep)
+    // Month 1 (Jan) has no data
     expect(component.isMonthAvailable(1)).toBe(false);
     expect(component.isMonthAvailable(8)).toBe(true);
 

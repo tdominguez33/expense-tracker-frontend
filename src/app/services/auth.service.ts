@@ -56,8 +56,8 @@ export class AuthService {
             this.authState.next(true);
           },
           error: (err) => {
-            // Si el servidor respondió con un status HTTP (ej. 401 contraseña incorrecta),
-            // la URL es alcanzable y válida.
+            // If the server responded with an HTTP status (e.g. 401 incorrect password),
+            // the URL is reachable and valid.
             if (err.status && err.status !== 0 && apiUrl) {
               this.config.setApiUrl(baseUrl);
             }

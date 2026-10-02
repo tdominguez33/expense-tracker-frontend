@@ -1,7 +1,7 @@
-<div class="drawer lg:drawer-open">
+<div class="drawer lg:drawer-open h-full min-h-0 overflow-hidden">
   <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
   
-  <div class="drawer-content flex flex-col bg-base-100 overflow-x-hidden">
+  <div class="drawer-content flex flex-col bg-base-100 h-full min-h-0 overflow-x-hidden">
     <!-- Navbar for mobile -->
     <div class="w-full navbar bg-base-200 lg:hidden shadow-sm sticky top-0 z-30 safe-top px-3">
       <div class="flex-none">
@@ -16,14 +16,14 @@
     </div>
     
     <!-- Main content -->
-    <main class="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto safe-bottom">
+    <main class="flex-1 min-h-0 p-4 sm:p-6 md:p-10 overflow-y-auto safe-bottom">
       <router-outlet></router-outlet>
     </main>
   </div> 
   
-  <div class="drawer-side z-50">
+  <div class="drawer-side z-50 h-full">
     <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label> 
-    <div class="flex flex-col bg-base-200 text-base-content min-h-full w-72 p-4 safe-top safe-bottom">
+    <div class="flex flex-col bg-base-200 text-base-content h-full w-72 p-4 safe-top safe-bottom">
       <!-- Sidebar Title (Non-interactive) -->
       <div class="flex items-center gap-3 px-4 pt-3 pb-2 mb-6 select-none pointer-events-none cursor-default">
         <img src="icon.png" alt="Logo" class="w-8 h-8 object-contain pointer-events-none select-none" />

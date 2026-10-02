@@ -124,7 +124,7 @@ export class PeriodCharts {
     return { active, total: data.length };
   });
 
-  // Responsive month rows for mobile layout (días 1-15, días 16-fin)
+  // Responsive month rows for mobile layout (days 1-15, days 16-end)
   timelineMonthRows = computed<TimelineBarItem[][]>(() => {
     const data = this.processedTimelineData();
     if (!this.isMonthView() || data.length <= 15) {

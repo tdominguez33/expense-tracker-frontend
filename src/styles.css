@@ -4,25 +4,89 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-  scrollbar-gutter: stable !important;
-  overflow-anchor: none;
-  overscroll-behavior-y: none;
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  scrollbar-gutter: auto !important;
 }
 
-body, main {
-  font-family: 'Inter', sans-serif;
-  overflow-anchor: none;
+/* Prevent DaisyUI from forcing scrollbar-gutter: stable on html when drawer or modal opens */
+html:has(.drawer-toggle:checked),
+:root:has(:is(.modal-open, .modal:target, .modal-toggle:checked + .modal, .modal[open])) {
+  scrollbar-gutter: auto !important;
 }
 
 body {
-  overscroll-behavior-y: none;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
+  font-family: 'Inter', sans-serif;
 }
 
-/* iOS Safe Area Utilities */
+main {
+  font-family: 'Inter', sans-serif;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+}
+
+app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+app-titlebar {
+  display: block;
+  position: relative;
+  z-index: 60;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+app-layout,
+app-login {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.drawer,
+.drawer-content {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* On mobile (< 1024px) drawer-side is position: fixed; must start below the titlebar to avoid overlapping or being pushed behind */
+@media (max-width: 1023.98px) {
+  .drawer-side {
+    top: var(--titlebar-height, 0px) !important;
+    height: calc(100% - var(--titlebar-height, 0px)) !important;
+    height: calc(100dvh - var(--titlebar-height, 0px)) !important;
+    max-height: calc(100% - var(--titlebar-height, 0px)) !important;
+    max-height: calc(100dvh - var(--titlebar-height, 0px)) !important;
+  }
+}
+
+/* On desktop (>= 1024px) drawer-side is sticky within the layout that already starts below the titlebar */
+@media (min-width: 1024px) {
+  .drawer.lg\:drawer-open > .drawer-side {
+    top: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+}
+
+/* Global variables and iOS Safe Area Utilities */
 :root {
+  --titlebar-height: 0px;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
@@ -89,7 +153,7 @@ body {
   }
 }
 
-/* Transición suave entre temas vía View Transitions API (acelerada por GPU, sin caída de FPS ni recálculos en el DOM) */
+/* Smooth theme transition via View Transitions API (GPU-accelerated, zero FPS drops or DOM recalculations) */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 200ms;

@@ -442,7 +442,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     const modal = document.getElementById('tx_modal') as HTMLDialogElement;
     modal.showModal();
     
-    // Evitar que se abra el teclado en móvil automáticamente al crear o editar
+    // Prevent the mobile keyboard from automatically opening when creating or editing
     if (this.isMobile()) {
       setTimeout(() => {
         if (document.activeElement instanceof HTMLElement) {

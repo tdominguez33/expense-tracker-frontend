@@ -1,0 +1,62 @@
+@if (isDesktop()) {
+  <header
+    class="h-8 w-full bg-base-200 text-base-content flex items-center justify-between select-none relative z-[60] shrink-0 text-xs"
+    data-tauri-drag-region
+    (mousedown)="onHeaderMouseDown($event)"
+    (dblclick)="toggleMaximize()">
+
+    <!-- Draggable Region -->
+    <div class="flex-1 h-full" data-tauri-drag-region></div>
+
+    <!-- Window Control Buttons (Right - 3 Windows functions) -->
+    <div class="flex items-stretch h-full">
+      <!-- Minimize -->
+      <button
+        type="button"
+        (click)="minimize(); $event.stopPropagation()"
+        (mousedown)="$event.stopPropagation()"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-base-content/10 active:bg-base-content/20 transition-colors text-base-content/80 focus:outline-none"
+        title="Minimizar"
+        aria-label="Minimizar ventana">
+        <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
+          <path d="M0 5h10v1H0z" />
+        </svg>
+      </button>
+
+      <!-- Maximize / Restore -->
+      <button
+        type="button"
+        (click)="toggleMaximize(); $event.stopPropagation()"
+        (mousedown)="$event.stopPropagation()"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-base-content/10 active:bg-base-content/20 transition-colors text-base-content/80 focus:outline-none"
+        [title]="isMaximized() ? 'Restaurar' : 'Maximizar'"
+        [attr.aria-label]="isMaximized() ? 'Restaurar ventana' : 'Maximizar ventana'">
+        @if (isMaximized()) {
+          <!-- Restore Icon (Overlapping Dual Squares) -->
+          <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M2.5 1.5h6v6" />
+            <rect x="0.5" y="2.5" width="7" height="7" />
+          </svg>
+        } @else {
+          <!-- Maximize Icon (Single Square) -->
+          <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1">
+            <rect x="0.5" y="0.5" width="9" height="9" />
+          </svg>
+        }
+      </button>
+
+      <!-- Close -->
+      <button
+        type="button"
+        (click)="close(); $event.stopPropagation()"
+        (mousedown)="$event.stopPropagation()"
+        class="inline-flex items-center justify-center w-11 h-full hover:bg-[#e81123] hover:text-white active:bg-[#c4101e] transition-colors text-base-content/80 focus:outline-none"
+        title="Cerrar"
+        aria-label="Cerrar ventana">
+        <svg class="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+          <path d="M1 1l8 8M9 1L1 9" />
+        </svg>
+      </button>
+    </div>
+  </header>
+}
