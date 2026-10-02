@@ -1,15 +1,23 @@
 # Correr proyecto
+
 ### Desarrollo
-1. Instalar Angular + dependencias
-```
-cd frontend
+
+1. Instalar dependencias
+```bash
 npm install
 ```
+
 2. (Opción 1) Ejecutar frontend directamente desde Angular
+```bash
+npm start
 ```
-ng serve
+
+3. (Opción 2) Ejecutar frontend como app de escritorio (Tauri)
+```bash
+npm run tauri:dev
 ```
-2. (Opción 2) Ejecutar frontend como app electron
-```
-npm run electron:dev
+
+### Compilar app de escritorio
+```bash
+npm run tauri:build
 ```

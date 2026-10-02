@@ -63,9 +63,12 @@ describe('HistoryView', () => {
   });
 
   it('should default to latest month on init', () => {
+    const testFixture = TestBed.createComponent(HistoryView);
+    const testComp = testFixture.componentInstance;
+    testComp.initDefaultPeriod();
     const now = new Date();
-    expect(component.selectedYear()).toBe(now.getFullYear());
-    expect(component.selectedMonth()).toBe(now.getMonth() + 1);
+    expect(testComp.selectedYear()).toBe(now.getFullYear());
+    expect(testComp.selectedMonth()).toBe(now.getMonth() + 1);
   });
 
   it('should fallback to last available month on initial load if current month has no data', () => {

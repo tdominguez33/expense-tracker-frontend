@@ -23,13 +23,13 @@
 
         <!-- Reusable Period Card Template -->
         <ng-template #periodCardTpl let-item>
-          <div class="card shadow-sm border cursor-pointer transition-all duration-200 overflow-visible h-full"
+          <div class="card shadow-sm border cursor-pointer transition-colors duration-200 overflow-visible h-full"
                [ngClass]="selectedPeriod() === item.period ? 'bg-base-200/70 border-base-content/30 shadow-md' : 'bg-base-100 border-base-content/15 hover:bg-base-200/40'"
                (click)="onCardClick(item.period)">
             <div class="card-body p-3.5 sm:p-4 xl:p-5 overflow-visible">
               <!-- Header with integrated mobile arrows -->
               <div class="flex items-center justify-between sm:justify-start w-full mb-1 sm:mb-0">
-                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -ml-1 transition-all"
+                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -ml-1 transition-colors duration-200"
                         [class.invisible]="item.period === 'day'"
                         [disabled]="item.period === 'day' || isNavigatingPeriod || selectedPeriod() !== item.period"
                         (click)="onCardPrevClick($event)"
@@ -47,7 +47,7 @@
                   {{ item.label }}
                 </span>
 
-                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -mr-1 transition-all"
+                <button class="sm:hidden btn btn-circle btn-ghost btn-xs text-base-content/50 hover:text-base-content hover:bg-base-300/50 -mr-1 transition-colors duration-200"
                         [class.invisible]="item.period === 'year'"
                         [disabled]="item.period === 'year' || isNavigatingPeriod || selectedPeriod() !== item.period"
                         (click)="onCardNextClick($event)"
@@ -98,7 +98,7 @@
                       @if (getComparisonTooltip(item.period); as tip) {
                         <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2 z-40
                                     opacity-0 -translate-y-1 group-hover/comp:opacity-100 group-hover/comp:translate-y-0
-                                    transition-all duration-200 delay-150
+                                    transition-[opacity,transform] duration-200 delay-150
                                     bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10">
                           <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
                           <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
@@ -138,7 +138,7 @@
           <div class="flex justify-center items-center gap-1.5 mt-2">
             @for (item of periodMetadata; track item.period; let i = $index) {
               <button (click)="onDotClick(item.period)"
-                      class="transition-all duration-300 rounded-full"
+                      class="transition-all duration-200 rounded-full"
                       [class]="selectedPeriod() === item.period ? 'w-5 h-1.5 bg-primary' : 'w-1.5 h-1.5 bg-base-content/25 hover:bg-base-content/40'"
                       [attr.aria-label]="item.label"
                       [title]="item.label">
@@ -234,10 +234,10 @@
                                    (mouseenter)="hoverTimelineBar(bar)">
                                 
                                 <!-- Bar Background (capsule) -->
-                                <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                                <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                                      [class.ring-2]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                      [class.ring-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel">
-                                  <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50" 
+                                  <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50" 
                                        [class.brightness-125]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                        [style.height]="bar.heightPct + '%'">
                                   </div>
@@ -268,10 +268,10 @@
                                (mouseenter)="hoverTimelineBar(bar)">
                             
                             <!-- Bar Background (capsule) -->
-                            <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                            <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                                  [class.ring-2]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.ring-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel">
-                              <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                              <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
                                    [class.brightness-125]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                    [style.height]="bar.heightPct + '%'">
                               </div>
@@ -300,10 +300,10 @@
                                (mouseenter)="hoverTimelineBar(bar)">
                             
                             <!-- Bar Background (capsule) -->
-                            <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                            <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                                  [class.ring-2]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                  [class.ring-primary]="activeTimelineBar()?.fullLabel === bar.fullLabel">
-                              <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                              <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
                                    [class.brightness-125]="activeTimelineBar()?.fullLabel === bar.fullLabel"
                                    [style.height]="bar.heightPct + '%'">
                               </div>
@@ -364,12 +364,12 @@
             
             <div class="flex items-center gap-1.5">
               <button (click)="goToSlide(0)" 
-                      class="text-xs px-3 py-1 rounded-full transition-all duration-200 border"
+                      class="text-xs px-3 py-1 rounded-full transition-colors duration-200 border"
                       [ngClass]="activeSlide() === 0 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
                 Categorías
               </button>
               <button (click)="goToSlide(1)" 
-                      class="text-xs px-3 py-1 rounded-full transition-all duration-200 border"
+                      class="text-xs px-3 py-1 rounded-full transition-colors duration-200 border"
                       [ngClass]="activeSlide() === 1 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
                 Evolución
               </button>
@@ -415,7 +415,7 @@
         <div class="grid gap-3 sm:gap-4 lg:gap-5" [ngClass]="creditCardsGridClass()">
           @for (card of creditCards(); track card.id) {
             @if (creditReports()[card.id]; as report) {
-              <div class="card bg-base-100 shadow-sm border border-base-content/20 hover:border-base-content/35 transition-colors">
+              <div class="card bg-base-100 shadow-sm border border-base-content/20 hover:border-base-content/35 transition-colors duration-200">
                 <div class="card-body p-3.5 sm:p-4">
                   <!-- Card Header -->
                   <div class="flex items-center gap-2">

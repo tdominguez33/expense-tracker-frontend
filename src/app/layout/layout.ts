@@ -12,7 +12,7 @@ import { AuthService } from '../services/auth.service';
   styleUrl: './layout.css'
 })
 export class Layout implements OnInit, OnDestroy {
-  isDarkTheme = false;
+  isDarkTheme = true;
   private router = inject(Router);
 
   private edgeTouchStartX = 0;
@@ -38,8 +38,8 @@ export class Layout implements OnInit, OnDestroy {
 
     if (storedTheme) {
       this.isDarkTheme = storedTheme === 'dark';
-    } else if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-      this.isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } else {
+      this.isDarkTheme = true;
     }
     this.applyTheme();
   }
@@ -152,7 +152,46 @@ export class Layout implements OnInit, OnDestroy {
 
   toggleTheme() {
     this.isDarkTheme = !this.isDarkTheme;
-    this.applyTheme();
+
+    if (
+      typeof document !== 'undefined' &&
+      'startViewTransition' in document &&
+      typeof (document as any).startViewTransition === 'function'
+    ) {
+      const style = document.createElement('style');
+      style.appendChild(
+        document.createTextNode(
+          `*, *::before, *::after {
+            -webkit-transition: none !important;
+            -moz-transition: none !important;
+            -o-transition: none !important;
+            -ms-transition: none !important;
+            transition: none !important;
+          }`
+        )
+      );
+      document.head.appendChild(style);
+
+      const transition = (document as any).startViewTransition(() => {
+        this.applyTheme();
+      });
+
+      const cleanup = () => {
+        if (style.parentNode) {
+          document.head.removeChild(style);
+        }
+      };
+
+      if (transition && typeof transition.ready?.then === 'function') {
+        transition.ready.then(cleanup, cleanup);
+      } else if (transition && typeof transition.finished?.then === 'function') {
+        transition.finished.then(cleanup, cleanup);
+      } else {
+        cleanup();
+      }
+    } else {
+      this.applyTheme();
+    }
   }
 
   private applyTheme() {

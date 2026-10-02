@@ -95,7 +95,7 @@
       } @else {
         <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
           @for (cat of categories(); track cat.id; let idx = $index) {
-            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0 select-none transition-all duration-150 rounded-lg min-w-0"
+            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0 select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0"
                 [attr.data-cat-index]="idx"
                 [class.opacity-50]="draggedCatIndex() === idx"
                 [class.shadow-xl]="touchDraggedCatIndex() === idx"
@@ -168,7 +168,7 @@
                  (dragover)="canDragEnt ? onDragOverEnt($event) : null"
                  (drop)="canDragEnt ? onDropEnt(i, $event) : null"
                  (dragend)="canDragEnt ? onDragEndEnt() : null"
-                 class="transition-all duration-150 min-w-0 rounded-2xl p-1"
+                 class="transition-[transform,opacity,box-shadow] duration-150 min-w-0 rounded-2xl p-1"
                  [class.opacity-40]="canDragEnt && draggedEntIndex() === i && draggedEntIndex() !== null"
                  [class.shadow-xl]="canDragEnt && touchDraggedEntIndex() === i"
                  [class.scale-[1.02]]="canDragEnt && touchDraggedEntIndex() === i"
@@ -207,7 +207,7 @@
                 <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
                   @let canDragAcc = accountsByEntity()[entName].accounts.length > 1;
                   @for (acc of accountsByEntity()[entName].accounts; track acc.id; let j = $index) {
-                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 select-none transition-all duration-150 rounded-lg min-w-0 flex-nowrap"
+                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0 flex-nowrap"
                         [class.cursor-grab]="canDragAcc"
                         [class.active:cursor-grabbing]="canDragAcc"
                         [attr.data-acc-index]="canDragAcc ? j : null"
@@ -351,7 +351,7 @@
         <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-2">
           @for (c of (showAllColors() ? pastelColors : pastelColors.slice(0, 10)); track c) {
             <button type="button" 
-                    class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center"
+                    class="w-8 h-8 rounded-full border-2 transition-transform duration-200 hover:scale-110 flex items-center justify-center"
                     [style.backgroundColor]="c"
                     [class.border-base-content]="catForm.get('color')?.value === c"
                     [class.border-transparent]="catForm.get('color')?.value !== c"

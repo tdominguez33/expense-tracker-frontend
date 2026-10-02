@@ -9,6 +9,19 @@
   <meta name="description" content="Control y seguimiento de gastos y finanzas personales">
   <meta name="theme-color" content="#191e24">
 
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+          meta.setAttribute('content', theme === 'dark' ? '#191e24' : '#f2f2f2');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- PWA Web App Manifest -->
   <link rel="manifest" href="manifest.webmanifest">
 

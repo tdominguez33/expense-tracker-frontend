@@ -29,6 +29,16 @@ describe('Layout', () => {
     expect(navbarImg.getAttribute('src')).toBe('icon.png');
   });
 
+  it('should default to dark theme when no stored theme is found', () => {
+    if (typeof localStorage !== 'undefined' && typeof localStorage?.removeItem === 'function') {
+      localStorage.removeItem('theme');
+    }
+    const newFixture = TestBed.createComponent(Layout);
+    const newComponent = newFixture.componentInstance;
+    expect(newComponent.isDarkTheme).toBe(true);
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
   it('should toggle theme and update meta theme-color tag', () => {
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
@@ -47,6 +57,28 @@ describe('Layout', () => {
     expect(component.isDarkTheme).toBe(true);
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(meta.getAttribute('content')).toBe('#191e24');
+  });
+
+  it('should invoke document.startViewTransition when available', () => {
+    const startViewTransitionMock = vi.fn((cb: () => void) => {
+      cb();
+      return {
+        ready: Promise.resolve(),
+        finished: Promise.resolve()
+      };
+    });
+
+    (document as any).startViewTransition = startViewTransitionMock;
+
+    try {
+      component.isDarkTheme = true;
+      component.toggleTheme();
+      expect(startViewTransitionMock).toHaveBeenCalled();
+      expect(component.isDarkTheme).toBe(false);
+      expect(document.documentElement.getAttribute('data-theme')).toBe('corporate');
+    } finally {
+      delete (document as any).startViewTransition;
+    }
   });
 
   it('should open drawer on edge swipe right and close on swipe left', () => {

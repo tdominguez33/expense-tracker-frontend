@@ -107,10 +107,10 @@
                            (mouseenter)="hoverBar(bar)">
                         
                         <!-- Bar Track (capsule) -->
-                        <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                        <div class="w-full max-w-[36px] h-full bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                              [class.ring-2]="selected"
                              [class.ring-primary]="selected">
-                          <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50" 
+                          <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50" 
                                [class.brightness-125]="selected"
                                [style.height]="bar.heightPct + '%'">
                           </div>
@@ -141,10 +141,10 @@
                        (mouseenter)="hoverBar(bar)">
                     
                     <!-- Bar Track (capsule) -->
-                    <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                    <div class="w-full max-w-[40px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                          [class.ring-2]="selected"
                          [class.ring-primary]="selected">
-                      <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                      <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
                            [class.brightness-125]="selected"
                            [style.height]="bar.heightPct + '%'">
                       </div>
@@ -173,10 +173,10 @@
                        (mouseenter)="hoverBar(bar)">
                     
                     <!-- Bar Track (capsule) -->
-                    <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-all duration-200"
+                    <div class="w-full max-w-[48px] flex-1 min-h-0 bg-base-200/50 rounded-full flex items-end overflow-hidden border border-base-content/10 relative transition-colors duration-200"
                          [class.ring-2]="selected"
                          [class.ring-primary]="selected">
-                      <div class="w-full bg-primary transition-all duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
+                      <div class="w-full bg-primary transition-[height] duration-500 ease-out border-t border-primary/50 group-hover:brightness-110" 
                            [class.brightness-125]="selected"
                            [style.height]="bar.heightPct + '%'">
                       </div>
@@ -234,12 +234,12 @@
       
       <div class="flex items-center gap-1.5">
         <button (click)="goToSlide(0)" 
-                class="text-xs px-3 py-1 rounded-full transition-all duration-200 border cursor-pointer select-none"
+                class="text-xs px-3 py-1 rounded-full transition-colors duration-200 border cursor-pointer select-none"
                 [ngClass]="activeSlide() === 0 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
           Categorías
         </button>
         <button (click)="goToSlide(1)" 
-                class="text-xs px-3 py-1 rounded-full transition-all duration-200 border cursor-pointer select-none"
+                class="text-xs px-3 py-1 rounded-full transition-colors duration-200 border cursor-pointer select-none"
                 [ngClass]="activeSlide() === 1 ? 'bg-primary text-primary-content font-semibold border-primary shadow-sm' : 'bg-base-100 text-base-content/70 border-base-content/20 hover:bg-base-200'">
           Evolución
         </button>
