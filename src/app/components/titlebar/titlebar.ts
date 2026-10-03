@@ -3,6 +3,18 @@ import { CommonModule } from '@angular/common';
 import { isTauri } from '@tauri-apps/api/core';
 import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window';
 
+export function isDesktopApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    isTauri() ||
+    '__TAURI_INTERNALS__' in window ||
+    '__TAURI__' in window ||
+    (window as any).isTauri === true ||
+    window.location.hostname === 'tauri.localhost' ||
+    window.location.protocol === 'tauri:'
+  );
+}
+
 @Component({
   selector: 'app-titlebar',
   standalone: true,
@@ -12,20 +24,26 @@ import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window'
 export class TitlebarComponent implements OnInit, OnDestroy {
   @Input() forceShow = false;
 
-  isDesktop = signal<boolean>(false);
+  isDesktop = signal<boolean>(isDesktopApp());
   isMaximized = signal<boolean>(false);
 
   private appWindow: TauriWindow | null = null;
   private unlistenResize: (() => void) | null = null;
 
+  constructor() {
+    if (this.isDesktop() && typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--titlebar-height', '2rem');
+    }
+  }
+
   async ngOnInit() {
-    if (this.forceShow || (typeof window !== 'undefined' && isTauri())) {
+    if (this.forceShow || this.isDesktop() || isDesktopApp()) {
       this.isDesktop.set(true);
       if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--titlebar-height', '2rem');
       }
 
-      if (typeof window !== 'undefined' && isTauri()) {
+      if (typeof window !== 'undefined' && isDesktopApp()) {
         try {
           this.appWindow = getCurrentWindow();
           const max = await this.appWindow.isMaximized();

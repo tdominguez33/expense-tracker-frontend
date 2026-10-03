@@ -37,7 +37,7 @@ jobs:
         run: |
           $tauriConfig = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
           $version = $tauriConfig.version
-          if (-not $version) { $version = "0.12.0" }
+          if (-not $version) { $version = "0.12.1" }
 
           $setupSource = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
           $setupAsset = "Expense-Tracker-v$version-build.${{ github.run_number }}-setup.exe"
