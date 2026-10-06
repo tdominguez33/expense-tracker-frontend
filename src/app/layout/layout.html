@@ -21,41 +21,82 @@
     </main>
   </div> 
   
-  <div class="drawer-side z-50 h-full">
+  <div class="drawer-side z-50 h-full lg:overflow-visible">
     <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label> 
-    <div class="flex flex-col bg-base-200 text-base-content h-full w-72 p-4 safe-top safe-bottom">
-      <!-- Sidebar Title (Non-interactive) -->
-      <div class="flex items-center gap-3 px-4 pt-3 pb-2 mb-6 select-none pointer-events-none cursor-default">
-        <img src="icon.png" alt="Logo" class="w-8 h-8 object-contain pointer-events-none select-none" />
-        <span class="text-xl font-bold text-base-content tracking-wide pointer-events-none select-none">Expense Tracker</span>
+    <div class="sidebar-panel relative flex flex-col bg-base-200 text-base-content h-full w-72 p-3 safe-top safe-bottom border-r border-base-content/10 select-none"
+         [class.lg:w-20]="isSidebarCollapsed">
+
+      <!-- Collapse / Expand Toggle Button on outer border (Reddit style) -->
+      <button type="button" 
+              class="hidden lg:flex absolute top-5 -right-3.5 z-40 items-center justify-center w-7 h-7 rounded-full border border-base-content/20 bg-base-100 hover:bg-base-200 text-base-content shadow-sm cursor-pointer transition-colors duration-150 active:scale-95" 
+              (click)="toggleSidebarCollapse()" 
+              aria-label="Alternar barra lateral">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 stroke-current" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <!-- Sidebar Header -->
+      <div class="flex items-center px-3 pt-2 pb-2 mb-6 min-h-[2.5rem] select-none pointer-events-none cursor-default">
+        <img src="icon.png" alt="Logo" 
+             class="sidebar-logo w-8 h-8 object-contain shrink-0" 
+             [class.sidebar-logo-centered]="isSidebarCollapsed" />
+        <span class="sidebar-title ml-3 text-xl font-bold text-base-content tracking-wide truncate"
+              [class.sidebar-title-collapsed]="isSidebarCollapsed">
+          Expense Tracker
+        </span>
       </div>
       
       <!-- Main Menu Items -->
-      <ul class="menu p-0 space-y-2 w-full">
-        <li>
-          <a routerLink="/dashboard" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-            Dashboard
+      <ul class="menu p-0 space-y-1.5 w-full">
+        <li class="w-full">
+          <a routerLink="/dashboard" routerLinkActive="active" 
+             class="w-full h-11 px-3 flex items-center rounded-lg font-medium"
+             (click)="closeDrawer()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Dashboard</span>
           </a>
         </li>
-        <li>
-          <a routerLink="/transactions" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Gastos
+        <li class="w-full">
+          <a routerLink="/transactions" routerLinkActive="active" 
+             class="w-full h-11 px-3 flex items-center rounded-lg font-medium"
+             (click)="closeDrawer()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Gastos</span>
           </a>
         </li>
-        <li>
-          <a routerLink="/statements" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-            Resúmenes
+        <li class="w-full">
+          <a routerLink="/statements" routerLinkActive="active" 
+             class="w-full h-11 px-3 flex items-center rounded-lg font-medium"
+             (click)="closeDrawer()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Resúmenes</span>
           </a>
         </li>
-        <li>
-          <a routerLink="/history" routerLinkActive="active" class="py-3" (click)="closeDrawer()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Histórico
+        <li class="w-full">
+          <a routerLink="/history" routerLinkActive="active" 
+             class="w-full h-11 px-3 flex items-center rounded-lg font-medium"
+             (click)="closeDrawer()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Histórico</span>
           </a>
         </li>
       </ul>
@@ -64,28 +105,47 @@
       <div class="flex-1"></div>
 
       <!-- Bottom Menu Items -->
-      <ul class="menu p-0 space-y-2 w-full pt-4 border-t border-base-content/10">
-        <li>
-          <a routerLink="/settings" routerLinkActive="active" class="py-3 font-medium" (click)="closeDrawer()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            Ajustes
+      <ul class="menu p-0 space-y-1.5 w-full pt-4 border-t border-base-content/10">
+        <li class="w-full">
+          <a routerLink="/settings" routerLinkActive="active" 
+             class="w-full h-11 px-3 flex items-center rounded-lg font-medium"
+             (click)="closeDrawer()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Ajustes</span>
           </a>
         </li>
-        <li>
-          <button class="py-3 font-medium" (click)="toggleTheme()">
-            @if (isDarkTheme) {
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              Modo Claro
-            } @else {
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-              Modo Oscuro
-            }
+        <li class="w-full">
+          <button type="button"
+                  class="w-full h-11 px-3 flex items-center rounded-lg font-medium" 
+                  (click)="toggleTheme()">
+            <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              @if (isDarkTheme) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              }
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">
+              {{ isDarkTheme ? 'Modo Claro' : 'Modo Oscuro' }}
+            </span>
           </button>
         </li>
-        <li>
-          <button class="py-3 font-medium text-error hover:bg-error/10" (click)="logout()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Cerrar Sesión
+        <li class="w-full">
+          <button type="button"
+                  class="w-full h-11 px-3 flex items-center rounded-lg font-medium text-error hover:bg-error/10" 
+                  (click)="logout()">
+            <span class="nav-icon-slot ml-0.5 -mr-0.5 shrink-0 flex items-center justify-center w-5 h-5"
+                  [class.sidebar-icon-centered]="isSidebarCollapsed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            </span>
+            <span class="nav-label ml-3 truncate whitespace-nowrap"
+                  [class.sidebar-label-collapsed]="isSidebarCollapsed">Cerrar Sesión</span>
           </button>
         </li>
       </ul>

@@ -1,11 +1,11 @@
 {
   "name": "frontend-angular",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "build:tauri": "ng build && node scripts/clean-tauri-dist.js",
+    "build:tauri": "ng build --no-service-worker",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "tauri": "tauri",

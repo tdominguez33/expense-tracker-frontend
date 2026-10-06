@@ -192,4 +192,54 @@ describe('Layout', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('should toggle isSidebarCollapsed and persist to localStorage', () => {
+    const storage: Record<string, string> = {};
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage[key] ?? null,
+      setItem: (key: string, val: string) => { storage[key] = val; },
+      removeItem: (key: string) => { delete storage[key]; }
+    });
+
+    expect(component.isSidebarCollapsed).toBe(false);
+
+    component.toggleSidebarCollapse();
+    expect(component.isSidebarCollapsed).toBe(true);
+    expect(storage['sidebar_collapsed']).toBe('true');
+
+    component.toggleSidebarCollapse();
+    expect(component.isSidebarCollapsed).toBe(false);
+    expect(storage['sidebar_collapsed']).toBe('false');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should load stored sidebar_collapsed preference from localStorage on init', () => {
+    const storage: Record<string, string> = { sidebar_collapsed: 'true' };
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage[key] ?? null,
+      setItem: (key: string, val: string) => { storage[key] = val; },
+      removeItem: (key: string) => { delete storage[key]; }
+    });
+
+    const newFixture = TestBed.createComponent(Layout);
+    const newComp = newFixture.componentInstance;
+    expect(newComp.isSidebarCollapsed).toBe(true);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should render the outer border collapse toggle button and toggle collapse when clicked', () => {
+    const toggleBtn = fixture.nativeElement.querySelector('button[aria-label*="barra lateral"]') as HTMLButtonElement;
+    expect(toggleBtn).toBeTruthy();
+    expect(component.isSidebarCollapsed).toBe(false);
+
+    toggleBtn.click();
+    fixture.detectChanges();
+    expect(component.isSidebarCollapsed).toBe(true);
+
+    toggleBtn.click();
+    fixture.detectChanges();
+    expect(component.isSidebarCollapsed).toBe(false);
+  });
 });

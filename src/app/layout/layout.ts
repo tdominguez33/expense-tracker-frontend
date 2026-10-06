@@ -13,6 +13,7 @@ import { AuthService } from '../services/auth.service';
 })
 export class Layout implements OnInit, OnDestroy {
   isDarkTheme = true;
+  isSidebarCollapsed = false;
   private router = inject(Router);
 
   private edgeTouchStartX = 0;
@@ -30,9 +31,11 @@ export class Layout implements OnInit, OnDestroy {
       this.closeDrawer();
     });
     let storedTheme: string | null = null;
+    let storedSidebar: string | null = null;
     if (typeof localStorage !== 'undefined' && typeof localStorage?.getItem === 'function') {
       try {
         storedTheme = localStorage.getItem('theme');
+        storedSidebar = localStorage.getItem('sidebar_collapsed');
       } catch {}
     }
 
@@ -40,6 +43,9 @@ export class Layout implements OnInit, OnDestroy {
       this.isDarkTheme = storedTheme === 'dark';
     } else {
       this.isDarkTheme = true;
+    }
+    if (storedSidebar !== null) {
+      this.isSidebarCollapsed = storedSidebar === 'true';
     }
     this.applyTheme();
   }
@@ -233,6 +239,15 @@ export class Layout implements OnInit, OnDestroy {
       if (drawer && drawer.checked) {
         drawer.checked = false;
       }
+    }
+  }
+
+  toggleSidebarCollapse() {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    if (typeof localStorage !== 'undefined' && typeof localStorage?.setItem === 'function') {
+      try {
+        localStorage.setItem('sidebar_collapsed', String(this.isSidebarCollapsed));
+      } catch {}
     }
   }
 
