@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { Router, ActivatedRoute } from '@angular/router';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, Location } from '@angular/common';
 import { forkJoin } from 'rxjs';
 
@@ -75,6 +75,11 @@ export class Statements implements OnInit {
   
   isSubmitting = signal(false);
   formError = signal('');
+  
+  commentControl = new FormControl('');
+  commentTarget = signal<any>(null);
+  isSubmittingComment = signal(false);
+  commentError = signal('');
   
   constructor() {
     this.stForm = this.fb.group({
@@ -502,6 +507,94 @@ export class Statements implements OnInit {
       error: () => {
         this.isSubmitting.set(false);
         this.closePostponeModal();
+      }
+    });
+  }
+
+  hasComment(st: any): boolean {
+    return Boolean(st?.comment && st.comment.trim().length > 0);
+  }
+
+  openCommentModal(st: any) {
+    if (!st) return;
+    this.commentTarget.set(st);
+    this.commentControl.setValue(st.comment || '');
+    this.commentError.set('');
+    const modal = document.getElementById('comment_modal') as any;
+    if (typeof modal?.showModal === 'function') {
+      modal.showModal();
+    }
+  }
+
+  closeCommentModal() {
+    this.commentError.set('');
+    const modal = document.getElementById('comment_modal') as any;
+    if (typeof modal?.close === 'function') {
+      modal.close();
+    }
+  }
+
+  saveComment() {
+    const target = this.commentTarget();
+    if (!target) return;
+
+    const trimmed = this.commentControl.value?.trim() || null;
+    this.isSubmittingComment.set(true);
+    this.commentError.set('');
+
+    this.api.updateStatement(target.id, { comment: trimmed }).subscribe({
+      next: () => {
+        this.isSubmittingComment.set(false);
+        this.closeCommentModal();
+        this.statements.update(list =>
+          list.map(s => s.id === target.id ? { ...s, comment: trimmed } : s)
+        );
+        if (this.viewingDetailsData()) {
+          this.viewingDetailsData.update(d => {
+            if (!d) return null;
+            if ((d as any).statement && (d as any).statement.id === target.id) {
+              return { ...d, statement: { ...(d as any).statement, comment: trimmed } };
+            }
+            return d;
+          });
+        }
+        this.loadStatements();
+      },
+      error: (err: any) => {
+        this.isSubmittingComment.set(false);
+        this.commentError.set(err.error?.detail || 'Error al guardar el comentario.');
+      }
+    });
+  }
+
+  deleteComment() {
+    const target = this.commentTarget();
+    if (!target) return;
+
+    this.isSubmittingComment.set(true);
+    this.commentError.set('');
+
+    this.api.updateStatement(target.id, { comment: null }).subscribe({
+      next: () => {
+        this.isSubmittingComment.set(false);
+        this.closeCommentModal();
+        this.statements.update(list =>
+          list.map(s => s.id === target.id ? { ...s, comment: null } : s)
+        );
+        if (this.viewingDetailsData()) {
+          this.viewingDetailsData.update(d => {
+            if (!d) return null;
+            if ((d as any).statement && (d as any).statement.id === target.id) {
+              return { ...d, statement: { ...(d as any).statement, comment: null } };
+            }
+            return d;
+          });
+        }
+        this.loadStatements();
+      },
+      error: (err: any) => {
+        this.isSubmittingComment.set(false);
+        this.commentError.set(err.error?.detail || 'Error al eliminar el comentario.');
       }
     });
   }

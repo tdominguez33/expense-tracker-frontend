@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { of } from 'rxjs';
+import { ApiService } from '../../services/api.service';
 import { Statements } from './statements';
 
 describe('Statements - Expenses Sorting', () => {
@@ -60,5 +62,73 @@ describe('Statements - Expenses Sorting', () => {
 
     const details = component.getViewingDetails();
     expect(details.map(d => d.description)).toEqual(['C', 'B', 'A']);
+  });
+});
+
+describe('Statements - Comments', () => {
+  let component: Statements;
+  let mockApi: any;
+
+  beforeEach(() => {
+    mockApi = {
+      updateStatement: vi.fn().mockReturnValue(of({ ok: true })),
+      getStatements: vi.fn().mockImplementation(() => of(component.statements())),
+      getStatementItems: vi.fn().mockReturnValue(of({ items: [], subtotal: 0, tax_amount: 0, total_amount: 0 })),
+      getConfig: vi.fn().mockReturnValue(of({})),
+      getEntities: vi.fn().mockReturnValue(of([])),
+      getCategories: vi.fn().mockReturnValue(of([])),
+      getAccounts: vi.fn().mockReturnValue(of([]))
+    };
+
+    TestBed.configureTestingModule({
+      imports: [Statements],
+      providers: [
+        { provide: ApiService, useValue: mockApi },
+        provideRouter([])
+      ]
+    });
+    const fixture = TestBed.createComponent(Statements);
+    component = fixture.componentInstance;
+  });
+
+  it('hasComment should correctly identify statements with non-empty comments', () => {
+    expect(component.hasComment(null)).toBe(false);
+    expect(component.hasComment({})).toBe(false);
+    expect(component.hasComment({ comment: null })).toBe(false);
+    expect(component.hasComment({ comment: '' })).toBe(false);
+    expect(component.hasComment({ comment: '   ' })).toBe(false);
+    expect(component.hasComment({ comment: 'Pagar con dólares' })).toBe(true);
+  });
+
+  it('openCommentModal should set commentTarget and initialize commentControl', () => {
+    const st = { id: 10, comment: 'Comentario existente' };
+    component.openCommentModal(st);
+    expect(component.commentTarget()).toBe(st);
+    expect(component.commentControl.value).toBe('Comentario existente');
+  });
+
+  it('saveComment should call updateStatement with trimmed text and update local state', () => {
+    const st = { id: 10, comment: '' };
+    component.statements.set([{ id: 10, comment: '' }, { id: 11, comment: 'otro' }]);
+    component.commentTarget.set(st);
+    component.commentControl.setValue('  Nuevo comentario  ');
+
+    component.saveComment();
+
+    expect(mockApi.updateStatement).toHaveBeenCalledWith(10, { comment: 'Nuevo comentario' });
+    const updated = component.statements().find(s => s.id === 10);
+    expect(updated?.comment).toBe('Nuevo comentario');
+  });
+
+  it('deleteComment should call updateStatement with null and update local state', () => {
+    const st = { id: 10, comment: 'Comentario anterior' };
+    component.statements.set([{ id: 10, comment: 'Comentario anterior' }]);
+    component.commentTarget.set(st);
+
+    component.deleteComment();
+
+    expect(mockApi.updateStatement).toHaveBeenCalledWith(10, { comment: null });
+    const updated = component.statements().find(s => s.id === 10);
+    expect(updated?.comment).toBeNull();
   });
 });

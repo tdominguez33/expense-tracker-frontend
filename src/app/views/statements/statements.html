@@ -77,12 +77,23 @@
                       <td class="text-right whitespace-nowrap">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</td>
                       <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
                       <td>
-                        @let stState = getStatementState(st);
-                        <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
-                             [class.badge-success]="stState === 'PAID'"
-                             [class.badge-warning]="stState === 'CLOSED'"
-                             [class.badge-info]="stState === 'OPEN'">
-                          {{ translateState(stState) }}
+                        <div class="flex items-center gap-2">
+                          @let stState = getStatementState(st);
+                          <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
+                               [class.badge-success]="stState === 'PAID'"
+                               [class.badge-warning]="stState === 'CLOSED'"
+                               [class.badge-info]="stState === 'OPEN'">
+                            {{ translateState(stState) }}
+                          </div>
+                          @if (hasComment(st)) {
+                            <div class="tooltip tooltip-bottom sm:tooltip-top" [attr.data-tip]="st.comment">
+                              <span class="inline-flex text-base-content/60 hover:text-base-content transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                                </svg>
+                              </span>
+                            </div>
+                          }
                         </div>
                       </td>
                       <td>
@@ -112,11 +123,22 @@
                     <span class="font-bold text-base text-base-content tracking-tight">
                       {{ getStatementPeriod(st.start_date, st.closing_date) }}
                     </span>
-                    <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
-                         [class.badge-success]="stState === 'PAID'"
-                         [class.badge-warning]="stState === 'CLOSED'"
-                         [class.badge-info]="stState === 'OPEN'">
-                      {{ translateState(stState) }}
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
+                           [class.badge-success]="stState === 'PAID'"
+                           [class.badge-warning]="stState === 'CLOSED'"
+                           [class.badge-info]="stState === 'OPEN'">
+                        {{ translateState(stState) }}
+                      </div>
+                      @if (hasComment(st)) {
+                        <div class="tooltip tooltip-left" [attr.data-tip]="st.comment">
+                          <span class="inline-flex text-base-content/60">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                          </span>
+                        </div>
+                      }
                     </div>
                   </div>
 
@@ -226,12 +248,23 @@
                 <td class="text-right whitespace-nowrap">{{ st.due_date | date:'dd-MM-yyyy':'UTC' }}</td>
                 <td class="font-bold text-error whitespace-nowrap">${{ (st.total_amount || 0) | number:'1.0-0' }}</td>
                 <td>
-                  @let stState = getStatementState(st);
-                  <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
-                       [class.badge-success]="stState === 'PAID'"
-                       [class.badge-warning]="stState === 'CLOSED'"
-                       [class.badge-info]="stState === 'OPEN'">
-                    {{ translateState(stState) }}
+                  <div class="flex items-center gap-2">
+                    @let stState = getStatementState(st);
+                    <div class="badge font-bold border-0 text-neutral-900 whitespace-nowrap" 
+                         [class.badge-success]="stState === 'PAID'"
+                         [class.badge-warning]="stState === 'CLOSED'"
+                         [class.badge-info]="stState === 'OPEN'">
+                      {{ translateState(stState) }}
+                    </div>
+                    @if (hasComment(st)) {
+                      <div class="tooltip tooltip-bottom sm:tooltip-top" [attr.data-tip]="st.comment">
+                        <span class="inline-flex text-base-content/60 hover:text-base-content transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                          </svg>
+                        </span>
+                      </div>
+                    }
                   </div>
                 </td>
                 <td>
@@ -261,11 +294,22 @@
               <span class="font-bold text-base text-base-content tracking-tight">
                 {{ getStatementPeriod(st.start_date, st.closing_date) }}
               </span>
-              <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
-                   [class.badge-success]="stState === 'PAID'"
-                   [class.badge-warning]="stState === 'CLOSED'"
-                   [class.badge-info]="stState === 'OPEN'">
-                {{ translateState(stState) }}
+              <div class="flex items-center gap-1.5 shrink-0">
+                <div class="badge font-bold border-0 text-neutral-900 shrink-0 text-xs" 
+                     [class.badge-success]="stState === 'PAID'"
+                     [class.badge-warning]="stState === 'CLOSED'"
+                     [class.badge-info]="stState === 'OPEN'">
+                  {{ translateState(stState) }}
+                </div>
+                @if (hasComment(st)) {
+                  <div class="tooltip tooltip-left" [attr.data-tip]="st.comment">
+                    <span class="inline-flex text-base-content/60">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                      </svg>
+                    </span>
+                  </div>
+                }
               </div>
             </div>
 
@@ -327,17 +371,25 @@
           }
         </div>
       </div>
-      <div>
+      <div class="flex flex-col sm:flex-row lg:flex-col min-[1200px]:flex-row items-stretch sm:items-center lg:items-stretch min-[1200px]:items-center gap-2 shrink-0">
         @let stStateDetail = getStatementState(viewingStatement());
         @if (stStateDetail === 'CLOSED') {
-          <button class="btn btn-success w-full sm:w-auto" (click)="markAsPaid(viewingStatement())" [disabled]="isLoading()">
+          <button class="btn btn-success w-full sm:w-auto lg:w-full min-[1200px]:w-auto" (click)="markAsPaid(viewingStatement())" [disabled]="isLoading()">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
             Marcar como pago
           </button>
         } @else if (stStateDetail === 'PAID') {
-          <button class="btn btn-outline btn-error w-full sm:w-auto" (click)="markAsUnpaid(viewingStatement())" [disabled]="isLoading()">
+          <button class="btn btn-outline btn-error w-full sm:w-auto lg:w-full min-[1200px]:w-auto" (click)="markAsUnpaid(viewingStatement())" [disabled]="isLoading()">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             Marcar como no pago
+          </button>
+        }
+        @if (!hasComment(viewingStatement())) {
+          <button class="btn btn-outline btn-primary w-full sm:w-auto lg:w-full min-[1200px]:w-auto" (click)="openCommentModal(viewingStatement())" [disabled]="isLoading()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Agregar comentario
           </button>
         }
       </div>
@@ -412,6 +464,30 @@
         <span class="text-sm font-bold text-base-content">{{ viewingStatement().due_date | date:'dd-MM-yyyy':'UTC' }}</span>
       </div>
     </div>
+
+    @if (hasComment(viewingStatement())) {
+      <!-- COMMENT SECTION -->
+      <div class="card bg-base-100 shadow-sm border border-base-content/20 mb-6 sm:mb-8">
+        <div class="card-body p-4 sm:p-5 flex flex-row items-start justify-between gap-4">
+          <div class="space-y-1 min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-base-content/60">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              <span>Comentario</span>
+            </div>
+            <p class="text-sm sm:text-base text-base-content whitespace-pre-line break-words leading-relaxed">
+              {{ viewingStatement()?.comment }}
+            </p>
+          </div>
+          <button type="button" class="btn btn-sm btn-circle btn-ghost text-info shrink-0" (click)="openCommentModal(viewingStatement())" title="Editar comentario" aria-label="Editar comentario">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    }
 
     <!-- TRANSACTIONS LIST -->
     <!-- Expenses Header and Special Sort Button (shared for Desktop and Mobile) -->
@@ -696,4 +772,48 @@
     </div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<!-- Comment Modal -->
+<dialog id="comment_modal" class="modal">
+  <div class="modal-box bg-base-100">
+    <h3 class="font-bold text-xl mb-4">
+      {{ hasComment(commentTarget()) ? 'Editar Comentario' : 'Agregar Comentario' }}
+    </h3>
+    
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-medium">Comentario del Resumen</span>
+      </label>
+      <textarea 
+        [formControl]="commentControl" 
+        class="textarea textarea-bordered w-full h-28 text-base" 
+        placeholder="Escribe un comentario o nota para este resumen...">
+      </textarea>
+    </div>
+
+    @if (commentError()) {
+      <div class="alert alert-error mt-4 py-2"><span>{{ commentError() }}</span></div>
+    }
+
+    <div class="modal-action mt-6 flex justify-between items-center">
+      <div>
+        @if (hasComment(commentTarget())) {
+          <button type="button" class="btn btn-ghost text-error btn-sm sm:btn-md" (click)="deleteComment()" [disabled]="isSubmittingComment()">
+            Eliminar comentario
+          </button>
+        }
+      </div>
+      <div class="flex gap-2">
+        <button type="button" class="btn btn-ghost" (click)="closeCommentModal()" [disabled]="isSubmittingComment()">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="saveComment()" [disabled]="isSubmittingComment()">
+          @if (isSubmittingComment()) {
+            <span class="loading loading-spinner loading-xs mr-1"></span>
+          }
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button (click)="closeCommentModal()">close</button></form>
 </dialog>
