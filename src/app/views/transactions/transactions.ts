@@ -1,9 +1,10 @@
-import { Component, inject, OnInit, OnDestroy, AfterViewInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, AfterViewInit, signal, computed, DestroyRef } from '@angular/core';
 import { ApiService } from '../../services/api.service';
+import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule, DatePipe } from '@angular/common';
-import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import { getContrastColor } from '../../utils/color';
 
 export const DEFAULT_PAGE_SIZE = 50;
@@ -21,6 +22,8 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   protected readonly Math = Math;
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
+  private refreshService = inject(RefreshService);
+  private destroyRef = inject(DestroyRef);
   
   transactions = signal<any[]>([]);
   accounts = signal<any[]>([]);
@@ -121,6 +124,9 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   appTimezone = signal<string>('America/Argentina/Buenos_Aires');
 
   ngOnInit() {
+    const unregister = this.refreshService.register(() => this.reloadAllSilent());
+    this.destroyRef.onDestroy(unregister);
+
     this.searchSubject.pipe(
       debounceTime(300),
       distinctUntilChanged()
@@ -302,7 +308,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     requestAnimationFrame(animateScroll);
   }
 
-  loadTransactions(silent: boolean = false) {
+  loadTransactions(silent: boolean = false): Promise<void> {
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
       this.loadingTimeout = null;
@@ -317,42 +323,72 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
       }, SPINNER_DELAY_MS);
     }
 
-    this.api.getTransactions({
-      page: this.currentPage(),
-      limit: this.pageSize(),
-      search: this.searchTerm(),
-      category_id: this.selectedFilterCategory()
-    }).subscribe({
-      next: (res) => {
-        if (this.loadingTimeout) {
-          clearTimeout(this.loadingTimeout);
-          this.loadingTimeout = null;
+    return new Promise((resolve) => {
+      this.api.getTransactions({
+        page: this.currentPage(),
+        limit: this.pageSize(),
+        search: this.searchTerm(),
+        category_id: this.selectedFilterCategory()
+      }).subscribe({
+        next: (res) => {
+          if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
+          }
+          const items = res.items || [];
+          this.transactions.set(items);
+          this.totalItems.set(res.total || 0);
+          this.totalPages.set(res.total_pages || 1);
+          this.currentPage.set(res.page || 1);
+          this.hasLoadedOnce.set(true);
+          if (!silent) {
+            this.isLoading.set(false);
+            this.showSpinner.set(false);
+          }
+          resolve();
+        },
+        error: (err) => {
+          if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
+          }
+          console.error(err);
+          this.errorMsg.set('Error loading transactions.');
+          this.hasLoadedOnce.set(true);
+          if (!silent) {
+            this.isLoading.set(false);
+            this.showSpinner.set(false);
+          }
+          resolve();
         }
-        const items = res.items || [];
-        this.transactions.set(items);
-        this.totalItems.set(res.total || 0);
-        this.totalPages.set(res.total_pages || 1);
-        this.currentPage.set(res.page || 1);
-        this.hasLoadedOnce.set(true);
-        if (!silent) {
-          this.isLoading.set(false);
-          this.showSpinner.set(false);
-        }
-      },
-      error: (err) => {
-        if (this.loadingTimeout) {
-          clearTimeout(this.loadingTimeout);
-          this.loadingTimeout = null;
-        }
-        console.error(err);
-        this.errorMsg.set('Error loading transactions.');
-        this.hasLoadedOnce.set(true);
-        if (!silent) {
-          this.isLoading.set(false);
-          this.showSpinner.set(false);
-        }
-      }
+      });
     });
+  }
+
+  async reloadAllSilent(): Promise<void> {
+    const txPromise = this.loadTransactions(true);
+    const reportPromise = new Promise<void>((resolve) => {
+      this.api.getGeneralReport().subscribe({
+        next: (r) => { this.generalReport.set(r); resolve(); },
+        error: () => resolve()
+      });
+    });
+    const metaPromise = new Promise<void>((resolve) => {
+      forkJoin({
+        accs: this.api.getAccounts().pipe(catchError(() => of([]))),
+        ents: this.api.getEntities().pipe(catchError(() => of([]))),
+        cats: this.api.getCategories().pipe(catchError(() => of([])))
+      }).subscribe({
+        next: ({ accs, ents, cats }) => {
+          this.accounts.set(accs || []);
+          this.entities.set(ents || []);
+          this.categories.set(cats || []);
+          resolve();
+        },
+        error: () => resolve()
+      });
+    });
+    await Promise.all([txPromise, reportPromise, metaPromise]);
   }
 
   onSearchChange(term: string) {

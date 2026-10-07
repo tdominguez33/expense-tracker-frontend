@@ -549,4 +549,18 @@ describe('HistoryView', () => {
     expect(originalAmountSpan).toBeTruthy();
     expect(originalAmountSpan?.textContent).toContain('350');
   });
+
+  it('should reload report silently without setting isLoading or showing spinner when silent is true', async () => {
+    component.isLoading.set(false);
+    component.showSpinner.set(false);
+
+    const updatedReport = { ...mockReport, total_amount: 999999 };
+    mockApiService.getHistoryReport.mockReturnValue(of(updatedReport));
+
+    await component.loadReport({ silent: true });
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.showSpinner()).toBe(false);
+    expect(component.reportData().total_amount).toBe(999999);
+  });
 });

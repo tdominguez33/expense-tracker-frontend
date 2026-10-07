@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, OnDestroy, signal, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, HostListener, DestroyRef } from '@angular/core';
 import { ApiService } from '../../services/api.service';
+import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CATEGORY_COLORS } from '../../constants/colors';
 import { getContrastColor } from '../../utils/color';
 
@@ -16,6 +18,8 @@ import { getContrastColor } from '../../utils/color';
 export class Settings implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
+  private refreshService = inject(RefreshService);
+  private destroyRef = inject(DestroyRef);
   
   isMobile = signal<boolean>(false);
 
@@ -147,6 +151,9 @@ export class Settings implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    const unregister = this.refreshService.register(() => this.loadData({ silent: true }));
+    this.destroyRef.onDestroy(unregister);
+
     this.checkIsMobile();
     this.loadData();
   }
@@ -160,32 +167,50 @@ export class Settings implements OnInit, OnDestroy {
     }
   }
 
-  loadData() {
-    this.isLoading.set(true);
-    forkJoin({
-      config: this.api.getConfig(),
-      cats: this.api.getCategories(),
-      ents: this.api.getEntities(),
-      accs: this.api.getAccounts()
-    }).subscribe(({ config: c, cats, ents, accs }) => {
-      let taxStr = '';
-      if (c.default_tax_percentage !== null && c.default_tax_percentage !== undefined) {
-        taxStr = c.default_tax_percentage.toString().replace('.', ',');
-      }
-      this.configForm.patchValue({
-        default_tax_percentage: taxStr as any,
-        default_account_id: c.default_account_id,
-        statement_grace_days: c.statement_grace_days ?? 10
+  loadData(options?: { silent?: boolean }): Promise<void> {
+    if (!options?.silent) {
+      this.isLoading.set(true);
+    }
+
+    return new Promise((resolve) => {
+      forkJoin({
+        config: this.api.getConfig().pipe(catchError(() => of({}))),
+        cats: this.api.getCategories().pipe(catchError(() => of([]))),
+        ents: this.api.getEntities().pipe(catchError(() => of([]))),
+        accs: this.api.getAccounts().pipe(catchError(() => of([])))
+      }).subscribe({
+        next: ({ config: c, cats, ents, accs }) => {
+          let taxStr = '';
+          if (c && (c as any).default_tax_percentage !== null && (c as any).default_tax_percentage !== undefined) {
+            taxStr = (c as any).default_tax_percentage.toString().replace('.', ',');
+          }
+          this.configForm.patchValue({
+            default_tax_percentage: taxStr as any,
+            default_account_id: (c as any)?.default_account_id ?? null,
+            statement_grace_days: (c as any)?.statement_grace_days ?? 10
+          });
+          this.timezoneControl.setValue((c as any)?.timezone || 'America/Argentina/Buenos_Aires', { emitEvent: false });
+          
+          this.categories.set(cats || []);
+          this.entities.set(ents || []);
+          
+          this.accounts.set(accs || []);
+          this.loadAccounts(accs || []);
+          
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        },
+        error: (err) => {
+          console.error(err);
+          this.errorMsg.set('Error loading settings data.');
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        }
       });
-      this.timezoneControl.setValue(c.timezone || 'America/Argentina/Buenos_Aires', { emitEvent: false });
-      
-      this.categories.set(cats);
-      this.entities.set(ents);
-      
-      this.accounts.set(accs);
-      this.loadAccounts(accs);
-      
-      this.isLoading.set(false);
     });
   }
   

@@ -227,5 +227,19 @@ describe('Transactions', () => {
     expect(groupYesterday).toBeDefined();
     expect(groupYesterday?.total).toBe(4000);
   });
+
+  it('should reload data silently without showing spinner or setting isLoading', async () => {
+    component.isLoading.set(false);
+    component.showSpinner.set(false);
+
+    mockApiService.getTransactions.mockReturnValue(of({ items: [{ id: 99, description: 'New' }], total: 1, page: 1, pages: 1 }));
+
+    await component.reloadAllSilent();
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.showSpinner()).toBe(false);
+    expect(component.transactions().length).toBe(1);
+    expect(component.transactions()[0].id).toBe(99);
+  });
 });
 

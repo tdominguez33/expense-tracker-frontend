@@ -373,5 +373,15 @@ describe('Dashboard', () => {
     } as any);
     expect(component.activeTooltipPeriod()).toBeNull();
   });
+
+  it('should refresh data silently without toggling isLoading when silent option is true', async () => {
+    component.isLoading.set(false);
+    mockApiService.getGeneralReport.mockReturnValue(of({ totals: { month: { current: 1234 } }, comparisons: {} }));
+
+    await component.loadData({ silent: true });
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.generalReport()).toEqual({ totals: { month: { current: 1234 } }, comparisons: {} });
+  });
 });
 

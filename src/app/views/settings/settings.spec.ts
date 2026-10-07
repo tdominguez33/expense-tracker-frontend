@@ -557,5 +557,16 @@ describe('Settings', () => {
       expect(component.accForm.get('entity_id')?.value).toBe(2);
       expect(component.editingAccId()).toBe(10);
     });
+
+    it('should reload data silently without setting isLoading when silent is true', async () => {
+      component.isLoading.set(false);
+      mockApiService.getCategories.mockReturnValue(of([{ id: 1, name: 'Comida', color: '#ff0000' }]));
+
+      await component.loadData({ silent: true });
+
+      expect(component.isLoading()).toBe(false);
+      expect(component.categories().length).toBe(1);
+      expect(component.categories()[0].name).toBe('Comida');
+    });
   });
 });

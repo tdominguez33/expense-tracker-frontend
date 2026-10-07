@@ -1,8 +1,9 @@
-import { Component, inject, OnInit, OnDestroy, ElementRef, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ElementRef, HostListener, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../services/auth.service';
+import { RefreshService } from '../services/refresh.service';
 
 @Component({
   selector: 'app-layout',
@@ -16,6 +17,7 @@ export class Layout implements OnInit, OnDestroy {
   isSidebarCollapsed = false;
   private router = inject(Router);
   private elementRef = inject(ElementRef);
+  private refreshService = inject(RefreshService);
 
   private edgeTouchStartX = 0;
   private edgeTouchStartY = 0;
@@ -28,12 +30,27 @@ export class Layout implements OnInit, OnDestroy {
   private isDirectionLocked = false;
   private dragAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
 
+  // Pull-to-refresh state
+  pullDistance = signal<number>(0);
+  isPullDragging = signal<boolean>(false);
+  isRefreshing = signal<boolean>(false);
+  pullRotation = signal<number>(0);
+  pullScale = signal<number>(0);
+  pullOpacity = signal<number>(0);
+  pullIndicatorY = signal<number>(0);
+  canPullToRefresh = false;
+  private pullTouchStartY = 0;
+  private pullTouchStartX = 0;
+  readonly PULL_THRESHOLD = 65;
+  readonly MAX_PULL = 95;
+
   constructor(private authService: AuthService) {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
       takeUntilDestroyed()
     ).subscribe(() => {
       this.closeDrawer();
+      this.resetPullStyles();
     });
     let storedTheme: string | null = null;
     let storedSidebar: string | null = null;
@@ -66,6 +83,7 @@ export class Layout implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearDragStyles();
+    this.resetPullStyles();
     if (typeof window !== 'undefined') {
       window.removeEventListener('touchstart', this.onGlobalTouchStart);
       window.removeEventListener('touchmove', this.onGlobalTouchMove);
@@ -78,11 +96,13 @@ export class Layout implements OnInit, OnDestroy {
   onWindowResize() {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
       this.clearDragStyles();
+      this.resetPullStyles();
     }
   }
 
   onDrawerChange() {
     this.clearDragStyles();
+    this.resetPullStyles();
   }
 
   onGlobalTouchStart = (e: TouchEvent) => {
@@ -90,6 +110,7 @@ export class Layout implements OnInit, OnDestroy {
     if (e.touches.length !== 1) return;
 
     this.clearDragStyles();
+    this.resetPullStyles();
 
     const touch = e.touches[0];
     this.edgeTouchStartX = touch.clientX;
@@ -122,10 +143,26 @@ export class Layout implements OnInit, OnDestroy {
       if (isTopNavbar) {
         this.isEdgeSwiping = false;
         this.isDrawerSwiping = false;
+        this.canPullToRefresh = false;
         return;
       }
 
-      // Exclude interactive elements (buttons, links, etc.) to allow normal clicks without swipe interference
+      // Check pull to refresh eligibility inside main scroll container
+      const mainEl = this.getMainScrollElement();
+      const isInsideModal = !!target?.closest?.('dialog, .modal');
+      const isFormInput = !!target?.closest?.('input, select, textarea');
+      const isInMain = !target || (mainEl && (mainEl === target || mainEl.contains(target)));
+      const isScrollAtTop = (mainEl?.scrollTop ?? 0) <= 0;
+
+      if (!this.isRefreshing() && isInMain && isScrollAtTop && !isInsideModal && !isFormInput) {
+        this.canPullToRefresh = true;
+        this.pullTouchStartX = touch.clientX;
+        this.pullTouchStartY = touch.clientY;
+      } else {
+        this.canPullToRefresh = false;
+      }
+
+      // Exclude interactive elements (buttons, links, etc.) from edge drawer swipe
       const isInteractive = target?.closest?.('button, a, input, select, textarea, [role="button"], .btn');
       if (isInteractive) {
         this.isEdgeSwiping = false;
@@ -137,6 +174,7 @@ export class Layout implements OnInit, OnDestroy {
       if (touch.clientX <= 35) {
         this.isEdgeSwiping = true;
         this.isDrawerSwiping = false;
+        this.canPullToRefresh = false;
         if (e.cancelable) {
           e.preventDefault();
         }
@@ -147,10 +185,62 @@ export class Layout implements OnInit, OnDestroy {
     } else {
       this.isDrawerSwiping = true;
       this.isEdgeSwiping = false;
+      this.canPullToRefresh = false;
     }
   };
 
   onGlobalTouchMove = (e: TouchEvent) => {
+    if (this.isRefreshing()) return;
+
+    if (this.canPullToRefresh) {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - this.pullTouchStartX;
+      const dy = touch.clientY - this.pullTouchStartY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      const mainEl = this.getMainScrollElement();
+      if ((mainEl?.scrollTop ?? 0) > 0) {
+        this.canPullToRefresh = false;
+        if (this.isPullDragging()) {
+          this.resetPullStyles();
+        }
+        return;
+      }
+
+      if (!this.isPullDragging()) {
+        if (Math.hypot(dx, dy) < 6) {
+          return;
+        }
+
+        // Must be predominantly downward drag
+        if (absDx > absDy || dy <= 0) {
+          this.canPullToRefresh = false;
+          return;
+        }
+
+        this.isPullDragging.set(true);
+      }
+
+      if (this.isPullDragging()) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+
+        const rawPull = dy > 0 ? Math.pow(dy, 0.82) * 1.8 : 0;
+        const dist = Math.min(this.MAX_PULL, Math.max(0, rawPull));
+        this.pullDistance.set(dist);
+
+        const progress = Math.min(1, dist / this.PULL_THRESHOLD);
+        this.pullRotation.set(Math.min(360, Math.floor(progress * 360)));
+        this.pullScale.set(Math.min(1, 0.4 + 0.6 * progress));
+        this.pullOpacity.set(Math.min(1, progress * 1.5));
+        this.pullIndicatorY.set(Math.min(48, Math.max(10, dist * 0.55)));
+        return;
+      }
+    }
+
     if (!this.isEdgeSwiping && !this.isDrawerSwiping) return;
     if (e.touches.length !== 1) return;
 
@@ -229,6 +319,19 @@ export class Layout implements OnInit, OnDestroy {
   };
 
   onGlobalTouchEnd = (e: TouchEvent) => {
+    if (this.isPullDragging()) {
+      this.isPullDragging.set(false);
+      this.canPullToRefresh = false;
+
+      if (this.pullDistance() >= this.PULL_THRESHOLD) {
+        this.triggerPullRefresh();
+      } else {
+        this.resetPullStyles();
+      }
+      return;
+    }
+    this.canPullToRefresh = false;
+
     if (!this.isEdgeSwiping && !this.isDrawerSwiping) return;
 
     const dx = this.currentTouchX - this.edgeTouchStartX;
@@ -453,6 +556,58 @@ export class Layout implements OnInit, OnDestroy {
       overlay.style.backgroundColor = '';
       overlay.style.transition = '';
     }
+  }
+
+  async triggerPullRefresh() {
+    if (this.isRefreshing()) return;
+    this.isRefreshing.set(true);
+    this.pullDistance.set(55);
+    this.pullIndicatorY.set(32);
+    this.pullScale.set(1);
+    this.pullOpacity.set(1);
+
+    const startTime = Date.now();
+    try {
+      await this.refreshService.triggerRefresh();
+    } catch (err) {
+      console.error('Pull-to-refresh error:', err);
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+    }
+
+    this.pullDistance.set(0);
+    this.pullIndicatorY.set(0);
+    this.pullScale.set(0);
+    this.pullOpacity.set(0);
+
+    setTimeout(() => {
+      this.isRefreshing.set(false);
+      this.pullRotation.set(0);
+    }, 280);
+  }
+
+  resetPullStyles() {
+    this.isPullDragging.set(false);
+    this.canPullToRefresh = false;
+    this.pullDistance.set(0);
+    this.pullIndicatorY.set(0);
+    this.pullScale.set(0);
+    this.pullOpacity.set(0);
+    this.pullRotation.set(0);
+  }
+
+  getMainScrollElement(): HTMLElement | null {
+    if (this.elementRef?.nativeElement) {
+      const el = this.elementRef.nativeElement.querySelector('main');
+      if (el) return el;
+    }
+    if (typeof document !== 'undefined') {
+      return document.querySelector('main');
+    }
+    return null;
   }
 
   toggleSidebarCollapse() {

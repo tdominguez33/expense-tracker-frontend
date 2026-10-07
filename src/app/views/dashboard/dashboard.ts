@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of, switchMap, map, catchError } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { RefreshService } from '../../services/refresh.service';
 import { CategoryDoughnut } from '../../components/category-doughnut/category-doughnut';
 
 export type DashboardPeriod = 'day' | 'week' | 'month' | 'year';
@@ -34,6 +35,7 @@ export interface TimelineActiveCount {
 export class Dashboard implements OnInit {
   private api = inject(ApiService);
   private destroyRef = inject(DestroyRef);
+  private refreshService = inject(RefreshService);
 
   readonly periods: readonly DashboardPeriod[] = ['day', 'week', 'month', 'year'] as const;
 
@@ -76,64 +78,10 @@ export class Dashboard implements OnInit {
   categories = signal<any[]>([]);
 
   ngOnInit() {
+    const unregister = this.refreshService.register(() => this.loadData({ silent: true }));
+    this.destroyRef.onDestroy(unregister);
+
     this.loadData();
-  }
-
-  loadData() {
-    this.isLoading.set(true);
-    this.errorMsg.set('');
-
-    forkJoin({
-      entities: this.api.getEntities().pipe(catchError(() => of([]))),
-      categories: this.api.getCategories().pipe(catchError(() => of([]))),
-      accounts: this.api.getAccounts().pipe(catchError(() => of([]))),
-      general: this.api.getGeneralReport(),
-      creditAll: this.api.getCreditAllReport().pipe(catchError(() => of(null)))
-    })
-    .pipe(
-      takeUntilDestroyed(this.destroyRef),
-      switchMap(res => {
-        this.entities.set(res.entities || []);
-        this.categories.set(res.categories || []);
-        this.generalReport.set(res.general || null);
-        this.globalDebt.set(res.creditAll?.total_global_debt || 0);
-        this.globalLimit.set(res.creditAll?.total_available_limit || 0);
-
-        const cards = (res.accounts || []).filter((a: any) => a.account_type === 'CREDIT_CARD');
-        this.creditCards.set(cards);
-
-        if (cards.length === 0) {
-          this.creditReports.set({});
-          return of([]);
-        }
-
-        const reportObservables = cards.map((card: any) =>
-          this.api.getCreditReport(card.id).pipe(
-            map((report: any) => ({ cardId: card.id, report })),
-            catchError(() => of({ cardId: card.id, report: null }))
-          )
-        );
-
-        return forkJoin(reportObservables);
-      })
-    )
-    .subscribe({
-      next: (cardReports: any) => {
-        if (Array.isArray(cardReports) && cardReports.length > 0) {
-          const reportsMap: Record<number, any> = {};
-          cardReports.forEach(({ cardId, report }) => {
-            if (report) {
-              reportsMap[cardId] = report;
-            }
-          });
-          this.creditReports.set(reportsMap);
-        }
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        this.handleError(err);
-      }
-    });
 
     if (typeof window !== 'undefined') {
       window.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
@@ -141,6 +89,74 @@ export class Dashboard implements OnInit {
         window.removeEventListener('scroll', this.onScroll, { capture: true });
       });
     }
+  }
+
+  loadData(options?: { silent?: boolean }): Promise<void> {
+    if (!options?.silent) {
+      this.isLoading.set(true);
+    }
+    this.errorMsg.set('');
+
+    return new Promise((resolve) => {
+      forkJoin({
+        entities: this.api.getEntities().pipe(catchError(() => of([]))),
+        categories: this.api.getCategories().pipe(catchError(() => of([]))),
+        accounts: this.api.getAccounts().pipe(catchError(() => of([]))),
+        general: this.api.getGeneralReport(),
+        creditAll: this.api.getCreditAllReport().pipe(catchError(() => of(null)))
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        switchMap(res => {
+          this.entities.set(res.entities || []);
+          this.categories.set(res.categories || []);
+          this.generalReport.set(res.general || null);
+          this.globalDebt.set(res.creditAll?.total_global_debt || 0);
+          this.globalLimit.set(res.creditAll?.total_available_limit || 0);
+
+          const cards = (res.accounts || []).filter((a: any) => a.account_type === 'CREDIT_CARD');
+          this.creditCards.set(cards);
+
+          if (cards.length === 0) {
+            this.creditReports.set({});
+            return of([]);
+          }
+
+          const reportObservables = cards.map((card: any) =>
+            this.api.getCreditReport(card.id).pipe(
+              map((report: any) => ({ cardId: card.id, report })),
+              catchError(() => of({ cardId: card.id, report: null }))
+            )
+          );
+
+          return forkJoin(reportObservables);
+        })
+      )
+      .subscribe({
+        next: (cardReports: any) => {
+          if (Array.isArray(cardReports) && cardReports.length > 0) {
+            const reportsMap: Record<number, any> = {};
+            cardReports.forEach(({ cardId, report }) => {
+              if (report) {
+                reportsMap[cardId] = report;
+              }
+            });
+            this.creditReports.set(reportsMap);
+          }
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        },
+        error: (err) => {
+          this.handleError(err);
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        }
+      });
+    });
   }
 
   activeTooltipPeriod = signal<string | null>(null);

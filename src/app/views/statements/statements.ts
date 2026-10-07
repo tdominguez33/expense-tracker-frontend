@@ -1,9 +1,11 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core';
 import { ApiService } from '../../services/api.service';
+import { RefreshService } from '../../services/refresh.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, Location } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-statements',
@@ -17,6 +19,8 @@ export class Statements implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
+  private refreshService = inject(RefreshService);
+  private destroyRef = inject(DestroyRef);
 
   accounts = signal<any[]>([]);
   statements = signal<any[]>([]);
@@ -116,8 +120,9 @@ export class Statements implements OnInit {
   }
 
   ngOnInit() {
-    this.isLoading.set(true);
-    
+    const unregister = this.refreshService.register(() => this.loadData({ silent: true }));
+    this.destroyRef.onDestroy(unregister);
+
     this.route.paramMap.subscribe(params => {
       const idStr = params.get('id');
       const accIdStr = params.get('accountId');
@@ -138,27 +143,48 @@ export class Statements implements OnInit {
       }
     });
 
-    forkJoin({
-      config: this.api.getConfig(),
-      ents: this.api.getEntities(),
-      cats: this.api.getCategories(),
-      accs: this.api.getAccounts(),
-      sts: this.api.getStatements()
-    }).subscribe(({ config, ents, cats, accs, sts }) => {
-      this.appTimezone.set(config.timezone || 'America/Argentina/Buenos_Aires');
-      this.graceDays.set(config.statement_grace_days ?? 10);
-      this.defaultTaxPercentage.set(config.default_tax_percentage || 0);
-      this.entities.set(ents);
-      this.categories.set(cats);
-      this.accounts.set(accs.filter((a: any) => a.account_type === 'CREDIT_CARD'));
-      this.statements.set(sts);
-      
-      const currentRouteId = this.routeId();
-      if (currentRouteId) {
-        this.loadStatementItems(currentRouteId);
-      }
-      
-      this.isLoading.set(false);
+    this.loadData();
+  }
+
+  loadData(options?: { silent?: boolean }): Promise<void> {
+    if (!options?.silent) {
+      this.isLoading.set(true);
+    }
+
+    return new Promise((resolve) => {
+      forkJoin({
+        config: this.api.getConfig().pipe(catchError(() => of({}))),
+        ents: this.api.getEntities().pipe(catchError(() => of([]))),
+        cats: this.api.getCategories().pipe(catchError(() => of([]))),
+        accs: this.api.getAccounts().pipe(catchError(() => of([]))),
+        sts: this.api.getStatements().pipe(catchError(() => of([])))
+      }).subscribe({
+        next: ({ config, ents, cats, accs, sts }) => {
+          if (config && (config as any).timezone) this.appTimezone.set((config as any).timezone);
+          if (config && (config as any).statement_grace_days !== undefined) this.graceDays.set((config as any).statement_grace_days);
+          if (config && (config as any).default_tax_percentage !== undefined) this.defaultTaxPercentage.set((config as any).default_tax_percentage);
+          this.entities.set(ents || []);
+          this.categories.set(cats || []);
+          this.accounts.set((accs || []).filter((a: any) => a.account_type === 'CREDIT_CARD'));
+          this.statements.set(sts || []);
+          
+          const currentRouteId = this.routeId();
+          if (currentRouteId) {
+            this.loadStatementItems(currentRouteId);
+          }
+          
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        },
+        error: () => {
+          if (!options?.silent) {
+            this.isLoading.set(false);
+          }
+          resolve();
+        }
+      });
     });
   }
 

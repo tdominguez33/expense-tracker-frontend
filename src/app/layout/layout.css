@@ -2,6 +2,14 @@
   overflow: visible;
 }
 
+:host main {
+  overscroll-behavior-y: contain;
+}
+
+.pull-refresh-content {
+  will-change: transform;
+}
+
 /* Smooth transition for sidebar: transform on mobile for drawer slide, width on desktop for collapse/expand */
 :host .sidebar-panel {
   touch-action: pan-y;

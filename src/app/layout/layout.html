@@ -16,8 +16,31 @@
     </div>
     
     <!-- Main content -->
-    <main class="flex-1 min-h-0 p-4 sm:p-6 md:p-10 overflow-y-auto safe-bottom">
-      <router-outlet></router-outlet>
+    <main class="flex-1 min-h-0 p-4 sm:p-6 md:p-10 overflow-y-auto safe-bottom relative overscroll-y-contain">
+      <!-- Pull-to-refresh Indicator -->
+      @if (pullDistance() > 0 || isRefreshing()) {
+        <div class="pull-refresh-indicator pointer-events-none absolute left-0 right-0 top-0 flex justify-center z-30 pt-2"
+             [style.transform]="'translateY(' + pullIndicatorY() + 'px)'"
+             [style.transition]="isPullDragging() ? 'none' : 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease'">
+          <div class="w-10 h-10 rounded-full bg-base-100 shadow-md border border-base-content/15 flex items-center justify-center text-primary"
+               [style.opacity]="pullOpacity()"
+               [style.transform]="'scale(' + pullScale() + ')'">
+            <svg xmlns="http://www.w3.org/2000/svg" 
+                 class="w-5 h-5 text-primary"
+                 [class.animate-spin]="isRefreshing()"
+                 [style.transform]="!isRefreshing() ? ('rotate(' + pullRotation() + 'deg)') : null"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+        </div>
+      }
+
+      <div class="pull-refresh-content h-full"
+           [style.transform]="pullDistance() > 0 ? ('translateY(' + pullDistance() + 'px)') : null"
+           [style.transition]="isPullDragging() ? 'none' : 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)'">
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div> 
   

@@ -131,4 +131,15 @@ describe('Statements - Comments', () => {
     const updated = component.statements().find(s => s.id === 10);
     expect(updated?.comment).toBeNull();
   });
+
+  it('loadData should update data without setting isLoading when silent is true', async () => {
+    component.isLoading.set(false);
+    mockApi.getStatements.mockReturnValue(of([{ id: 101 }]));
+
+    await component.loadData({ silent: true });
+
+    expect(component.isLoading()).toBe(false);
+    expect(component.statements().length).toBe(1);
+    expect(component.statements()[0].id).toBe(101);
+  });
 });

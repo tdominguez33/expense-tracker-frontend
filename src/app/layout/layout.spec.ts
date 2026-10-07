@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { Layout } from './layout';
+import { RefreshService } from '../services/refresh.service';
 
 describe('Layout', () => {
   let component: Layout;
@@ -435,5 +436,169 @@ describe('Layout', () => {
     toggleBtn.click();
     fixture.detectChanges();
     expect(component.isSidebarCollapsed).toBe(false);
+  });
+
+  describe('Pull-to-refresh (Mobile view)', () => {
+    let refreshService: RefreshService;
+
+    beforeEach(() => {
+      fixture.detectChanges();
+      refreshService = TestBed.inject(RefreshService);
+    });
+
+    it('should translate page content down and update indicator as user pulls down', () => {
+      vi.stubGlobal('innerWidth', 375);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      expect(mainEl).toBeTruthy();
+      mainEl.scrollTop = 0;
+
+      // Start touch in main content
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(true);
+
+      // Drag down 80px
+      const preventDefault = vi.fn();
+      component.onGlobalTouchMove({
+        touches: [{ clientX: 150, clientY: 180 }],
+        cancelable: true,
+        preventDefault
+      } as any);
+
+      expect(component.isPullDragging()).toBe(true);
+      expect(component.pullDistance()).toBeGreaterThan(0);
+      expect(component.pullIndicatorY()).toBeGreaterThan(0);
+      expect(preventDefault).toHaveBeenCalled();
+
+      fixture.detectChanges();
+      const contentEl = fixture.nativeElement.querySelector('.pull-refresh-content') as HTMLElement;
+      expect(contentEl.style.transform).toContain('translateY');
+      const indicatorEl = fixture.nativeElement.querySelector('.pull-refresh-indicator') as HTMLElement;
+      expect(indicatorEl).toBeTruthy();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should reset pull styles on touchend if threshold is not reached', () => {
+      vi.stubGlobal('innerWidth', 375);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      // Drag slightly (15px)
+      component.onGlobalTouchMove({
+        touches: [{ clientX: 150, clientY: 115 }],
+        cancelable: true,
+        preventDefault: vi.fn()
+      } as any);
+
+      expect(component.pullDistance()).toBeLessThan(component.PULL_THRESHOLD);
+
+      component.onGlobalTouchEnd({} as any);
+
+      expect(component.isPullDragging()).toBe(false);
+      expect(component.pullDistance()).toBe(0);
+      expect(component.isRefreshing()).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should trigger silent refresh and spin indicator when reaching threshold', async () => {
+      vi.stubGlobal('innerWidth', 375);
+      const refreshSpy = vi.spyOn(refreshService, 'triggerRefresh').mockResolvedValue();
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      // Pull down far enough to cross threshold (e.g. 150px downwards)
+      component.onGlobalTouchMove({
+        touches: [{ clientX: 150, clientY: 250 }],
+        cancelable: true,
+        preventDefault: vi.fn()
+      } as any);
+
+      expect(component.pullDistance()).toBeGreaterThanOrEqual(component.PULL_THRESHOLD);
+
+      fixture.detectChanges();
+      const spinnerSvg = fixture.nativeElement.querySelector('.pull-refresh-indicator svg');
+      // While dragging (even past threshold), it should NOT spin yet
+      expect(spinnerSvg?.classList.contains('animate-spin')).toBe(false);
+
+      const refreshPromise = component.onGlobalTouchEnd({} as any);
+
+      // Once released, isRefreshing becomes true and it starts spinning
+      fixture.detectChanges();
+      expect(component.isRefreshing()).toBe(true);
+      expect(spinnerSvg?.classList.contains('animate-spin')).toBe(true);
+      expect(component.pullDistance()).toBe(55);
+
+      await refreshPromise;
+      expect(refreshSpy).toHaveBeenCalled();
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should NOT activate pull-to-refresh when desktop (innerWidth >= 1024)', () => {
+      vi.stubGlobal('innerWidth', 1280);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 300, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should NOT activate pull-to-refresh when main.scrollTop > 0', () => {
+      vi.stubGlobal('innerWidth', 375);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 50;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should NOT activate pull-to-refresh when starting at edge (drawer swipe takes precedence)', () => {
+      vi.stubGlobal('innerWidth', 375);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 20, clientY: 150 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(false);
+      expect(component.pullDistance()).toBe(0);
+
+      vi.unstubAllGlobals();
+    });
   });
 });

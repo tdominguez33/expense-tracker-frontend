@@ -1,7 +1,8 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../services/api.service';
+import { RefreshService } from '../../services/refresh.service';
 import { CategoryBreakdownItem } from '../../components/category-doughnut/category-doughnut';
 import { PeriodCharts } from '../../components/period-charts/period-charts';
 import { DEFAULT_PAGE_SIZE } from '../transactions/transactions';
@@ -22,6 +23,8 @@ export type SortDirection = 'asc' | 'desc';
 export class HistoryView implements OnInit, OnDestroy {
   protected readonly Math = Math;
   private api = inject(ApiService);
+  private destroyRef = inject(DestroyRef);
+  private refreshService = inject(RefreshService);
 
   getTextColorForBackground(hexColor: string): string {
     return getContrastColor(hexColor);
@@ -59,6 +62,9 @@ export class HistoryView implements OnInit, OnDestroy {
   ];
 
   ngOnInit() {
+    const unregister = this.refreshService.register(() => this.loadReport({ silent: true }));
+    this.destroyRef.onDestroy(unregister);
+
     this.initDefaultPeriod();
     this.loadReport();
   }
@@ -79,7 +85,7 @@ export class HistoryView implements OnInit, OnDestroy {
     this.availableYears.set([defYear]);
   }
 
-  loadReport() {
+  loadReport(options?: { silent?: boolean }): Promise<void> {
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
       this.loadingTimeout = null;
@@ -87,83 +93,94 @@ export class HistoryView implements OnInit, OnDestroy {
 
     this.currentPage.set(1);
     this.hoveredBarIndex.set(null);
-    this.isLoading.set(true);
-    this.loadingTimeout = setTimeout(() => {
-      if (this.isLoading()) {
-        this.showSpinner.set(true);
-      }
-    }, SPINNER_DELAY_MS);
+
+    if (!options?.silent) {
+      this.isLoading.set(true);
+      this.loadingTimeout = setTimeout(() => {
+        if (this.isLoading()) {
+          this.showSpinner.set(true);
+        }
+      }, SPINNER_DELAY_MS);
+    }
 
     this.errorMsg.set('');
 
-    this.api.getHistoryReport(this.selectedYear(), this.selectedMonth()).subscribe({
-      next: (data) => {
-        if (this.loadingTimeout) {
-          clearTimeout(this.loadingTimeout);
-          this.loadingTimeout = null;
-        }
-        this.reportData.set(data);
-        if (data.available_periods) {
-          this.availablePeriods.set(data.available_periods);
-        } else {
-          const current = { ...this.availablePeriods() };
-          current[this.selectedYear()] = data.available_months || [];
-          this.availablePeriods.set(current);
-        }
-        if (data.available_years && data.available_years.length > 0) {
-          this.availableYears.set(data.available_years);
-        } else if (!this.availableYears().includes(this.selectedYear())) {
-          this.availableYears.set([this.selectedYear()]);
-        }
-        const availMonths = data.available_months || [];
-        this.availableMonths.set(availMonths);
-
-        const currMonth = this.selectedMonth();
-
-        // On initial load, ensure the latest available month is opened
-        if (!this.hasLoadedOnce()) {
-          if (availMonths.length > 0) {
-            const lastAvailMonth = availMonths[availMonths.length - 1];
-            if (currMonth !== lastAvailMonth) {
-              this.selectedMonth.set(lastAvailMonth);
-              this.loadReport();
-              return;
-            }
-          } else if (data.available_years && data.available_years.length > 0) {
-            const lastYear = data.available_years[data.available_years.length - 1];
-            if (lastYear !== this.selectedYear()) {
-              this.selectedYear.set(lastYear);
-              const periods = data.available_periods || {};
-              const months = periods[lastYear] || [];
-              if (months.length > 0) {
-                this.selectedMonth.set(months[months.length - 1]);
-              }
-              this.loadReport();
-              return;
-            }
+    return new Promise((resolve) => {
+      this.api.getHistoryReport(this.selectedYear(), this.selectedMonth()).subscribe({
+        next: (data) => {
+          if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
           }
-        } else if (currMonth !== null && availMonths.length > 0 && !availMonths.includes(currMonth)) {
-          const fallbackMonth = availMonths[availMonths.length - 1];
-          this.selectedMonth.set(fallbackMonth);
-          this.loadReport();
-          return;
-        }
+          this.reportData.set(data);
+          if (data.available_periods) {
+            this.availablePeriods.set(data.available_periods);
+          } else {
+            const current = { ...this.availablePeriods() };
+            current[this.selectedYear()] = data.available_months || [];
+            this.availablePeriods.set(current);
+          }
+          if (data.available_years && data.available_years.length > 0) {
+            this.availableYears.set(data.available_years);
+          } else if (!this.availableYears().includes(this.selectedYear())) {
+            this.availableYears.set([this.selectedYear()]);
+          }
+          const availMonths = data.available_months || [];
+          this.availableMonths.set(availMonths);
 
-        this.hasLoadedOnce.set(true);
-        this.isLoading.set(false);
-        this.showSpinner.set(false);
-      },
-      error: (err) => {
-        if (this.loadingTimeout) {
-          clearTimeout(this.loadingTimeout);
-          this.loadingTimeout = null;
+          const currMonth = this.selectedMonth();
+
+          // On initial load, ensure the latest available month is opened
+          if (!this.hasLoadedOnce()) {
+            if (availMonths.length > 0) {
+              const lastAvailMonth = availMonths[availMonths.length - 1];
+              if (currMonth !== lastAvailMonth) {
+                this.selectedMonth.set(lastAvailMonth);
+                this.loadReport(options).then(resolve);
+                return;
+              }
+            } else if (data.available_years && data.available_years.length > 0) {
+              const lastYear = data.available_years[data.available_years.length - 1];
+              if (lastYear !== this.selectedYear()) {
+                this.selectedYear.set(lastYear);
+                const periods = data.available_periods || {};
+                const months = periods[lastYear] || [];
+                if (months.length > 0) {
+                  this.selectedMonth.set(months[months.length - 1]);
+                }
+                this.loadReport(options).then(resolve);
+                return;
+              }
+            }
+          } else if (currMonth !== null && availMonths.length > 0 && !availMonths.includes(currMonth)) {
+            const fallbackMonth = availMonths[availMonths.length - 1];
+            this.selectedMonth.set(fallbackMonth);
+            this.loadReport(options).then(resolve);
+            return;
+          }
+
+          this.hasLoadedOnce.set(true);
+          if (!options?.silent) {
+            this.isLoading.set(false);
+            this.showSpinner.set(false);
+          }
+          resolve();
+        },
+        error: (err) => {
+          if (this.loadingTimeout) {
+            clearTimeout(this.loadingTimeout);
+            this.loadingTimeout = null;
+          }
+          console.error('Error cargando histórico:', err);
+          this.errorMsg.set('No se pudo cargar el reporte histórico.');
+          this.hasLoadedOnce.set(true);
+          if (!options?.silent) {
+            this.isLoading.set(false);
+            this.showSpinner.set(false);
+          }
+          resolve();
         }
-        console.error('Error cargando histórico:', err);
-        this.errorMsg.set('No se pudo cargar el reporte histórico.');
-        this.hasLoadedOnce.set(true);
-        this.isLoading.set(false);
-        this.showSpinner.set(false);
-      }
+      });
     });
   }
 
