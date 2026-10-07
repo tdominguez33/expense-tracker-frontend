@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, HostListener } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -17,10 +17,13 @@ export class Settings implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
   
+  isMobile = signal<boolean>(false);
+
   categories = signal<any[]>([]);
   accounts = signal<any[]>([]);
   entities = signal<any[]>([]);
   accountsByEntity = signal<any>({});
+
   
   isLoading = signal<boolean>(true);
   
@@ -130,7 +133,21 @@ export class Settings implements OnInit, OnDestroy {
     });
   }
 
+  @HostListener('window:resize')
+  onResize() {
+    this.checkIsMobile();
+  }
+
+  checkIsMobile() {
+    if (typeof window !== 'undefined') {
+      const isSmallScreen = window.innerWidth < 768;
+      const isTouchMobile = window.innerWidth < 1024 && (('ontouchstart' in window) || (navigator?.maxTouchPoints ?? 0) > 0);
+      this.isMobile.set(isSmallScreen || isTouchMobile);
+    }
+  }
+
   ngOnInit() {
+    this.checkIsMobile();
     this.loadData();
   }
 
@@ -647,6 +664,49 @@ export class Settings implements OnInit, OnDestroy {
   
   // -- Modals & Editing --
   
+  private showDialog(id: string, focusInputSelector?: string) {
+    if (typeof document === 'undefined') return;
+    const dialog = document.getElementById(id) as HTMLDialogElement | null;
+    if (!dialog) return;
+
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    }
+
+    if (this.isMobile()) {
+      // En mobile: no hacer foco en ningún elemento para evitar que se abra el teclado virtual
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 0);
+    } else {
+      // En escritorio: hacer foco en el campo de texto para poder escribir de inmediato
+      const doFocus = () => {
+        let inputToFocus: HTMLElement | null = null;
+        if (focusInputSelector) {
+          inputToFocus = dialog.querySelector(focusInputSelector) as HTMLElement | null;
+        }
+        if (!inputToFocus) {
+          inputToFocus = dialog.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea') as HTMLElement | null;
+        }
+        if (inputToFocus) {
+          inputToFocus.focus();
+          if (inputToFocus instanceof HTMLInputElement && typeof inputToFocus.setSelectionRange === 'function') {
+            const len = inputToFocus.value?.length ?? 0;
+            inputToFocus.setSelectionRange(len, len);
+          }
+        }
+      };
+
+      doFocus();
+      setTimeout(doFocus, 0);
+    }
+  }
+
   openCatModal(cat?: any) {
     this.errorMsg.set('');
     this.showAllColors.set(false);
@@ -657,7 +717,7 @@ export class Settings implements OnInit, OnDestroy {
       this.editingCatId.set(null);
       this.catForm.reset({ color: this.pastelColors[0] || '' });
     }
-    (document.getElementById('cat_modal') as HTMLDialogElement).showModal();
+    this.showDialog('cat_modal', 'input[formControlName="name"]');
   }
 
   selectColor(color: string) {
@@ -673,7 +733,7 @@ export class Settings implements OnInit, OnDestroy {
       this.editingEntId.set(null);
       this.entForm.reset();
     }
-    (document.getElementById('ent_modal') as HTMLDialogElement).showModal();
+    this.showDialog('ent_modal', 'input[formControlName="name"]');
   }
 
   openAccModal(acc?: any) {
@@ -687,7 +747,7 @@ export class Settings implements OnInit, OnDestroy {
       }
       
       this.accForm.patchValue({
-        entity_id: acc.entity_id,
+        entity_id: acc.entity_id !== undefined && acc.entity_id !== null ? acc.entity_id : '',
         account_type: acc.account_type,
         name: acc.name,
         available_limit: formattedLimit,
@@ -695,17 +755,22 @@ export class Settings implements OnInit, OnDestroy {
       });
     } else {
       this.editingAccId.set(null);
-      this.accForm.reset({ account_type: 'DEBIT' });
+      this.accForm.reset({ entity_id: '', account_type: 'DEBIT' });
     }
-    (document.getElementById('acc_modal') as HTMLDialogElement).showModal();
+    this.showDialog('acc_modal', 'input[formControlName="name"]');
   }
   
   openModal(id: string) {
-    (document.getElementById(id) as HTMLDialogElement).showModal();
+    this.showDialog(id);
   }
   
   closeModal(id: string) {
-    (document.getElementById(id) as HTMLDialogElement).close();
+    if (typeof document !== 'undefined') {
+      const dialog = document.getElementById(id) as HTMLDialogElement | null;
+      if (dialog && typeof dialog.close === 'function') {
+        dialog.close();
+      }
+    }
   }
   
   // -- Submits --
@@ -882,13 +947,16 @@ export class Settings implements OnInit, OnDestroy {
     this.selectedImportFile.set(null);
     this.importError.set('');
     this.importSuccessMsg.set('');
-    const modal = document.getElementById('import_modal') as HTMLDialogElement;
-    if (modal) modal.showModal();
+    this.showDialog('import_modal');
   }
 
   closeImportModal() {
-    const modal = document.getElementById('import_modal') as HTMLDialogElement;
-    if (modal) modal.close();
+    if (typeof document !== 'undefined') {
+      const modal = document.getElementById('import_modal') as HTMLDialogElement | null;
+      if (modal && typeof modal.close === 'function') {
+        modal.close();
+      }
+    }
     this.selectedImportFile.set(null);
     this.importError.set('');
     this.importSuccessMsg.set('');

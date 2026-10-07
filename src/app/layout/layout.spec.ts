@@ -81,6 +81,12 @@ describe('Layout', () => {
     }
   });
 
+  it('should render theme toggle button with .theme-toggle-btn', () => {
+    fixture.detectChanges();
+    const btn = fixture.nativeElement.querySelector('button.theme-toggle-btn') as HTMLButtonElement;
+    expect(btn).toBeTruthy();
+  });
+
   it('should open drawer on edge swipe right and close on swipe left', () => {
     // Set viewport width to mobile (< 1024)
     vi.stubGlobal('innerWidth', 375);
@@ -152,6 +158,194 @@ describe('Layout', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('should progressively move sidebar panel and update overlay during edge touch drag to open', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+    const overlay = fixture.nativeElement.querySelector('.drawer-overlay') as HTMLElement;
+
+    drawer.checked = false;
+
+    // Start edge swipe at clientX = 20
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 20, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Drag to clientX = 120 (dx = 100)
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 120, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Panel should have inline transform tracking the finger (panelWidth = 288, translateX = -288 + 100 = -188px)
+    expect(panel.style.transform).toBe('translateX(-188px)');
+    expect(panel.style.transition).toBe('none');
+    expect(overlay.style.backgroundColor).toContain('rgba(0, 0, 0,');
+    expect(overlay.style.transition).toBe('none');
+
+    // Drag further to clientX = 220 (dx = 200)
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 220, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    expect(panel.style.transform).toBe('translateX(-88px)');
+
+    // Release touch: since dx = 200 (> 40), it snaps open
+    component.onGlobalTouchEnd({
+      touches: []
+    } as any);
+
+    expect(drawer.checked).toBe(true);
+    expect(panel.style.transform).toBe('translateX(0px)');
+    expect(panel.style.transition).toContain('transform');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should progressively move sidebar panel and dim overlay during drag to close', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+    const overlay = fixture.nativeElement.querySelector('.drawer-overlay') as HTMLElement;
+
+    drawer.checked = true;
+
+    // Touch inside open drawer / overlay at clientX = 250
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 250, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Drag left to clientX = 150 (dx = -100)
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 150, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Panel moves progressively with dx (-100px)
+    expect(panel.style.transform).toBe('translateX(-100px)');
+    expect(panel.style.transition).toBe('none');
+    expect(overlay.style.backgroundColor).toContain('rgba(0, 0, 0,');
+
+    // Release touch: since dx = -100 (< -40), it snaps closed
+    component.onGlobalTouchEnd({
+      touches: []
+    } as any);
+
+    expect(drawer.checked).toBe(false);
+    expect(panel.style.transform).toBe('translateX(-100%)');
+    expect(overlay.style.backgroundColor).toBe('transparent');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should snap back closed if edge swipe was released before threshold', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+    const overlay = fixture.nativeElement.querySelector('.drawer-overlay') as HTMLElement;
+
+    drawer.checked = false;
+
+    // Start edge swipe at clientX = 20
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 20, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Drag slightly: dx = 15 (< 40 threshold)
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 35, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    expect(panel.style.transform).toBe('translateX(-273px)');
+
+    // Release
+    component.onGlobalTouchEnd({
+      touches: []
+    } as any);
+
+    expect(drawer.checked).toBe(false);
+    expect(panel.style.transform).toBe('translateX(-100%)');
+    expect(overlay.style.backgroundColor).toBe('transparent');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should snap back open if drag to close was released before threshold', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+    const overlay = fixture.nativeElement.querySelector('.drawer-overlay') as HTMLElement;
+
+    drawer.checked = true;
+
+    // Start drag at clientX = 200
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 200, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Drag slightly left: dx = -15 (> -40 threshold)
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 185, clientY: 200 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    expect(panel.style.transform).toBe('translateX(-15px)');
+
+    // Release
+    component.onGlobalTouchEnd({
+      touches: []
+    } as any);
+
+    expect(drawer.checked).toBe(true);
+    expect(panel.style.transform).toBe('translateX(0px)');
+    expect(overlay.style.backgroundColor).toContain('rgba(0, 0, 0,');
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should not hijack gesture when swiping vertically (e.g. scrolling menu)', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+
+    drawer.checked = true;
+
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Vertical drag: dy = 50, dx = -5
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 95, clientY: 150 }],
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    // Should not have applied horizontal drag transform
+    expect(panel.style.transform).toBe('');
+    expect(component['isDrawerSwiping']).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
 
   it('should not intercept touches or start edge swipe when touching inside the navbar or on the menu button', () => {
     vi.stubGlobal('innerWidth', 375);

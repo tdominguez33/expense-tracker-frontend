@@ -96,7 +96,9 @@
           </li>
         </ng-template>
 
-        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-1.5" (mouseleave)="onCategoryLeave()">
+        <ul class="category-legend-grid grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-1.5"
+            [style.--legend-rows]="legendRowCount()"
+            (mouseleave)="onCategoryLeave()">
           <!-- Top 5 categories (always visible) -->
           @for (cat of topCategories(); track cat.id) {
             <ng-container *ngTemplateOutlet="categoryItem; context: { cat: cat }"></ng-container>

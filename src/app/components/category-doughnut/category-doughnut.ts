@@ -36,6 +36,10 @@ export interface CategoryBreakdownItem {
       pointer-events: auto;
     }
     @media (min-width: 640px) {
+      .category-legend-grid {
+        grid-auto-flow: column;
+        grid-template-rows: repeat(var(--legend-rows, 5), minmax(0, auto));
+      }
       .expand-grid {
         display: contents !important;
         opacity: 1 !important;
@@ -62,6 +66,12 @@ export class CategoryDoughnut implements OnDestroy {
 
   topCategories = computed(() => this.breakdown().slice(0, 5));
   extraCategories = computed(() => this.breakdown().slice(5));
+
+  legendRowCount = computed(() => {
+    const count = this.breakdown().length;
+    if (count <= 1) return 1;
+    return Math.max(2, Math.ceil(count / 2));
+  });
 
   effectiveMaxAmount = computed(() => {
     const fromInput = this.maxAmount();

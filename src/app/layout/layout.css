@@ -2,11 +2,18 @@
   overflow: visible;
 }
 
-/* Smooth transition for sidebar collapsing and expanding */
+/* Smooth transition for sidebar: transform on mobile for drawer slide, width on desktop for collapse/expand */
 :host .sidebar-panel {
-  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: width;
+  touch-action: pan-y;
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1), width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, width;
 }
+
+/* Smooth fade transition for mobile drawer backdrop overlay */
+:host .drawer-side > .drawer-overlay {
+  transition: background-color 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 
 /* Ensure menu items have no flashing borders or outlines */
 :host .drawer-side .menu li {
@@ -25,6 +32,21 @@
 :host .drawer-side .menu li > *:focus-visible {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Theme toggle button: maintain continuous hover background on hover & active (no black flicker, no click flicker) */
+:host .drawer-side .menu li > .theme-toggle-btn:hover,
+:host .drawer-side .menu li > button.theme-toggle-btn:hover,
+:host .drawer-side .menu li > .theme-toggle-btn:active,
+:host .drawer-side .menu li > button.theme-toggle-btn:active {
+  background-color: var(--fallback-bc, oklch(var(--bc) / 0.1)) !important;
+  color: inherit !important;
+}
+
+:host .drawer-side .menu li > .theme-toggle-btn:focus:not(:hover),
+:host .drawer-side .menu li > button.theme-toggle-btn:focus:not(:hover) {
+  background-color: transparent !important;
+  color: inherit !important;
 }
 
 /* Icon slot movement: subtle delayed 6px drift to the right when collapsing */

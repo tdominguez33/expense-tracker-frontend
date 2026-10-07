@@ -1,0 +1,12 @@
+/* Prevent DaisyUI menu item hover styling on the action buttons container */
+:host .menu li > .item-actions,
+:host .menu li > .item-actions:hover,
+:host .menu li > .item-actions:focus,
+:host .menu li > .item-actions:active,
+:host .menu li > div:not(.menu-title),
+:host .menu li > div:not(.menu-title):hover,
+:host .menu li > div:not(.menu-title):focus,
+:host .menu li > div:not(.menu-title):active {
+  background-color: transparent !important;
+  cursor: default !important;
+}

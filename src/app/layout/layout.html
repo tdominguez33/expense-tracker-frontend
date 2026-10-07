@@ -1,5 +1,5 @@
 <div class="drawer lg:drawer-open h-full min-h-0 overflow-hidden">
-  <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
+  <input id="my-drawer-2" type="checkbox" class="drawer-toggle" (change)="onDrawerChange()" />
   
   <div class="drawer-content flex flex-col bg-base-100 h-full min-h-0 overflow-x-hidden">
     <!-- Navbar for mobile -->
@@ -120,7 +120,7 @@
         </li>
         <li class="w-full">
           <button type="button"
-                  class="w-full h-11 px-3 flex items-center rounded-lg font-medium" 
+                  class="theme-toggle-btn w-full h-11 px-3 flex items-center rounded-lg font-medium" 
                   (click)="toggleTheme()">
             <span class="nav-icon-slot shrink-0 flex items-center justify-center w-5 h-5"
                   [class.sidebar-icon-centered]="isSidebarCollapsed">

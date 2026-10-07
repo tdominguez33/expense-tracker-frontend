@@ -465,4 +465,97 @@ describe('Settings', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('Modal focus behavior (Mobile vs Desktop)', () => {
+    beforeEach(() => {
+      HTMLDialogElement.prototype.showModal = vi.fn();
+      HTMLDialogElement.prototype.close = vi.fn();
+    });
+
+    it('should blur active element and not focus any element when opening dialogs on mobile', () => {
+      component.isMobile.set(true);
+
+      const entInput = fixture.nativeElement.querySelector('#ent_modal input[formControlName="name"]') as HTMLInputElement;
+      const accInput = fixture.nativeElement.querySelector('#acc_modal input[formControlName="name"]') as HTMLInputElement;
+      const catInput = fixture.nativeElement.querySelector('#cat_modal input[formControlName="name"]') as HTMLInputElement;
+
+      const entFocusSpy = vi.spyOn(entInput, 'focus');
+      const accFocusSpy = vi.spyOn(accInput, 'focus');
+      const catFocusSpy = vi.spyOn(catInput, 'focus');
+      const blurSpy = vi.spyOn(HTMLElement.prototype, 'blur');
+
+      // 1. Entity modal on mobile
+      component.openEntModal();
+      expect(entFocusSpy).not.toHaveBeenCalled();
+
+      // 2. Account modal on mobile
+      component.openAccModal();
+      expect(accFocusSpy).not.toHaveBeenCalled();
+
+      // 3. Category modal on mobile
+      component.openCatModal();
+      expect(catFocusSpy).not.toHaveBeenCalled();
+
+      // blur should be called to ensure no element retains focus
+      expect(blurSpy).toHaveBeenCalled();
+    });
+
+    it('should focus name input immediately when opening dialogs on desktop to allow typing right away', () => {
+      component.isMobile.set(false);
+
+      const entInput = fixture.nativeElement.querySelector('#ent_modal input[formControlName="name"]') as HTMLInputElement;
+      const accInput = fixture.nativeElement.querySelector('#acc_modal input[formControlName="name"]') as HTMLInputElement;
+      const catInput = fixture.nativeElement.querySelector('#cat_modal input[formControlName="name"]') as HTMLInputElement;
+
+      const entFocusSpy = vi.spyOn(entInput, 'focus');
+      const entSelectSpy = vi.spyOn(entInput, 'select');
+      const entSelectionRangeSpy = vi.spyOn(entInput, 'setSelectionRange');
+      const accFocusSpy = vi.spyOn(accInput, 'focus');
+      const catFocusSpy = vi.spyOn(catInput, 'focus');
+
+      // 1. Entity modal on desktop (should focus, position caret at end, but NOT select all text in blue)
+      component.openEntModal({ id: 1, name: 'Banco Galicia' });
+      expect(entFocusSpy).toHaveBeenCalled();
+      expect(entSelectSpy).not.toHaveBeenCalled();
+      expect(entSelectionRangeSpy).toHaveBeenCalledWith('Banco Galicia'.length, 'Banco Galicia'.length);
+
+      // 2. Account modal on desktop (focuses name input so user can type immediately, without selecting)
+      component.openAccModal();
+      expect(accFocusSpy).toHaveBeenCalled();
+
+      // 3. Category modal on desktop
+      component.openCatModal();
+      expect(catFocusSpy).toHaveBeenCalled();
+    });
+
+    it('should update isMobile on checkIsMobile and onResize', () => {
+      vi.stubGlobal('innerWidth', 375);
+      component.checkIsMobile();
+      expect(component.isMobile()).toBe(true);
+
+      vi.stubGlobal('innerWidth', 1024);
+      component.onResize();
+      expect(component.isMobile()).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should default entity_id to empty string ("Selecciona una entidad") when creating a new account', () => {
+      component.openAccModal();
+      expect(component.accForm.get('entity_id')?.value).toBe('');
+      expect(component.editingAccId()).toBeNull();
+    });
+
+    it('should default entity_id to empty string ("Selecciona una entidad") when editing an account without entity_id', () => {
+      component.openAccModal({ id: 5, name: 'Efectivo', account_type: 'DEBIT', entity_id: null });
+      expect(component.accForm.get('entity_id')?.value).toBe('');
+      expect(component.editingAccId()).toBe(5);
+    });
+
+    it('should retain existing entity_id when editing an account that already has an entity', () => {
+      component.openAccModal({ id: 10, name: 'Visa Gold', account_type: 'CREDIT_CARD', entity_id: 2 });
+      expect(component.accForm.get('entity_id')?.value).toBe(2);
+      expect(component.editingAccId()).toBe(10);
+    });
+  });
 });

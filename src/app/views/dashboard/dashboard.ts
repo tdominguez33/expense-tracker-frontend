@@ -134,6 +134,42 @@ export class Dashboard implements OnInit {
         this.handleError(err);
       }
     });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('scroll', this.onScroll, { capture: true, passive: true });
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', this.onScroll, { capture: true });
+      });
+    }
+  }
+
+  activeTooltipPeriod = signal<string | null>(null);
+
+  toggleComparisonTooltip(period: string, event?: Event) {
+    event?.stopPropagation();
+    if (this.activeTooltipPeriod() === period) {
+      this.closeTooltip();
+    } else {
+      this.activeTooltipPeriod.set(period);
+    }
+  }
+
+  closeTooltip() {
+    if (this.activeTooltipPeriod() !== null) {
+      this.activeTooltipPeriod.set(null);
+    }
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  private onScroll = () => {
+    this.closeTooltip();
+  };
+
+  @HostListener('window:wheel')
+  onWindowWheel() {
+    this.closeTooltip();
   }
 
   private handleError(err: any) {
@@ -487,6 +523,10 @@ export class Dashboard implements OnInit {
   cardsGestureDirection: 'none' | 'horizontal' | 'vertical' = 'none';
 
   onCardsTouchStart(e: TouchEvent) {
+    const target = e.target as HTMLElement | null;
+    if (!target?.closest?.('[data-comparison-trigger]')) {
+      this.closeTooltip();
+    }
     if (e.touches.length > 0) {
       this.cardsTouchStartX = e.touches[0].clientX;
       this.cardsTouchStartY = e.touches[0].clientY;
@@ -499,6 +539,7 @@ export class Dashboard implements OnInit {
 
   onCardsTouchMove(e: TouchEvent) {
     if (e.touches.length === 0) return;
+    this.closeTooltip();
     if (this.cardsGestureDirection === 'vertical') return;
 
     const currentX = e.touches[0].clientX;
@@ -796,8 +837,11 @@ export class Dashboard implements OnInit {
   private touchStartY = 0;
 
   @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
-    const target = event.target as Element | null;
+  onDocumentClick(event?: MouseEvent) {
+    const target = event?.target as Element | null;
+    if (!target?.closest?.('[data-comparison-trigger]')) {
+      this.closeTooltip();
+    }
     const isTimelineBar = target?.closest('[data-timeline-bar]');
     if (!isTimelineBar && (this.selectedTimelineBar() !== null || this.hoveredTimelineBar() !== null)) {
       this.selectedTimelineBar.set(null);
@@ -810,6 +854,10 @@ export class Dashboard implements OnInit {
     if (event.touches.length > 0) {
       this.touchStartX = event.touches[0].clientX;
       this.touchStartY = event.touches[0].clientY;
+      const target = event.target as Element | null;
+      if (!target?.closest?.('[data-comparison-trigger]')) {
+        this.closeTooltip();
+      }
     }
   }
 
@@ -820,6 +868,9 @@ export class Dashboard implements OnInit {
       const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
       if (deltaX < 10 && deltaY < 10) {
         const target = event.target as Element | null;
+        if (!target?.closest?.('[data-comparison-trigger]')) {
+          this.closeTooltip();
+        }
         const isTimelineBar = target?.closest('[data-timeline-bar]');
         if (!isTimelineBar && (this.selectedTimelineBar() !== null || this.hoveredTimelineBar() !== null)) {
           this.selectedTimelineBar.set(null);

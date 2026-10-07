@@ -332,5 +332,46 @@ describe('Dashboard', () => {
     component.selectTimelineBar(mockBar, touchEvent);
     expect(component.selectedTimelineBar()).toEqual(mockBar);
   });
+
+  it('should toggle comparison tooltip and hide on outside click, touch, scroll, or card swipe', () => {
+    expect(component.activeTooltipPeriod()).toBeNull();
+
+    // 1. Toggle comparison tooltip open for 'month'
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBe('month');
+
+    // 2. Toggle comparison tooltip again for 'month' -> closes
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBeNull();
+
+    // 3. Open for 'month' and click outside
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBe('month');
+    component.onDocumentClick();
+    expect(component.activeTooltipPeriod()).toBeNull();
+
+    // 4. Open for 'month' and touch outside
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBe('month');
+    component.onTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }],
+      target: document.body
+    } as any);
+    expect(component.activeTooltipPeriod()).toBeNull();
+
+    // 5. Open for 'month' and scroll window / wheel
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBe('month');
+    component.onWindowWheel();
+    expect(component.activeTooltipPeriod()).toBeNull();
+
+    // 6. Open for 'month' and swipe cards
+    component.toggleComparisonTooltip('month');
+    expect(component.activeTooltipPeriod()).toBe('month');
+    component.onCardsTouchMove({
+      touches: [{ clientX: 100, clientY: 100 }]
+    } as any);
+    expect(component.activeTooltipPeriod()).toBeNull();
+  });
 });
 

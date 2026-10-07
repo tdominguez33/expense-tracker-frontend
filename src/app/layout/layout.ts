@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ElementRef, HostListener } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,13 +15,18 @@ export class Layout implements OnInit, OnDestroy {
   isDarkTheme = true;
   isSidebarCollapsed = false;
   private router = inject(Router);
+  private elementRef = inject(ElementRef);
 
   private edgeTouchStartX = 0;
   private edgeTouchStartY = 0;
   private currentTouchX = 0;
   private currentTouchY = 0;
+  private touchStartTime = 0;
   private isEdgeSwiping = false;
   private isDrawerSwiping = false;
+  private isDragging = false;
+  private isDirectionLocked = false;
+  private dragAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private authService: AuthService) {
     this.router.events.pipe(
@@ -55,32 +60,51 @@ export class Layout implements OnInit, OnDestroy {
       window.addEventListener('touchstart', this.onGlobalTouchStart, { passive: false });
       window.addEventListener('touchmove', this.onGlobalTouchMove, { passive: false });
       window.addEventListener('touchend', this.onGlobalTouchEnd, { passive: true });
+      window.addEventListener('touchcancel', this.onGlobalTouchEnd, { passive: true });
     }
   }
 
   ngOnDestroy() {
+    this.clearDragStyles();
     if (typeof window !== 'undefined') {
       window.removeEventListener('touchstart', this.onGlobalTouchStart);
       window.removeEventListener('touchmove', this.onGlobalTouchMove);
       window.removeEventListener('touchend', this.onGlobalTouchEnd);
+      window.removeEventListener('touchcancel', this.onGlobalTouchEnd);
     }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      this.clearDragStyles();
+    }
+  }
+
+  onDrawerChange() {
+    this.clearDragStyles();
   }
 
   onGlobalTouchStart = (e: TouchEvent) => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) return;
     if (e.touches.length !== 1) return;
 
+    this.clearDragStyles();
+
     const touch = e.touches[0];
     this.edgeTouchStartX = touch.clientX;
     this.edgeTouchStartY = touch.clientY;
     this.currentTouchX = touch.clientX;
     this.currentTouchY = touch.clientY;
+    this.touchStartTime = Date.now();
+    this.isDragging = false;
+    this.isDirectionLocked = false;
 
     if (!this.isDrawerOpen()) {
       // Exclude top navbar area to allow tapping the menu button without interference
       let isTopNavbar = false;
       const target = e.target as HTMLElement | null;
-      if (target?.closest('.navbar, label[for="my-drawer-2"]')) {
+      if (target?.closest?.('.navbar, label[for="my-drawer-2"]')) {
         isTopNavbar = true;
       } else if (typeof document !== 'undefined') {
         const navbar = document.querySelector('.navbar');
@@ -97,13 +121,15 @@ export class Layout implements OnInit, OnDestroy {
 
       if (isTopNavbar) {
         this.isEdgeSwiping = false;
+        this.isDrawerSwiping = false;
         return;
       }
 
       // Exclude interactive elements (buttons, links, etc.) to allow normal clicks without swipe interference
-      const isInteractive = target?.closest('button, a, input, select, textarea, [role="button"], .btn');
+      const isInteractive = target?.closest?.('button, a, input, select, textarea, [role="button"], .btn');
       if (isInteractive) {
         this.isEdgeSwiping = false;
+        this.isDrawerSwiping = false;
         return;
       }
 
@@ -116,6 +142,7 @@ export class Layout implements OnInit, OnDestroy {
         }
       } else {
         this.isEdgeSwiping = false;
+        this.isDrawerSwiping = false;
       }
     } else {
       this.isDrawerSwiping = true;
@@ -131,27 +158,108 @@ export class Layout implements OnInit, OnDestroy {
     this.currentTouchX = touch.clientX;
     this.currentTouchY = touch.clientY;
 
-    if (this.isEdgeSwiping && e.cancelable) {
+    const dx = this.currentTouchX - this.edgeTouchStartX;
+    const dy = this.currentTouchY - this.edgeTouchStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    if (!this.isDirectionLocked) {
+      if (Math.hypot(dx, dy) < 6) {
+        return;
+      }
+
+      if (absDy > absDx) {
+        // Vertical movement: cancel swipe so user can scroll naturally
+        this.isDirectionLocked = true;
+        this.isEdgeSwiping = false;
+        this.isDrawerSwiping = false;
+        this.isDragging = false;
+        return;
+      }
+
+      if (this.isEdgeSwiping && dx <= 0) {
+        return;
+      }
+
+      if (this.isDrawerSwiping && dx >= 0) {
+        return;
+      }
+
+      this.isDirectionLocked = true;
+      this.isDragging = true;
+    }
+
+    if (!this.isDragging) return;
+
+    if (e.cancelable) {
       e.preventDefault();
+    }
+
+    const panel = this.getSidebarPanel();
+    const overlay = this.getDrawerOverlay();
+    const panelWidth = this.getSidebarPanelWidth();
+
+    if (this.isEdgeSwiping) {
+      const clampedDx = Math.max(0, Math.min(panelWidth, dx));
+      const translateX = -panelWidth + clampedDx;
+      const progress = Math.max(0, Math.min(1, clampedDx / panelWidth));
+
+      if (panel) {
+        panel.style.transition = 'none';
+        panel.style.transform = `translateX(${translateX}px)`;
+      }
+      if (overlay) {
+        overlay.style.transition = 'none';
+        overlay.style.backgroundColor = `rgba(0, 0, 0, ${0.4 * progress})`;
+      }
+    } else if (this.isDrawerSwiping) {
+      const clampedDx = Math.max(-panelWidth, Math.min(0, dx));
+      const translateX = clampedDx;
+      const progress = Math.max(0, Math.min(1, 1 - (Math.abs(clampedDx) / panelWidth)));
+
+      if (panel) {
+        panel.style.transition = 'none';
+        panel.style.transform = `translateX(${translateX}px)`;
+      }
+      if (overlay) {
+        overlay.style.transition = 'none';
+        overlay.style.backgroundColor = `rgba(0, 0, 0, ${0.4 * progress})`;
+      }
     }
   };
 
   onGlobalTouchEnd = (e: TouchEvent) => {
-    if (this.isEdgeSwiping) {
-      const deltaX = this.currentTouchX - this.edgeTouchStartX;
-      const deltaY = Math.abs(this.currentTouchY - this.edgeTouchStartY);
-      this.isEdgeSwiping = false;
+    if (!this.isEdgeSwiping && !this.isDrawerSwiping) return;
 
-      if (deltaX > 40 && deltaX > deltaY * 1.2) {
-        this.openDrawer();
+    const dx = this.currentTouchX - this.edgeTouchStartX;
+    const dy = Math.abs(this.currentTouchY - this.edgeTouchStartY);
+    const duration = Date.now() - this.touchStartTime;
+    const velocityX = dx / Math.max(duration, 1);
+
+    const wasEdgeSwiping = this.isEdgeSwiping;
+    const wasDrawerSwiping = this.isDrawerSwiping;
+    const wasDragging = this.isDragging;
+
+    this.isEdgeSwiping = false;
+    this.isDrawerSwiping = false;
+    this.isDragging = false;
+    this.isDirectionLocked = false;
+
+    if (wasEdgeSwiping) {
+      const isFlick = velocityX > 0.3 && dx > 30;
+      const isMovedFarEnough = dx > 40 && dx > dy * 1.2;
+      if (isFlick || isMovedFarEnough) {
+        this.snapOpen(wasDragging);
+      } else if (wasDragging) {
+        this.snapClose(true);
       }
-    } else if (this.isDrawerSwiping) {
-      const deltaX = this.currentTouchX - this.edgeTouchStartX;
-      const deltaY = Math.abs(this.currentTouchY - this.edgeTouchStartY);
-      this.isDrawerSwiping = false;
-
-      if (deltaX < -40 && Math.abs(deltaX) > deltaY * 1.2) {
-        this.closeDrawer();
+    } else if (wasDrawerSwiping) {
+      const isFlick = velocityX < -0.3 && dx < -30;
+      const isMovedFarEnough = dx < -40 && Math.abs(dx) > dy * 1.2;
+      if (isFlick || isMovedFarEnough) {
+        this.snapClose(wasDragging);
+      } else if (wasDragging) {
+        this.snapOpen(true);
       }
     }
   };
@@ -217,28 +325,133 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   isDrawerOpen(): boolean {
-    if (typeof document !== 'undefined') {
-      const drawer = document.getElementById('my-drawer-2') as HTMLInputElement | null;
-      return !!drawer?.checked;
-    }
-    return false;
+    const drawer = this.getDrawerInput();
+    return !!drawer?.checked;
   }
 
   openDrawer() {
-    if (typeof document !== 'undefined') {
-      const drawer = document.getElementById('my-drawer-2') as HTMLInputElement | null;
-      if (drawer && !drawer.checked) {
-        drawer.checked = true;
-      }
+    this.clearDragStyles();
+    const drawer = this.getDrawerInput();
+    if (drawer && !drawer.checked) {
+      drawer.checked = true;
     }
   }
 
   closeDrawer() {
+    this.clearDragStyles();
+    const drawer = this.getDrawerInput();
+    if (drawer && drawer.checked) {
+      drawer.checked = false;
+    }
+  }
+
+  private snapOpen(wasDragging: boolean) {
+    const drawer = this.getDrawerInput();
+    if (drawer && !drawer.checked) {
+      drawer.checked = true;
+    }
+
+    const panel = this.getSidebarPanel();
+    const overlay = this.getDrawerOverlay();
+
+    if (wasDragging && panel && overlay) {
+      panel.style.transition = 'transform 240ms cubic-bezier(0.32, 0.72, 0, 1)';
+      panel.style.transform = 'translateX(0px)';
+      overlay.style.transition = 'background-color 240ms cubic-bezier(0.32, 0.72, 0, 1)';
+      overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+
+      this.clearDragTimeout();
+      this.dragAnimationTimeout = setTimeout(() => {
+        this.clearDragStyles();
+      }, 250);
+    } else {
+      this.clearDragStyles();
+    }
+  }
+
+  private snapClose(wasDragging: boolean) {
+    const drawer = this.getDrawerInput();
+    if (drawer && drawer.checked) {
+      drawer.checked = false;
+    }
+
+    const panel = this.getSidebarPanel();
+    const overlay = this.getDrawerOverlay();
+
+    if (wasDragging && panel && overlay) {
+      panel.style.transition = 'transform 240ms cubic-bezier(0.32, 0.72, 0, 1)';
+      panel.style.transform = 'translateX(-100%)';
+      overlay.style.transition = 'background-color 240ms cubic-bezier(0.32, 0.72, 0, 1)';
+      overlay.style.backgroundColor = 'transparent';
+
+      this.clearDragTimeout();
+      this.dragAnimationTimeout = setTimeout(() => {
+        this.clearDragStyles();
+      }, 250);
+    } else {
+      this.clearDragStyles();
+    }
+  }
+
+  private getSidebarPanel(): HTMLElement | null {
+    if (this.elementRef?.nativeElement) {
+      const el = this.elementRef.nativeElement.querySelector('.sidebar-panel');
+      if (el) return el;
+    }
     if (typeof document !== 'undefined') {
-      const drawer = document.getElementById('my-drawer-2') as HTMLInputElement | null;
-      if (drawer && drawer.checked) {
-        drawer.checked = false;
-      }
+      return document.querySelector('.sidebar-panel');
+    }
+    return null;
+  }
+
+  private getDrawerOverlay(): HTMLElement | null {
+    if (this.elementRef?.nativeElement) {
+      const el = this.elementRef.nativeElement.querySelector('.drawer-overlay');
+      if (el) return el;
+    }
+    if (typeof document !== 'undefined') {
+      return document.querySelector('.drawer-overlay');
+    }
+    return null;
+  }
+
+  private getDrawerInput(): HTMLInputElement | null {
+    if (this.elementRef?.nativeElement) {
+      const el = this.elementRef.nativeElement.querySelector('#my-drawer-2');
+      if (el) return el as HTMLInputElement;
+    }
+    if (typeof document !== 'undefined') {
+      return document.getElementById('my-drawer-2') as HTMLInputElement | null;
+    }
+    return null;
+  }
+
+  private getSidebarPanelWidth(): number {
+    const panel = this.getSidebarPanel();
+    if (panel && panel.offsetWidth > 0) {
+      return panel.offsetWidth;
+    }
+    return 288;
+  }
+
+  private clearDragTimeout() {
+    if (this.dragAnimationTimeout !== null) {
+      clearTimeout(this.dragAnimationTimeout);
+      this.dragAnimationTimeout = null;
+    }
+  }
+
+  private clearDragStyles() {
+    this.clearDragTimeout();
+    const panel = this.getSidebarPanel();
+    const overlay = this.getDrawerOverlay();
+    if (panel) {
+      panel.style.transform = '';
+      panel.style.transition = '';
+    }
+    if (overlay) {
+      overlay.style.backgroundColor = '';
+      overlay.style.transition = '';
     }
   }
 

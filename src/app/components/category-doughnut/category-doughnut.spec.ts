@@ -415,5 +415,61 @@ describe('CategoryDoughnut', () => {
       window.matchMedia = originalMatchMedia;
     }
   });
+
+  it('should compute legendRowCount and set --legend-rows style to enable top-to-bottom reading order', () => {
+    // 0 categories
+    fixture.componentRef.setInput('breakdown', []);
+    fixture.detectChanges();
+    expect(component.legendRowCount()).toBe(1);
+
+    // 1 category
+    fixture.componentRef.setInput('breakdown', [
+      { id: 1, name: 'Comida', color: '#f00', amount: 100, pct: 100 }
+    ]);
+    fixture.detectChanges();
+    expect(component.legendRowCount()).toBe(1);
+
+    // 2 categories: 2 rows (stacked vertically for top-to-bottom reading)
+    fixture.componentRef.setInput('breakdown', [
+      { id: 1, name: 'Comida', color: '#f00', amount: 100, pct: 60 },
+      { id: 2, name: 'Servicios', color: '#0f0', amount: 50, pct: 40 }
+    ]);
+    fixture.detectChanges();
+    expect(component.legendRowCount()).toBe(2);
+
+    let legendUl = fixture.nativeElement.querySelector('ul.category-legend-grid') as HTMLElement;
+    expect(legendUl).toBeTruthy();
+    expect(legendUl.style.getPropertyValue('--legend-rows')).toBe('2');
+
+    // 6 categories: 3 rows across 2 columns (col 1 has items 0-2, col 2 has items 3-5)
+    const sixCategories = Array.from({ length: 6 }, (_, i) => ({
+      id: i + 1,
+      name: `Cat ${i + 1}`,
+      color: '#f00',
+      amount: (6 - i) * 100,
+      pct: 16
+    }));
+    fixture.componentRef.setInput('breakdown', sixCategories);
+    fixture.detectChanges();
+    expect(component.legendRowCount()).toBe(3);
+
+    legendUl = fixture.nativeElement.querySelector('ul.category-legend-grid') as HTMLElement;
+    expect(legendUl.style.getPropertyValue('--legend-rows')).toBe('3');
+
+    // 10 categories: 5 rows across 2 columns
+    const tenCategories = Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      name: `Cat ${i + 1}`,
+      color: '#f00',
+      amount: (10 - i) * 100,
+      pct: 10
+    }));
+    fixture.componentRef.setInput('breakdown', tenCategories);
+    fixture.detectChanges();
+    expect(component.legendRowCount()).toBe(5);
+
+    legendUl = fixture.nativeElement.querySelector('ul.category-legend-grid') as HTMLElement;
+    expect(legendUl.style.getPropertyValue('--legend-rows')).toBe('5');
+  });
 });
 
