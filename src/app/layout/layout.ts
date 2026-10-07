@@ -31,6 +31,7 @@ export class Layout implements OnInit, OnDestroy {
   private dragAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Pull-to-refresh state
+  isStandalone = signal<boolean>(false);
   pullDistance = signal<number>(0);
   isPullDragging = signal<boolean>(false);
   isRefreshing = signal<boolean>(false);
@@ -41,8 +42,8 @@ export class Layout implements OnInit, OnDestroy {
   canPullToRefresh = false;
   private pullTouchStartY = 0;
   private pullTouchStartX = 0;
-  readonly PULL_THRESHOLD = 65;
-  readonly MAX_PULL = 95;
+  readonly PULL_THRESHOLD = 70;
+  readonly MAX_PULL = 105;
 
   constructor(private authService: AuthService) {
     this.router.events.pipe(
@@ -73,11 +74,20 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.checkStandaloneMode();
     if (typeof window !== 'undefined') {
       window.addEventListener('touchstart', this.onGlobalTouchStart, { passive: false });
       window.addEventListener('touchmove', this.onGlobalTouchMove, { passive: false });
       window.addEventListener('touchend', this.onGlobalTouchEnd, { passive: true });
       window.addEventListener('touchcancel', this.onGlobalTouchEnd, { passive: true });
+    }
+  }
+
+  checkStandaloneMode() {
+    if (typeof window !== 'undefined') {
+      const isStandaloneMedia = typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches;
+      const isIosStandalone = !!(window.navigator as any)?.standalone;
+      this.isStandalone.set(isStandaloneMedia || isIosStandalone);
     }
   }
 
@@ -154,7 +164,7 @@ export class Layout implements OnInit, OnDestroy {
       const isInMain = !target || (mainEl && (mainEl === target || mainEl.contains(target)));
       const isScrollAtTop = (mainEl?.scrollTop ?? 0) <= 0;
 
-      if (!this.isRefreshing() && isInMain && isScrollAtTop && !isInsideModal && !isFormInput) {
+      if (this.isStandalone() && !this.isRefreshing() && isInMain && isScrollAtTop && !isInsideModal && !isFormInput) {
         this.canPullToRefresh = true;
         this.pullTouchStartX = touch.clientX;
         this.pullTouchStartY = touch.clientY;
@@ -228,7 +238,7 @@ export class Layout implements OnInit, OnDestroy {
           e.preventDefault();
         }
 
-        const rawPull = dy > 0 ? Math.pow(dy, 0.82) * 1.8 : 0;
+        const rawPull = dy > 0 ? Math.pow(dy, 0.82) * 1.9 : 0;
         const dist = Math.min(this.MAX_PULL, Math.max(0, rawPull));
         this.pullDistance.set(dist);
 
@@ -236,7 +246,7 @@ export class Layout implements OnInit, OnDestroy {
         this.pullRotation.set(Math.min(360, Math.floor(progress * 360)));
         this.pullScale.set(Math.min(1, 0.4 + 0.6 * progress));
         this.pullOpacity.set(Math.min(1, progress * 1.5));
-        this.pullIndicatorY.set(Math.min(48, Math.max(10, dist * 0.55)));
+        this.pullIndicatorY.set(Math.min(14, dist * 0.16));
         return;
       }
     }
@@ -561,8 +571,8 @@ export class Layout implements OnInit, OnDestroy {
   async triggerPullRefresh() {
     if (this.isRefreshing()) return;
     this.isRefreshing.set(true);
-    this.pullDistance.set(55);
-    this.pullIndicatorY.set(32);
+    this.pullDistance.set(80);
+    this.pullIndicatorY.set(12);
     this.pullScale.set(1);
     this.pullOpacity.set(1);
 

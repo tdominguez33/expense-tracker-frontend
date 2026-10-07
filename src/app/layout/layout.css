@@ -2,7 +2,7 @@
   overflow: visible;
 }
 
-:host main {
+:host main.overscroll-y-contain {
   overscroll-behavior-y: contain;
 }
 

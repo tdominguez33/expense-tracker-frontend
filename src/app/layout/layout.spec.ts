@@ -444,6 +444,7 @@ describe('Layout', () => {
     beforeEach(() => {
       fixture.detectChanges();
       refreshService = TestBed.inject(RefreshService);
+      component.isStandalone.set(true);
     });
 
     it('should translate page content down and update indicator as user pulls down', () => {
@@ -544,7 +545,7 @@ describe('Layout', () => {
       fixture.detectChanges();
       expect(component.isRefreshing()).toBe(true);
       expect(spinnerSvg?.classList.contains('animate-spin')).toBe(true);
-      expect(component.pullDistance()).toBe(55);
+      expect(component.pullDistance()).toBe(80);
 
       await refreshPromise;
       expect(refreshSpy).toHaveBeenCalled();
@@ -597,6 +598,23 @@ describe('Layout', () => {
 
       expect(component.canPullToRefresh).toBe(false);
       expect(component.pullDistance()).toBe(0);
+
+      vi.unstubAllGlobals();
+    });
+
+    it('should NOT activate pull-to-refresh when in standard browser (isStandalone is false)', () => {
+      component.isStandalone.set(false);
+      vi.stubGlobal('innerWidth', 375);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(false);
 
       vi.unstubAllGlobals();
     });
