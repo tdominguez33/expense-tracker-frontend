@@ -444,7 +444,6 @@ describe('Layout', () => {
     beforeEach(() => {
       fixture.detectChanges();
       refreshService = TestBed.inject(RefreshService);
-      component.isStandalone.set(true);
     });
 
     it('should translate page content down and update indicator as user pulls down', () => {
@@ -602,9 +601,9 @@ describe('Layout', () => {
       vi.unstubAllGlobals();
     });
 
-    it('should NOT activate pull-to-refresh when in standard browser (isStandalone is false)', () => {
-      component.isStandalone.set(false);
+    it('should NOT activate pull-to-refresh when window.scrollY > 0', () => {
       vi.stubGlobal('innerWidth', 375);
+      vi.stubGlobal('scrollY', 120);
 
       const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
       mainEl.scrollTop = 0;
@@ -617,6 +616,120 @@ describe('Layout', () => {
       expect(component.canPullToRefresh).toBe(false);
 
       vi.unstubAllGlobals();
+    });
+
+    it('should cancel pull-to-refresh on touchmove if window scrolls', () => {
+      vi.stubGlobal('innerWidth', 375);
+      vi.stubGlobal('scrollY', 0);
+
+      const mainEl = fixture.nativeElement.querySelector('main') as HTMLElement;
+      mainEl.scrollTop = 0;
+
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 150, clientY: 100 }],
+        target: mainEl
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(true);
+
+      // Window scrolls down during move
+      vi.stubGlobal('scrollY', 20);
+
+      component.onGlobalTouchMove({
+        touches: [{ clientX: 150, clientY: 140 }],
+        cancelable: true,
+        preventDefault: vi.fn()
+      } as any);
+
+      expect(component.canPullToRefresh).toBe(false);
+      expect(component.isPullDragging()).toBe(false);
+
+      vi.unstubAllGlobals();
+    });
+  });
+
+  describe('Drawer Active State & Viewport Recovery', () => {
+    it('should initialize isDrawerActive as false', () => {
+      expect(component.isDrawerActive()).toBe(false);
+    });
+
+    it('should set isDrawerActive to true on openDrawer()', () => {
+      component.openDrawer();
+      expect(component.isDrawerActive()).toBe(true);
+      expect(component.isDrawerOpen()).toBe(true);
+    });
+
+    it('should set isDrawerActive to false after delay on closeDrawer()', () => {
+      vi.useFakeTimers();
+      component.openDrawer();
+      expect(component.isDrawerActive()).toBe(true);
+
+      component.closeDrawer();
+      expect(component.isDrawerOpen()).toBe(false);
+      // Still active during transition delay (at 100ms)
+      vi.advanceTimersByTime(100);
+      expect(component.isDrawerActive()).toBe(true);
+
+      // Finished transition at 180ms
+      vi.advanceTimersByTime(100);
+      expect(component.isDrawerActive()).toBe(false);
+      vi.useRealTimers();
+    });
+
+    it('should toggle isDrawerActive on drawer change event', () => {
+      vi.useFakeTimers();
+      const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+
+      drawer.checked = true;
+      component.onDrawerChange();
+      expect(component.isDrawerActive()).toBe(true);
+
+      drawer.checked = false;
+      component.onDrawerChange();
+      expect(component.isDrawerActive()).toBe(true); // in delay
+      vi.advanceTimersByTime(100);
+      expect(component.isDrawerActive()).toBe(true);
+      vi.advanceTimersByTime(100);
+      expect(component.isDrawerActive()).toBe(false);
+
+      vi.useRealTimers();
+    });
+
+    it('should activate drawer on edge swipe touch start', () => {
+      vi.stubGlobal('innerWidth', 375);
+      const preventDefaultMock = vi.fn();
+      component.onGlobalTouchStart({
+        touches: [{ clientX: 20, clientY: 200 }],
+        cancelable: true,
+        preventDefault: preventDefaultMock
+      } as any);
+
+      expect(component.isDrawerActive()).toBe(true);
+      vi.unstubAllGlobals();
+    });
+
+    it('should clean up drawerCloseTimeout on ngOnDestroy', () => {
+      vi.useFakeTimers();
+      component.setDrawerActive(false, 300);
+      expect(component['drawerCloseTimeout']).not.toBeNull();
+
+      component.ngOnDestroy();
+      expect(component['drawerCloseTimeout']).toBeNull();
+      vi.useRealTimers();
+    });
+
+    it('should open drawer and activate state when opened via click event', () => {
+      const preventDefaultMock = vi.fn();
+      const dummyEvent = { preventDefault: preventDefaultMock } as any;
+
+      const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+      drawer.checked = false;
+
+      component.openDrawer(dummyEvent);
+
+      expect(preventDefaultMock).toHaveBeenCalled();
+      expect(component.isDrawerActive()).toBe(true);
+      expect(component.isDrawerOpen()).toBe(true);
     });
   });
 });

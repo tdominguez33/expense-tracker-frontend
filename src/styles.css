@@ -5,12 +5,11 @@
 @tailwind utilities;
 
 html, body {
-  height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
   scrollbar-gutter: auto !important;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  color: var(--fallback-bc, oklch(var(--bc) / 1));
 }
 
 /* Prevent DaisyUI from forcing scrollbar-gutter: stable on html when drawer or modal opens */
@@ -26,16 +25,12 @@ body {
 main {
   font-family: 'Inter', sans-serif;
   overflow-anchor: none;
-  scrollbar-gutter: stable;
 }
 
 app-root {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
 }
 
 app-titlebar {
@@ -51,36 +46,158 @@ app-login {
   display: flex;
   flex-direction: column;
   flex: 1 1 0%;
-  min-height: 0;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
 }
 
-.drawer,
-.drawer-content {
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
-}
-
-/* On mobile (< 1024px) drawer-side is position: fixed; must start below the titlebar to avoid overlapping or being pushed behind */
-@media (max-width: 1023.98px) {
-  .drawer-side {
-    top: var(--titlebar-height, 0px) !important;
-    height: calc(100% - var(--titlebar-height, 0px)) !important;
-    height: calc(100dvh - var(--titlebar-height, 0px)) !important;
-    max-height: calc(100% - var(--titlebar-height, 0px)) !important;
-    max-height: calc(100dvh - var(--titlebar-height, 0px)) !important;
-  }
-}
-
-/* On desktop (>= 1024px) drawer-side is sticky within the layout that already starts below the titlebar */
+/* On desktop (>= 1024px) layout is fixed viewport with inner scrolling main */
 @media (min-width: 1024px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  main {
+    scrollbar-gutter: stable;
+  }
+
+  app-root {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-outlet-wrapper {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  app-layout,
+  app-login {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .drawer,
+  .drawer-content {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+  }
+
   .drawer.lg\:drawer-open > .drawer-side {
     top: 0 !important;
     height: 100% !important;
     max-height: 100% !important;
+  }
+}
+
+/* On mobile (< 1024px) document scrolls naturally so content flows behind Safari translucent bottom bar */
+@media (max-width: 1023.98px) {
+  html {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow-x: clip;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow-x: clip;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  app-root {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow: visible;
+  }
+
+  .app-outlet-wrapper {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow: visible;
+  }
+
+  app-layout,
+  app-login {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow: visible;
+  }
+
+  .drawer {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow: visible;
+  }
+
+  .drawer-content {
+    height: auto;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+    overflow: visible;
+  }
+
+  main {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  /* Completely detach .drawer-side from WebKit layer tree when closed on mobile.
+     This destroys the 100dvh hardware compositing overlay, allowing Safari's
+     Liquid Glass engine to sample the document and keep the floating bottom bar translucent */
+  .drawer:not(.drawer-active):not(:has(.drawer-toggle:checked)) > .drawer-side {
+    display: none !important;
+  }
+
+  .drawer-side {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    max-height: 100% !important;
+    max-height: 100dvh !important;
+    z-index: 50;
+    transition: display 180ms allow-discrete;
+  }
+
+  .drawer-side > *:not(.drawer-overlay) {
+    transition: transform 200ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+
+  .drawer-side > .drawer-overlay {
+    transition: background-color 180ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+
+  @starting-style {
+    .drawer-toggle:checked ~ .drawer-side > *:not(.drawer-overlay) {
+      transform: translateX(-100%) !important;
+    }
+    .drawer-toggle:checked ~ .drawer-side > .drawer-overlay {
+      background-color: transparent !important;
+    }
+  }
+
+  /* Prevent DaisyUI from locking html/body to overflow-y: hidden on mobile when drawer is toggled */
+  html:has(.drawer-toggle:checked),
+  body:has(.drawer-toggle:checked) {
+    overflow-y: auto !important;
+    scrollbar-gutter: auto !important;
   }
 }
 
@@ -98,7 +215,7 @@ app-login {
 }
 
 .safe-bottom {
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem));
 }
 
 /* Prevent iOS Safari from auto-zooming into inputs on focus */

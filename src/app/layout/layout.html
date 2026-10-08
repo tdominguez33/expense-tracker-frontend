@@ -1,11 +1,12 @@
-<div class="drawer lg:drawer-open h-full min-h-0 overflow-hidden">
+<div class="drawer lg:drawer-open min-h-full w-full lg:h-full lg:min-h-0 lg:overflow-hidden"
+     [class.drawer-active]="isDrawerActive()">
   <input id="my-drawer-2" type="checkbox" class="drawer-toggle" (change)="onDrawerChange()" />
   
-  <div class="drawer-content flex flex-col bg-base-100 h-full min-h-0 overflow-x-hidden">
+  <div class="drawer-content flex flex-col bg-base-100 min-h-full w-full lg:h-full lg:min-h-0 lg:overflow-x-hidden">
     <!-- Navbar for mobile -->
     <div class="w-full navbar bg-base-200 lg:hidden shadow-sm sticky top-0 z-30 safe-top px-3">
       <div class="flex-none">
-        <label for="my-drawer-2" aria-label="open sidebar" class="btn btn-square btn-ghost cursor-pointer">
+        <label for="my-drawer-2" (click)="openDrawer($event)" aria-label="open sidebar" class="btn btn-square btn-ghost cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-6 h-6 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </label>
       </div>
@@ -16,8 +17,7 @@
     </div>
     
     <!-- Main content -->
-    <main class="flex-1 min-h-0 p-4 sm:p-6 md:p-10 overflow-y-auto safe-bottom relative"
-          [class.overscroll-y-contain]="isStandalone()">
+    <main class="flex-1 min-h-0 w-full p-4 sm:p-6 md:p-10 lg:overflow-y-auto safe-bottom relative">
       <!-- Pull-to-refresh Indicator -->
       @if (pullDistance() > 0 || isRefreshing()) {
         <div class="pull-refresh-indicator pointer-events-none absolute left-0 right-0 top-0 flex justify-center z-30 pt-2"
@@ -37,7 +37,7 @@
         </div>
       }
 
-      <div class="pull-refresh-content h-full"
+      <div class="pull-refresh-content min-h-full w-full"
            [style.transform]="pullDistance() > 0 ? ('translateY(' + pullDistance() + 'px)') : null"
            [style.transition]="isPullDragging() ? 'none' : 'transform 260ms cubic-bezier(0.32, 0.72, 0, 1)'">
         <router-outlet></router-outlet>

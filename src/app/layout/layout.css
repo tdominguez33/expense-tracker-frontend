@@ -2,12 +2,10 @@
   overflow: visible;
 }
 
-:host main.overscroll-y-contain {
-  overscroll-behavior-y: contain;
-}
-
-.pull-refresh-content {
-  will-change: transform;
+@media (min-width: 1024px) {
+  :host main {
+    overscroll-behavior-y: contain;
+  }
 }
 
 /* Smooth transition for sidebar: transform on mobile for drawer slide, width on desktop for collapse/expand */
