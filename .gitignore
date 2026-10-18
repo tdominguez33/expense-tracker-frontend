@@ -46,6 +46,7 @@ Thumbs.db
 
 # Local scripts
 /scripts/set-version.js
+/scripts/capture-all-screens.mjs
 
 # Gemini Skills
 GEMINI.md
