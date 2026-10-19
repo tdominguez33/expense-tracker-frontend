@@ -99,7 +99,7 @@
                     <!-- Detailed tooltip shown only if there were prior expenses -->
                     @if (comp.percentage !== null) {
                       @if (getComparisonTooltip(item.period); as tip) {
-                        <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2 z-40
+                        <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2 z-30
                                      transition-[opacity,transform] duration-200 delay-75
                                      bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10"
                              [class.opacity-100]="activeTooltipPeriod() === item.period"
@@ -122,7 +122,7 @@
         </ng-template>
 
         <!-- Mobile Cards Slider (1 card visible, smooth GPU slide, touch-drag, single-card step) -->
-        <div class="sm:hidden mb-3 select-none relative z-30 w-full overflow-x-clip overflow-y-visible touch-pan-y"
+        <div class="sm:hidden mb-3 select-none relative z-20 w-full overflow-x-clip overflow-y-visible touch-pan-y"
              (touchstart)="onCardsTouchStart($event)"
              (touchmove)="onCardsTouchMove($event)"
              (touchend)="onCardsTouchEnd($event)"
