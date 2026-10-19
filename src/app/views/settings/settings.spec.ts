@@ -558,6 +558,26 @@ describe('Settings', () => {
       expect(component.editingAccId()).toBe(10);
     });
 
+    it('should enforce 15-character max length on category, entity, and account names', () => {
+      // 1. catForm
+      component.catForm.get('name')?.setValue('123456789012345'); // 15 chars
+      expect(component.catForm.get('name')?.valid).toBe(true);
+      component.catForm.get('name')?.setValue('1234567890123456'); // 16 chars
+      expect(component.catForm.get('name')?.valid).toBe(false);
+
+      // 2. entForm
+      component.entForm.get('name')?.setValue('123456789012345');
+      expect(component.entForm.get('name')?.valid).toBe(true);
+      component.entForm.get('name')?.setValue('1234567890123456');
+      expect(component.entForm.get('name')?.valid).toBe(false);
+
+      // 3. accForm
+      component.accForm.get('name')?.setValue('123456789012345');
+      expect(component.accForm.get('name')?.valid).toBe(true);
+      component.accForm.get('name')?.setValue('1234567890123456');
+      expect(component.accForm.get('name')?.valid).toBe(false);
+    });
+
     it('should reload data silently without setting isLoading when silent is true', async () => {
       component.isLoading.set(false);
       mockApiService.getCategories.mockReturnValue(of([{ id: 1, name: 'Comida', color: '#ff0000' }]));

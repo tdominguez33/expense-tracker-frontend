@@ -342,8 +342,11 @@
     <h3 class="font-bold text-xl mb-4">{{ editingCatId() ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
     <form [formGroup]="catForm" (ngSubmit)="onSubmitCat()" class="space-y-4">
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Nombre</span></label>
-        <input type="text" formControlName="name" class="input input-bordered w-full" />
+        <label class="label">
+          <span class="label-text font-medium">Nombre</span>
+          <span class="label-text-alt text-base-content/60">{{ (catForm.get('name')?.value || '').length }}/15</span>
+        </label>
+        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-medium">Color</span></label>
@@ -393,8 +396,11 @@
     <h3 class="font-bold text-xl mb-4">{{ editingEntId() ? 'Editar Entidad / Banco' : 'Nueva Entidad / Banco' }}</h3>
     <form [formGroup]="entForm" (ngSubmit)="onSubmitEnt()" class="space-y-4">
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Nombre</span></label>
-        <input type="text" formControlName="name" class="input input-bordered w-full" />
+        <label class="label">
+          <span class="label-text font-medium">Nombre</span>
+          <span class="label-text-alt text-base-content/60">{{ (entForm.get('name')?.value || '').length }}/15</span>
+        </label>
+        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
       </div>
       
       @if (errorMsg()) { <div class="alert alert-error mt-2 py-2"><span>{{ errorMsg() }}</span></div> }
@@ -432,8 +438,11 @@
       </div>
       
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Nombre</span></label>
-        <input type="text" formControlName="name" class="input input-bordered w-full" placeholder="Ej: Visa Signature" />
+        <label class="label">
+          <span class="label-text font-medium">Nombre</span>
+          <span class="label-text-alt text-base-content/60">{{ (accForm.get('name')?.value || '').length }}/15</span>
+        </label>
+        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" placeholder="Ej: Visa Signature" />
       </div>
       
       <div class="form-control">

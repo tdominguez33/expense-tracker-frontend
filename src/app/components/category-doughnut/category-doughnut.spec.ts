@@ -172,7 +172,7 @@ describe('CategoryDoughnut', () => {
     expect(component.amountMinWidthCh()).toBe(11.5);
 
     // Verify amount spans have the computed min-width
-    const amountSpan = fixture.nativeElement.querySelector('li[data-category-id="1"] span.tabular-nums.text-right') as HTMLElement;
+    const amountSpan = fixture.nativeElement.querySelector('li[data-category-id="1"] .category-amount-val') as HTMLElement;
     expect(amountSpan).toBeTruthy();
     expect(amountSpan.style.minWidth).toBe('11.5ch');
   });
@@ -372,48 +372,31 @@ describe('CategoryDoughnut', () => {
     expect(component.isExpanded()).toBe(true); // Should remain expanded because user opened it manually
   });
 
-  it('should not lock category selection when clicked with mouse cursor, but lock when touched', () => {
+  it('should lock category selection when clicked with mouse or touch tap', () => {
     fixture.componentRef.setInput('breakdown', [
       { id: 1, name: 'Comida', color: '#ff0000', amount: 500, pct: 50 },
       { id: 2, name: 'Servicios', color: '#00ff00', amount: 500, pct: 50 }
     ]);
     fixture.detectChanges();
 
-    // 1. Mouse click: does NOT set selectedCategory
+    // 1. Mouse click: DOES set selectedCategory
     const mouseEvent = { pointerType: 'mouse', stopPropagation: vi.fn() } as any;
+    component.onCategoryClick(1, mouseEvent);
+    expect(component.selectedCategory()).toBe(1);
+
+    // 2. Click again: deselects
     component.onCategoryClick(1, mouseEvent);
     expect(component.selectedCategory()).toBeNull();
 
-    // 2. Touch tap: DOES set selectedCategory
+    // 3. Touch tap: DOES set selectedCategory
     const touchEvent = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
     component.onCategoryClick(1, touchEvent);
     expect(component.selectedCategory()).toBe(1);
 
-    // 3. Re-tap with touch: deselects
+    // 4. Re-tap with touch: deselects
     const touchEvent2 = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
     component.onCategoryClick(1, touchEvent2);
     expect(component.selectedCategory()).toBeNull();
-
-    // 4. Desktop cursor detected via window.matchMedia
-    const originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes('(hover: hover) and (pointer: fine)'),
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn()
-    })) as any;
-
-    try {
-      const clickEvent = { stopPropagation: vi.fn() } as any;
-      component.onCategoryClick(1, clickEvent);
-      expect(component.selectedCategory()).toBeNull();
-    } finally {
-      window.matchMedia = originalMatchMedia;
-    }
   });
 
   it('should compute legendRowCount and set --legend-rows style to enable top-to-bottom reading order', () => {

@@ -270,16 +270,16 @@ describe('Dashboard', () => {
       }
     });
 
-    // Sized for the maximum (16 categories = 8 rows -> 36 + 8*40 + 42 = 398px)
+    // Sized for the maximum (16 categories = 8 rows -> 36 + 8*36 + 42 = 366px)
     const minH = component.getDesktopDoughnutMinHeight();
-    expect(minH).toBe('398px');
+    expect(minH).toBe('366px');
 
     // Verify it stays constant regardless of whether 'day' or 'year' is currently selected
     component.setPeriod('day');
-    expect(component.getDesktopDoughnutMinHeight()).toBe('398px');
+    expect(component.getDesktopDoughnutMinHeight()).toBe('366px');
 
     component.setPeriod('year');
-    expect(component.getDesktopDoughnutMinHeight()).toBe('398px');
+    expect(component.getDesktopDoughnutMinHeight()).toBe('366px');
   });
 
   it('should compute maxCategoryAmount as the maximum across all periods', () => {

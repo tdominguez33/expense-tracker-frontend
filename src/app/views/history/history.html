@@ -349,7 +349,7 @@
 
               <!-- Row 2: Metadata Badges & Date (Left) | Original Amount & Installments (Right) -->
               <div class="flex items-center justify-between gap-2 text-xs text-base-content/60 min-w-0">
-                <div class="flex items-center gap-1.5 truncate min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap min-w-0">
                   <!-- Date -->
                   <span class="text-[11px] font-mono text-base-content/50 shrink-0">
                     {{ t.transaction_date | date:'dd-MM-yyyy':'UTC' }}
@@ -365,8 +365,8 @@
 
                   <span class="text-base-content/20 shrink-0">•</span>
 
-                  <!-- Account Badge -->
-                  <span class="badge badge-ghost badge-xs text-[10px] text-base-content/70 truncate max-w-[100px]">
+                  <!-- Account Name -->
+                  <span class="text-[11px] font-medium text-base-content/70" [title]="t.account_name">
                     {{ t.account_name }}
                   </span>
                 </div>
@@ -538,8 +538,8 @@
                       <span class="truncate">{{ t.category_name }}</span>
                     </span>
                   </td>
-                  <td class="whitespace-nowrap">
-                    <span class="badge badge-ghost badge-sm text-xs truncate max-w-full">{{ t.account_name }}</span>
+                  <td class="truncate" [title]="t.account_name">
+                    <span class="text-xs font-medium text-base-content/80 truncate block">{{ t.account_name }}</span>
                   </td>
                   <td class="whitespace-nowrap">
                     @if (t.installments_count > 1) {

@@ -58,12 +58,12 @@ export class Settings implements OnInit, OnDestroy {
 
   constructor() {
     this.catForm = this.fb.group({
-      name: ['', Validators.required],
+      name: ['', [Validators.required, Validators.maxLength(15)]],
       color: [this.pastelColors[0] || '']
     });
     
     this.entForm = this.fb.group({
-      name: ['', Validators.required]
+      name: ['', [Validators.required, Validators.maxLength(15)]]
     });
     
     this.configForm = this.fb.group({
@@ -75,7 +75,7 @@ export class Settings implements OnInit, OnDestroy {
     this.accForm = this.fb.group({
       entity_id: ['', Validators.required],
       account_type: ['DEBIT', Validators.required],
-      name: ['', Validators.required],
+      name: ['', [Validators.required, Validators.maxLength(15)]],
       available_limit: [''],
       apple_wallet_alias: ['']
     });

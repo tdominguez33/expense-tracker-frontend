@@ -337,8 +337,8 @@ export class Dashboard implements OnInit {
 
     const count = Math.max(maxAvailable, 1);
     const rows = Math.ceil(count / 2);
-    // Dynamic legend height: title (~36px) + rows (~40px each)
-    const legendHeight = 36 + rows * 40;
+    // Dynamic legend height: title (~36px) + rows (~36px each for single-line compact items)
+    const legendHeight = 36 + rows * 36;
     // Doughnut chart circle height on desktop (256px)
     const innerContentHeight = Math.max(256, legendHeight);
     // Compact vertical padding (py-4 to py-5: ~40px total) + 2px border

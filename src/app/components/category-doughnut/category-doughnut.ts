@@ -50,6 +50,16 @@ export interface CategoryBreakdownItem {
         pointer-events: auto !important;
       }
     }
+    @media (min-width: 764px) and (max-width: 900px) {
+      .category-name-label {
+        display: none !important;
+      }
+    }
+    @media (min-width: 1024px) and (max-width: 1200px) {
+      .category-name-label {
+        display: none !important;
+      }
+    }
   `]
 })
 export class CategoryDoughnut implements OnDestroy {
@@ -195,11 +205,6 @@ export class CategoryDoughnut implements OnDestroy {
 
   onCategoryClick(catId: number, event?: Event) {
     event?.stopPropagation();
-
-    // On desktop PC with cursor/hover, clicking does not fix/select the category
-    if (!this.isTouchInteraction(event)) {
-      return;
-    }
 
     if (Date.now() - this.lastTouchHandledTime < 500) {
       return;

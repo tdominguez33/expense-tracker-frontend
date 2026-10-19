@@ -1,7 +1,7 @@
-<div class="flex flex-col md:flex-row items-center md:items-center justify-center gap-6 lg:gap-16 xl:gap-24 w-full my-auto">
+<div class="flex flex-col md:flex-row items-center md:items-center justify-center gap-6 md:gap-8 lg:gap-10 xl:gap-14 w-full my-auto">
   
   <!-- Chart Container -->
-  <div class="flex-shrink-0 w-48 h-48 sm:w-64 sm:h-64 relative flex justify-center mt-1 md:mt-0">
+  <div class="flex-shrink-0 w-48 h-48 sm:w-60 sm:h-60 lg:w-64 lg:h-64 relative flex justify-center mt-1 md:mt-0">
     
     <!-- SVG Doughnut -->
     <svg viewBox="0 0 42 42" class="absolute inset-0 w-full h-full -rotate-90 filter drop-shadow-sm pointer-events-none">
@@ -59,44 +59,46 @@
   @if (showLegend()) {
     <div class="flex-1 w-full min-w-0">
       @if (periodTitle()) {
-        <h3 class="font-bold text-base sm:text-lg mb-2 sm:mb-3 text-center md:text-left capitalize">{{ periodTitle() }}</h3>
+        <h3 class="font-bold text-base sm:text-lg mb-2 sm:mb-2.5 text-center md:text-left capitalize">{{ periodTitle() }}</h3>
       }
       @if (breakdown().length === 0) {
         <p class="text-base-content/50 italic text-center md:text-left">{{ emptyMessage() }}</p>
       } @else {
-        <!-- Reusable Category Item Template -->
+        <!-- Reusable Category Item Template: single-line with bullet, percentage first, amount -->
         <ng-template #categoryItem let-cat="cat">
-          <li class="flex items-center justify-between gap-2.5 text-xs sm:text-sm py-1.5 sm:py-1 px-2 rounded-lg transition-colors duration-200 cursor-pointer select-none hover:bg-base-200/50 active:bg-base-200/80 sm:pointer-events-auto"
-              [class.bg-base-200/60]="activeCategoryId() === cat.id"
+          <li class="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg border transition-all duration-200 cursor-pointer select-none hover:bg-base-200/60 hover:border-base-content/25 active:bg-base-200/80 sm:pointer-events-auto"
+              [class.bg-base-200/80]="activeCategoryId() === cat.id"
+              [class.border-base-content/40]="activeCategoryId() === cat.id"
+              [class.shadow-sm]="activeCategoryId() === cat.id"
+              [class.bg-base-100]="activeCategoryId() !== cat.id"
+              [class.border-base-content/15]="activeCategoryId() !== cat.id"
               [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
               (mouseenter)="onCategoryHover(cat.id)"
               (click)="onCategoryClick(cat.id, $event)"
-              [attr.data-category-id]="cat.id">
+              [attr.data-category-id]="cat.id"
+              [title]="cat.name + ': $' + (cat.amount | number:'1.0-0') + ' (' + cat.pct + '%)'">
             
-            <!-- Left: Bullet and Name -->
-            <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-              <span class="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full flex-shrink-0 transition-transform duration-200" 
+            <!-- Left: Bullet, Percentage (fixed width aligned), and Category Name -->
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <span class="w-3 h-3 rounded-full flex-shrink-0 transition-transform duration-200" 
                     [class.scale-125]="activeCategoryId() === cat.id"
                     [style.background-color]="cat.color"></span>
-              <span class="font-medium text-base-content/80 truncate transition-colors"
+              <span class="category-pct-val text-sm font-semibold text-base-content/70 tabular-nums transition-colors shrink-0 text-right w-9 sm:w-10"
                     [class.text-base-content]="activeCategoryId() === cat.id"
-                    [class.font-bold]="activeCategoryId() === cat.id">{{ cat.name }}</span>
+                    [class.font-bold]="activeCategoryId() === cat.id">{{ cat.pct }}%</span>
+              <span class="category-name-label font-medium text-sm text-base-content truncate transition-colors"
+                    [class.font-semibold]="activeCategoryId() === cat.id">{{ cat.name }}</span>
             </div>
 
-            <!-- Right: Percentage and Amount -->
-            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
-              <span class="w-10 sm:w-11 text-center text-[11px] sm:text-xs font-semibold text-base-content/60 bg-base-200/80 px-1 py-0.5 rounded transition-colors tabular-nums shrink-0"
-                    [class.text-base-content/90]="activeCategoryId() === cat.id"
-                    [class.bg-base-300/90]="activeCategoryId() === cat.id">{{ cat.pct }}%</span>
-              <span class="font-bold text-xs sm:text-sm text-base-content text-right tabular-nums whitespace-nowrap shrink-0 transition-colors"
-                    [style.min-width.ch]="amountMinWidthCh()"
-                    [class.text-primary]="activeCategoryId() === cat.id">${{ cat.amount | number:'1.0-0' }}</span>
-            </div>
+            <!-- Right: Amount -->
+            <span class="category-amount-val font-bold text-sm text-base-content text-right tabular-nums whitespace-nowrap shrink-0 transition-colors ml-auto pl-1.5"
+                  [style.min-width.ch]="amountMinWidthCh()"
+                  [class.text-primary]="activeCategoryId() === cat.id">${{ cat.amount | number:'1.0-0' }}</span>
 
           </li>
         </ng-template>
 
-        <ul class="category-legend-grid grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-1 sm:gap-y-1.5"
+        <ul class="category-legend-grid grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1.5"
             [style.--legend-rows]="legendRowCount()"
             (mouseleave)="onCategoryLeave()">
           <!-- Top 5 categories (always visible) -->
