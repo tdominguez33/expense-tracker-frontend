@@ -8,3 +8,13 @@
     min-height: var(--desktop-doughnut-min-h, 360px);
   }
 }
+
+.credit-card-item {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .credit-card-item:hover {
+    border-color: var(--fallback-bc, oklch(var(--bc) / 0.35));
+  }
+}

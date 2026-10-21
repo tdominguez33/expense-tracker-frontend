@@ -37,8 +37,8 @@
                     class="transition-[stroke-width,opacity] duration-200 cursor-pointer"
                     [class.stroke-[5]]="activeCategoryId() === cat.id"
                     [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
-                    (mouseenter)="onCategoryHover(cat.id)"
-                    (mouseleave)="onCategoryLeave()"
+                    (mouseenter)="onCategoryHover(cat.id, $event)"
+                    (mouseleave)="onCategoryLeave($event)"
                     (click)="onCategoryClick(cat.id, $event)"
                     [attr.data-category-id]="cat.id">
             </circle>
@@ -66,14 +66,14 @@
       } @else {
         <!-- Reusable Category Item Template: single-line with bullet, percentage first, amount -->
         <ng-template #categoryItem let-cat="cat">
-          <li class="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg border transition-all duration-200 cursor-pointer select-none hover:bg-base-200/60 hover:border-base-content/25 active:bg-base-200/80 sm:pointer-events-auto"
+          <li class="category-legend-item flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg border transition-all duration-200 cursor-pointer select-none sm:pointer-events-auto"
               [class.bg-base-200/80]="activeCategoryId() === cat.id"
               [class.border-base-content/40]="activeCategoryId() === cat.id"
               [class.shadow-sm]="activeCategoryId() === cat.id"
               [class.bg-base-100]="activeCategoryId() !== cat.id"
               [class.border-base-content/15]="activeCategoryId() !== cat.id"
               [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
-              (mouseenter)="onCategoryHover(cat.id)"
+              (mouseenter)="onCategoryHover(cat.id, $event)"
               (click)="onCategoryClick(cat.id, $event)"
               [attr.data-category-id]="cat.id"
               [title]="cat.name + ': $' + (cat.amount | number:'1.0-0') + ' (' + cat.pct + '%)'">
@@ -100,7 +100,7 @@
 
         <ul class="category-legend-grid grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-1.5"
             [style.--legend-rows]="legendRowCount()"
-            (mouseleave)="onCategoryLeave()">
+            (mouseleave)="onCategoryLeave($event)">
           <!-- Top 5 categories (always visible) -->
           @for (cat of topCategories(); track cat.id) {
             <ng-container *ngTemplateOutlet="categoryItem; context: { cat: cat }"></ng-container>

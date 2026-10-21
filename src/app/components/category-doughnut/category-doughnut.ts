@@ -35,6 +35,18 @@ export interface CategoryBreakdownItem {
       opacity: 1;
       pointer-events: auto;
     }
+    .category-legend-item {
+      -webkit-tap-highlight-color: transparent;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .category-legend-item:hover {
+        background-color: var(--fallback-b2, oklch(var(--b2) / 0.6));
+        border-color: var(--fallback-bc, oklch(var(--bc) / 0.25));
+      }
+      .category-legend-item:active {
+        background-color: var(--fallback-b2, oklch(var(--b2) / 0.8));
+      }
+    }
     @media (min-width: 640px) {
       .category-legend-grid {
         grid-auto-flow: column;
@@ -145,6 +157,8 @@ export class CategoryDoughnut implements OnDestroy {
   private hoverTimer: any = null;
   private touchStartX = 0;
   private touchStartY = 0;
+  private lastTouchTime = 0;
+  private isTouching = false;
 
   renderKey = computed(() => {
     const items = this.breakdown();
@@ -152,14 +166,20 @@ export class CategoryDoughnut implements OnDestroy {
     return `${title}-${items.map(i => `${i.id}:${i.pct}`).join(',')}`;
   });
 
-  onCategoryHover(catId: number) {
+  onCategoryHover(catId: number, event?: Event) {
+    if (this.isTouchInteraction(event)) {
+      return;
+    }
     if (this.hoverTimer) clearTimeout(this.hoverTimer);
     this.hoverTimer = setTimeout(() => {
       this.hoveredCategory.set(catId);
     }, 75);
   }
 
-  onCategoryLeave() {
+  onCategoryLeave(event?: Event) {
+    if (this.isTouchInteraction(event)) {
+      return;
+    }
     if (this.hoverTimer) clearTimeout(this.hoverTimer);
     this.hoverTimer = setTimeout(() => {
       this.hoveredCategory.set(null);
@@ -195,6 +215,9 @@ export class CategoryDoughnut implements OnDestroy {
       const pt = (event as PointerEvent).pointerType;
       if (pt === 'touch' || pt === 'pen') return true;
       if (pt === 'mouse') return false;
+    }
+    if (this.isTouching || (this.lastTouchTime > 0 && Date.now() - this.lastTouchTime < 1000)) {
+      return true;
     }
     if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
       const isDesktopCursor = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -234,14 +257,59 @@ export class CategoryDoughnut implements OnDestroy {
 
   @HostListener('document:touchstart', ['$event'])
   onTouchStart(event: TouchEvent) {
+    this.isTouching = true;
+    this.lastTouchTime = Date.now();
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    if (this.hoveredCategory() !== null) {
+      this.hoveredCategory.set(null);
+    }
     if (event.touches.length > 0) {
       this.touchStartX = event.touches[0].clientX;
       this.touchStartY = event.touches[0].clientY;
     }
   }
 
+  @HostListener('document:touchmove')
+  onTouchMove() {
+    this.isTouching = true;
+    this.lastTouchTime = Date.now();
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    if (this.hoveredCategory() !== null) {
+      this.hoveredCategory.set(null);
+    }
+  }
+
+  @HostListener('document:touchcancel')
+  onTouchCancel() {
+    this.isTouching = false;
+    this.lastTouchTime = Date.now();
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    if (this.hoveredCategory() !== null) {
+      this.hoveredCategory.set(null);
+    }
+  }
+
   @HostListener('document:touchend', ['$event'])
   onTouchEnd(event: TouchEvent) {
+    this.isTouching = false;
+    this.lastTouchTime = Date.now();
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    if (this.hoveredCategory() !== null) {
+      this.hoveredCategory.set(null);
+    }
+
     if (event.changedTouches.length > 0) {
       const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
       const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);

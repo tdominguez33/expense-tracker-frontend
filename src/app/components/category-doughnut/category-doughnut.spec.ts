@@ -152,6 +152,42 @@ describe('CategoryDoughnut', () => {
     expect(component.selectedCategory()).toBe(null);
   });
 
+  it('should not activate hover or change category color when dragging touch finger on mobile', () => {
+    fixture.componentRef.setInput('breakdown', [
+      { id: 1, name: 'Comida', color: '#ff0000', amount: 500, pct: 50 },
+      { id: 2, name: 'Servicios', color: '#00ff00', amount: 500, pct: 50 }
+    ]);
+    fixture.componentRef.setInput('totalAmount', 1000);
+    fixture.detectChanges();
+
+    const legendItems = fixture.nativeElement.querySelectorAll('li[data-category-id]');
+
+    // 1. Simulate touchstart on category 1
+    component.onTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }]
+    } as any);
+
+    // 2. Mobile browser dispatches simulated mouseenter during touch drag
+    component.onCategoryHover(1, { pointerType: 'touch' } as any);
+    component.onTouchMove();
+    component.onCategoryHover(2, { pointerType: 'touch' } as any);
+
+    // Ensure hover state is never set
+    expect(component.hoveredCategory()).toBeNull();
+    expect(component.activeCategoryId()).toBeNull();
+
+    // 3. User finishes dragging finger across screen (deltaX: 60px, deltaY: 20px)
+    component.onTouchEnd({
+      changedTouches: [{ clientX: 160, clientY: 120 }],
+      target: legendItems[1]
+    } as any);
+
+    // Selection and hover remain null (no color change)
+    expect(component.selectedCategory()).toBeNull();
+    expect(component.hoveredCategory()).toBeNull();
+    expect(component.activeCategoryId()).toBeNull();
+  });
+
   it('should compute effectiveMaxAmount and amountMinWidthCh for visual alignment', () => {
     // 1. Without maxAmount input, defaults to max in current breakdown
     fixture.componentRef.setInput('breakdown', [
