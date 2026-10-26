@@ -160,8 +160,12 @@ export class Dashboard implements OnInit {
   }
 
   activeTooltipPeriod = signal<string | null>(null);
+  hoveredTooltipPeriod = signal<string | null>(null);
 
   toggleComparisonTooltip(period: string, event?: Event) {
+    if (!this.isTouchInteraction(event)) {
+      return;
+    }
     event?.stopPropagation();
     if (this.activeTooltipPeriod() === period) {
       this.closeTooltip();
@@ -170,9 +174,27 @@ export class Dashboard implements OnInit {
     }
   }
 
+  onComparisonMouseEnter(period: string, event?: Event) {
+    if (this.isTouchInteraction(event)) {
+      return;
+    }
+    this.hoveredTooltipPeriod.set(period);
+  }
+
+  onComparisonMouseLeave(event?: Event) {
+    if (this.isTouchInteraction(event)) {
+      return;
+    }
+    this.hoveredTooltipPeriod.set(null);
+    this.closeTooltip();
+  }
+
   closeTooltip() {
     if (this.activeTooltipPeriod() !== null) {
       this.activeTooltipPeriod.set(null);
+    }
+    if (this.hoveredTooltipPeriod() !== null) {
+      this.hoveredTooltipPeriod.set(null);
     }
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -851,6 +873,8 @@ export class Dashboard implements OnInit {
 
   private touchStartX = 0;
   private touchStartY = 0;
+  private lastTouchTime = 0;
+  private isTouching = false;
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event?: MouseEvent) {
@@ -867,6 +891,8 @@ export class Dashboard implements OnInit {
 
   @HostListener('document:touchstart', ['$event'])
   onTouchStart(event: TouchEvent) {
+    this.isTouching = true;
+    this.lastTouchTime = Date.now();
     if (event.touches.length > 0) {
       this.touchStartX = event.touches[0].clientX;
       this.touchStartY = event.touches[0].clientY;
@@ -877,8 +903,16 @@ export class Dashboard implements OnInit {
     }
   }
 
+  @HostListener('document:touchcancel')
+  onTouchCancel() {
+    this.isTouching = false;
+    this.lastTouchTime = Date.now();
+  }
+
   @HostListener('document:touchend', ['$event'])
   onTouchEnd(event: TouchEvent) {
+    this.isTouching = false;
+    this.lastTouchTime = Date.now();
     if (event.changedTouches.length > 0) {
       const deltaX = Math.abs(event.changedTouches[0].clientX - this.touchStartX);
       const deltaY = Math.abs(event.changedTouches[0].clientY - this.touchStartY);
@@ -901,6 +935,12 @@ export class Dashboard implements OnInit {
       const pt = (event as PointerEvent).pointerType;
       if (pt === 'touch' || pt === 'pen') return true;
       if (pt === 'mouse') return false;
+    }
+    if (this.isTouching || (this.lastTouchTime > 0 && Date.now() - this.lastTouchTime < 1000)) {
+      return true;
+    }
+    if (event && (event.type === 'mouseenter' || event.type === 'mouseleave')) {
+      return false;
     }
     if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
       const isDesktopCursor = window.matchMedia('(hover: hover) and (pointer: fine)').matches;

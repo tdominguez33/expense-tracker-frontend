@@ -48,10 +48,10 @@
     </svg>
 
     <!-- Center Info -->
-    <div class="absolute inset-0 flex flex-col items-center justify-center m-7 sm:m-10 bg-base-100 rounded-full z-10 pointer-events-none">
+    <div class="absolute inset-[19%] flex flex-col items-center justify-center bg-base-100 rounded-full z-10 pointer-events-none px-1">
       @let info = getHoveredInfo();
-      <span class="text-xs sm:text-sm text-base-content/60 text-center px-2 truncate w-full" [style.color]="info.color">{{ info.name }}</span>
-      <span class="text-lg sm:text-xl font-bold mt-0.5 sm:mt-1">${{ info.amount | number:'1.0-0' }}</span>
+      <span class="text-xs sm:text-sm text-base-content/60 text-center leading-tight max-w-[85%] break-words line-clamp-2 text-balance" [style.color]="info.color">{{ info.name }}</span>
+      <span class="text-lg sm:text-xl font-bold leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">${{ info.amount | number:'1.0-0' }}</span>
     </div>
   </div>
 
@@ -74,6 +74,7 @@
               [class.border-base-content/15]="activeCategoryId() !== cat.id"
               [class.opacity-40]="activeCategoryId() !== null && activeCategoryId() !== cat.id"
               (mouseenter)="onCategoryHover(cat.id, $event)"
+              (mouseleave)="onCategoryLeave($event)"
               (click)="onCategoryClick(cat.id, $event)"
               [attr.data-category-id]="cat.id"
               [title]="cat.name + ': $' + (cat.amount | number:'1.0-0') + ' (' + cat.pct + '%)'">

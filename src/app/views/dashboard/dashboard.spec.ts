@@ -374,6 +374,21 @@ describe('Dashboard', () => {
     expect(component.activeTooltipPeriod()).toBeNull();
   });
 
+  it('should show comparison tooltip only on hover for mouse and not lock on mouse click', () => {
+    const mouseClickEvent = { pointerType: 'mouse', stopPropagation: vi.fn() } as any;
+    component.toggleComparisonTooltip('month', mouseClickEvent);
+    expect(component.activeTooltipPeriod()).toBeNull();
+    expect(mouseClickEvent.stopPropagation).not.toHaveBeenCalled();
+
+    const mouseEnterEvent = new MouseEvent('mouseenter');
+    component.onComparisonMouseEnter('month', mouseEnterEvent);
+    expect(component.hoveredTooltipPeriod()).toBe('month');
+
+    const mouseLeaveEvent = new MouseEvent('mouseleave');
+    component.onComparisonMouseLeave(mouseLeaveEvent);
+    expect(component.hoveredTooltipPeriod()).toBeNull();
+  });
+
   it('should refresh data silently without toggling isLoading when silent option is true', async () => {
     component.isLoading.set(false);
     mockApiService.getGeneralReport.mockReturnValue(of({ totals: { month: { current: 1234 } }, comparisons: {} }));

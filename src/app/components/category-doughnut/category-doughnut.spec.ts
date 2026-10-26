@@ -408,28 +408,24 @@ describe('CategoryDoughnut', () => {
     expect(component.isExpanded()).toBe(true); // Should remain expanded because user opened it manually
   });
 
-  it('should lock category selection when clicked with mouse or touch tap', () => {
+  it('should not lock category selection when clicked with mouse, but lock on touch tap', () => {
     fixture.componentRef.setInput('breakdown', [
       { id: 1, name: 'Comida', color: '#ff0000', amount: 500, pct: 50 },
       { id: 2, name: 'Servicios', color: '#00ff00', amount: 500, pct: 50 }
     ]);
     fixture.detectChanges();
 
-    // 1. Mouse click: DOES set selectedCategory
+    // 1. Mouse click: does NOT set selectedCategory
     const mouseEvent = { pointerType: 'mouse', stopPropagation: vi.fn() } as any;
-    component.onCategoryClick(1, mouseEvent);
-    expect(component.selectedCategory()).toBe(1);
-
-    // 2. Click again: deselects
     component.onCategoryClick(1, mouseEvent);
     expect(component.selectedCategory()).toBeNull();
 
-    // 3. Touch tap: DOES set selectedCategory
+    // 2. Touch tap: DOES set selectedCategory
     const touchEvent = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
     component.onCategoryClick(1, touchEvent);
     expect(component.selectedCategory()).toBe(1);
 
-    // 4. Re-tap with touch: deselects
+    // 3. Re-tap with touch: deselects
     const touchEvent2 = { pointerType: 'touch', stopPropagation: vi.fn() } as any;
     component.onCategoryClick(1, touchEvent2);
     expect(component.selectedCategory()).toBeNull();

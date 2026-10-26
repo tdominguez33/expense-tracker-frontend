@@ -68,9 +68,11 @@
                   ${{ generalReport().totals[item.period] | number:'1.0-0' }}
                 </p>
                 @if (getComparison(item.period); as comp) {
-                  <div class="relative group/comp inline-block shrink-0 self-end sm:self-start mb-0.5 sm:mb-0 focus:outline-none cursor-pointer sm:cursor-default"
+                  <div class="relative group/comp inline-block shrink-0 self-end sm:self-start mb-0.5 sm:mb-0 focus:outline-none cursor-pointer"
                        tabindex="0"
                        data-comparison-trigger="true"
+                       (mouseenter)="onComparisonMouseEnter(item.period, $event)"
+                       (mouseleave)="onComparisonMouseLeave($event)"
                        (click)="toggleComparisonTooltip(item.period, $event)">
                     <div class="flex items-center gap-1 text-xs">
                       @if (comp.percentage !== null) {
@@ -102,12 +104,10 @@
                         <div class="pointer-events-none absolute top-full right-0 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 mt-2 z-30
                                      transition-[opacity,transform] duration-200 delay-75
                                      bg-neutral text-neutral-content text-xs rounded-lg shadow-2xl px-3 py-2 whitespace-nowrap border border-white/10"
-                             [class.opacity-100]="activeTooltipPeriod() === item.period"
-                             [class.translate-y-0]="activeTooltipPeriod() === item.period"
-                             [class.opacity-0]="activeTooltipPeriod() !== item.period"
-                             [class.-translate-y-1]="activeTooltipPeriod() !== item.period"
-                             [class.sm:group-hover/comp:opacity-100]="true"
-                             [class.sm:group-hover/comp:translate-y-0]="true">
+                             [class.opacity-100]="activeTooltipPeriod() === item.period || hoveredTooltipPeriod() === item.period"
+                             [class.translate-y-0]="activeTooltipPeriod() === item.period || hoveredTooltipPeriod() === item.period"
+                             [class.opacity-0]="activeTooltipPeriod() !== item.period && hoveredTooltipPeriod() !== item.period"
+                             [class.-translate-y-1]="activeTooltipPeriod() !== item.period && hoveredTooltipPeriod() !== item.period">
                           <div class="font-medium text-[11px] leading-tight text-neutral-content">{{ tip.title }}</div>
                           <div class="text-[10px] leading-tight text-neutral-content/70 mt-0.5">{{ tip.subtitle }}</div>
                           <div class="absolute bottom-full right-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 -mb-0.5 border-4 border-transparent border-b-neutral"></div>
