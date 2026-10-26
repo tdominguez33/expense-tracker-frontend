@@ -112,7 +112,11 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     this.txForm.get('installments_count')?.valueChanges.subscribe(val => {
       if (val === null || val === '') return;
       const strVal = val.toString();
-      const clean = strVal.replace(/[^0-9]/g, '');
+      let clean = strVal.replace(/[^0-9]/g, '');
+      const numVal = parseInt(clean, 10);
+      if (!isNaN(numVal) && numVal > 120) {
+        clean = '120';
+      }
       if (strVal !== clean) {
         this.txForm.get('installments_count')?.setValue(clean, { emitEvent: false });
       }
@@ -528,6 +532,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     if (isNaN(current)) current = 1;
     current += step;
     if (current < 1) current = 1;
+    if (current > 120) current = 120;
     this.txForm.patchValue({ installments_count: current });
   }
 

@@ -19,6 +19,7 @@ export class LoginView {
 
   password = '';
   error = signal<string>('');
+  isRateLimited = signal<boolean>(false);
   loading = signal<boolean>(false);
   apiUrl = '';
 
@@ -77,6 +78,7 @@ export class LoginView {
     this.submitStartTime = Date.now();
     this.loading.set(true);
     this.error.set('');
+    this.isRateLimited.set(false);
 
     const candidates = this.getCandidateUrls(this.apiUrl);
     if (candidates.length === 0) {
@@ -127,7 +129,12 @@ export class LoginView {
         }
 
         this.finishWithDelay(() => {
-          if (err.status === 401) {
+          if (err.status === 429) {
+            this.isRateLimited.set(true);
+            this.error.set(
+              err.error?.detail || 'Demasiados intentos de inicio de sesión. Espera un minuto e intenta nuevamente.'
+            );
+          } else if (err.status === 401) {
             this.error.set('Contraseña incorrecta');
           } else if (err.status === 400) {
             this.error.set(err.error?.detail || 'Contraseña incorrecta');

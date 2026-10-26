@@ -450,7 +450,7 @@
           <span class="label-text font-medium">Alias de Apple Wallet (Opcional)</span>
           <span class="label-text-alt text-base-content/60">Para automatizaciones</span>
         </label>
-        <input type="text" formControlName="apple_wallet_alias" class="input input-bordered w-full" />
+        <input type="text" formControlName="apple_wallet_alias" maxlength="100" class="input input-bordered w-full" />
       </div>
       
       @if (accForm.get('account_type')?.value === 'CREDIT_CARD') {

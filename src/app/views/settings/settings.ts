@@ -242,6 +242,7 @@ export class Settings implements OnInit, OnDestroy {
     if (isNaN(current)) current = 0;
     current += step;
     if (current < 0) current = 0;
+    if (current > 365) current = 365;
     this.configForm.patchValue({ statement_grace_days: current });
   }
   
@@ -987,9 +988,16 @@ export class Settings implements OnInit, OnDestroy {
     this.importSuccessMsg.set('');
   }
 
+  private readonly MAX_IMPORT_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
+
   onImportFileSelected(event: any) {
     const file = event.target?.files?.[0];
     if (file) {
+      if (file.size > this.MAX_IMPORT_SIZE_BYTES) {
+        this.selectedImportFile.set(null);
+        this.importError.set('El archivo excede el tamaño máximo permitido (100 MB).');
+        return;
+      }
       this.selectedImportFile.set(file);
       this.importError.set('');
     }
@@ -999,6 +1007,10 @@ export class Settings implements OnInit, OnDestroy {
     const file = this.selectedImportFile();
     if (!file) {
       this.importError.set('Por favor, selecciona un archivo SQLite válido.');
+      return;
+    }
+    if (file.size > this.MAX_IMPORT_SIZE_BYTES) {
+      this.importError.set('El archivo excede el tamaño máximo permitido (100 MB).');
       return;
     }
 
@@ -1016,6 +1028,10 @@ export class Settings implements OnInit, OnDestroy {
       error: (err) => {
         this.isImportingDb.set(false);
         console.error('Error al importar la base de datos:', err);
+        if (err.status === 413) {
+          this.importError.set(err.error?.detail || 'El archivo excede el tamaño máximo permitido (100 MB).');
+          return;
+        }
         const msg = err.error?.detail || 'Error inesperado al procesar la base de datos.';
         this.importError.set(msg);
       }
