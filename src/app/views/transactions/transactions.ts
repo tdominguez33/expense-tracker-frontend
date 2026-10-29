@@ -576,8 +576,6 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
       delete payload.transaction_time;
     }
     
-    payload.currency = 'ARS';
-    
     const isEdit = !!this.editingTxId();
     const obs = isEdit
       ? this.api.updateTransaction(this.editingTxId()!, payload)
