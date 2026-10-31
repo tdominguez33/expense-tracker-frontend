@@ -51,12 +51,24 @@ export class Statements implements OnInit {
         const amtA = Number(a.installment_amount) || 0;
         const amtB = Number(b.installment_amount) || 0;
         if (amtB !== amtA) return amtB - amtA;
-        return (a.transaction_date || '').localeCompare(b.transaction_date || '');
+        const dateCmp = (a.transaction_date || '').localeCompare(b.transaction_date || '');
+        if (dateCmp !== 0) return dateCmp;
+        const timeA = a.transaction_time || '';
+        const timeB = b.transaction_time || '';
+        if (timeA && !timeB) return -1;
+        if (!timeA && timeB) return 1;
+        return timeA.localeCompare(timeB);
       } else {
         const dateA = a.transaction_date || '';
         const dateB = b.transaction_date || '';
         const cmp = dateA.localeCompare(dateB);
         if (cmp !== 0) return cmp;
+        const timeA = a.transaction_time || '';
+        const timeB = b.transaction_time || '';
+        if (timeA && !timeB) return -1;
+        if (!timeA && timeB) return 1;
+        const timeCmp = timeA.localeCompare(timeB);
+        if (timeCmp !== 0) return timeCmp;
         return (a.id || 0) - (b.id || 0);
       }
     });

@@ -435,6 +435,16 @@ export class HistoryView implements OnInit, OnDestroy {
           const sA = a.transaction_date || '';
           const sB = b.transaction_date || '';
           diff = sA.localeCompare(sB);
+          if (diff === 0) {
+            const tA = a.transaction_time || '';
+            const tB = b.transaction_time || '';
+            if (tA && !tB) return -1;
+            if (!tA && tB) return 1;
+            diff = tA.localeCompare(tB);
+            if (diff === 0) {
+              diff = (a.id || 0) - (b.id || 0);
+            }
+          }
           break;
         }
         case 'description': {
