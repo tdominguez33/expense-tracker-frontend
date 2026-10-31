@@ -7,10 +7,12 @@
       </div>
     </div>
     
-    @if (isLoading()) {
+    @if (showSpinner()) {
       <div class="flex justify-center my-10">
         <span class="loading loading-spinner loading-lg text-primary"></span>
       </div>
+    } @else if (!hasLoadedOnce()) {
+      <div class="flex justify-center my-10 min-h-[200px]"></div>
     } @else if (accounts().length === 0) {
       <div class="flex flex-col items-center justify-center py-20 text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
@@ -216,10 +218,12 @@
       </button>
     </div>
 
-    @if (isLoading()) {
+    @if (showSpinner()) {
       <div class="flex justify-center my-10">
         <span class="loading loading-spinner loading-lg text-primary"></span>
       </div>
+    } @else if (!hasLoadedOnce()) {
+      <div class="flex justify-center my-10 min-h-[200px]"></div>
     } @else if (filteredStatements().length === 0) {
       <div class="flex flex-col items-center justify-center py-20 px-4 text-center text-base-content/50 bg-base-200/50 rounded-box border border-base-content/20 border-dashed">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
@@ -395,10 +399,12 @@
       </div>
     </div>
 
-    @if (isLoading()) {
+    @if (showSpinner()) {
       <div class="flex justify-center my-10">
         <span class="loading loading-spinner loading-lg text-primary"></span>
       </div>
+    } @else if (!hasLoadedOnce()) {
+      <div class="flex justify-center my-10 min-h-[200px]"></div>
     } @else {
     <!-- STATS CARDS -->
     <!-- Desktop View (>= md): Total Expense (50%) and Stacked Closing/Due Dates (50%) -->

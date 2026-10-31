@@ -8,7 +8,7 @@ import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import { getContrastColor } from '../../utils/color';
 
 export const DEFAULT_PAGE_SIZE = 50;
-export const SPINNER_DELAY_MS = 250;
+export const SPINNER_DELAY_MS = 300;
 
 @Component({
   selector: 'app-transactions',

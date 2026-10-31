@@ -78,7 +78,7 @@
     </div>
     <div class="collapse-content pt-2 min-w-0 max-w-full overflow-hidden">
       <div class="flex justify-end items-center mb-4">
-        @if (isLoading()) {
+        @if (showSpinner()) {
           <span class="loading loading-spinner loading-sm text-primary mr-3"></span>
         }
         <button class="btn btn-sm btn-outline" (click)="openCatModal()" [disabled]="isLoading()">
@@ -144,7 +144,7 @@
     </div>
     <div class="collapse-content pt-2 min-w-0 max-w-full overflow-hidden">
       <div class="flex gap-2 justify-end items-center mb-4">
-        @if (isLoading()) {
+        @if (showSpinner()) {
           <span class="loading loading-spinner loading-sm text-primary mr-2"></span>
         }
         <button class="btn btn-sm btn-outline" (click)="openEntModal()" [disabled]="isLoading()">Nueva Entidad</button>
@@ -256,6 +256,70 @@
     </div>
   </div>
 
+  <!-- Seguridad Section -->
+  <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
+    <input type="checkbox" /> 
+    <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
+      <div class="min-w-0 flex-1">
+        <div class="font-bold truncate">Seguridad</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Cambiar contraseña</div>
+      </div>
+    </div>
+    <div class="collapse-content pt-2 space-y-4">
+      <div class="p-4 bg-base-200/50 rounded-box border border-base-content/10">
+        <div class="text-sm text-base-content/70 mb-4">
+          Al cambiar tu contraseña se cerrarán automáticamente las sesiones abiertas en otros dispositivos.
+        </div>
+
+        <form [formGroup]="passwordForm" (ngSubmit)="onSubmitPasswordChange()" class="max-w-full sm:max-w-md">
+          <fieldset [disabled]="isChangingPassword()" class="space-y-3">
+            <div class="form-control">
+              <label class="label py-1"><span class="label-text text-sm font-medium">Contraseña Actual</span></label>
+              <input type="password" formControlName="current_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Ingresa tu contraseña actual" />
+            </div>
+
+            <div class="form-control">
+              <label class="label py-1"><span class="label-text text-sm font-medium">Nueva Contraseña</span></label>
+              <input type="password" formControlName="new_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Mínimo 6 caracteres" />
+            </div>
+
+            <div class="form-control">
+              <label class="label py-1"><span class="label-text text-sm font-medium">Confirmar Nueva Contraseña</span></label>
+              <input type="password" formControlName="confirm_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Repite la nueva contraseña" />
+            </div>
+
+            <div class="pt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <button type="submit" class="btn btn-primary w-full sm:w-auto" [disabled]="passwordForm.invalid || isChangingPassword()">
+                @if (isChangingPassword()) {
+                  <span class="loading loading-spinner loading-sm"></span>
+                  Actualizando...
+                } @else {
+                  Actualizar Contraseña
+                }
+              </button>
+              @if (passwordSuccessMsg()) {
+                <div class="flex items-center gap-1.5 text-success text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{{ passwordSuccessMsg() }}</span>
+                </div>
+              }
+              @if (passwordErrorMsg()) {
+                <div class="flex items-center gap-1.5 text-error text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>{{ passwordErrorMsg() }}</span>
+                </div>
+              }
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- Opciones avanzadas -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
     <input type="checkbox" /> 
@@ -279,7 +343,12 @@
             <option value="Europe/Madrid">Europe/Madrid</option>
             <option value="UTC">UTC</option>
           </select>
-          <button class="btn btn-primary w-full sm:w-auto" (click)="saveTimezone()">Guardar Zona</button>
+          <button class="btn btn-primary w-full sm:w-auto" (click)="saveTimezone()" [disabled]="isSavingTimezone() || isSubmitting()">
+            @if (isSavingTimezone()) {
+              <span class="loading loading-spinner loading-sm"></span>
+            }
+            Guardar Zona
+          </button>
         </div>
         <label class="label"><span class="label-text-alt text-base-content/60">Afecta las fechas de tus nuevos gastos.</span></label>
       </div>
@@ -383,7 +452,12 @@
       
       <div class="modal-action">
         <button type="button" class="btn btn-ghost" (click)="closeModal('cat_modal')">Cancelar</button>
-        <button type="submit" class="btn btn-primary" [disabled]="catForm.invalid || isSubmitting()">Guardar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="catForm.invalid || isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar
+        </button>
       </div>
     </form>
   </div>
@@ -407,7 +481,12 @@
       
       <div class="modal-action">
         <button type="button" class="btn btn-ghost" (click)="closeModal('ent_modal')">Cancelar</button>
-        <button type="submit" class="btn btn-primary" [disabled]="entForm.invalid || isSubmitting()">Guardar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="entForm.invalid || isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar
+        </button>
       </div>
     </form>
   </div>
@@ -464,7 +543,12 @@
       
       <div class="modal-action">
         <button type="button" class="btn btn-ghost" (click)="closeModal('acc_modal')">Cancelar</button>
-        <button type="submit" class="btn btn-primary" [disabled]="accForm.invalid || isSubmitting()">Guardar</button>
+        <button type="submit" class="btn btn-primary" [disabled]="accForm.invalid || isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="loading loading-spinner loading-sm"></span>
+          }
+          Guardar
+        </button>
       </div>
     </form>
   </div>

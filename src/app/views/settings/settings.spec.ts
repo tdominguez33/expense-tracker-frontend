@@ -2,12 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Settings } from './settings';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('Settings', () => {
   let component: Settings;
   let fixture: ComponentFixture<Settings>;
   let mockApiService: any;
+  let mockAuthService: any;
 
   beforeEach(async () => {
     mockApiService = {
@@ -23,7 +25,8 @@ describe('Settings', () => {
     await TestBed.configureTestingModule({
       imports: [Settings],
       providers: [
-        { provide: ApiService, useValue: mockApiService }
+        { provide: ApiService, useValue: mockApiService },
+        { provide: AuthService, useValue: mockAuthService = { changePassword: vi.fn().mockReturnValue(of({ message: 'OK', access_token: 'tok' })) } }
       ]
     })
     .compileComponents();

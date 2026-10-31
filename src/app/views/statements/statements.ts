@@ -6,6 +6,7 @@ import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } 
 import { CommonModule, Location } from '@angular/common';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { debouncedLoading } from '../../utils/loading';
 
 @Component({
   selector: 'app-statements',
@@ -32,6 +33,8 @@ export class Statements implements OnInit {
   graceDays = signal<number>(10);
   
   isLoading = signal<boolean>(true);
+  showSpinner = debouncedLoading(this.isLoading, 300);
+  hasLoadedOnce = signal<boolean>(false);
   
   routeId = signal<number | null>(null);
   routeAccountId = signal<number | null>(null);
@@ -176,12 +179,14 @@ export class Statements implements OnInit {
           if (!options?.silent) {
             this.isLoading.set(false);
           }
+          this.hasLoadedOnce.set(true);
           resolve();
         },
         error: () => {
           if (!options?.silent) {
             this.isLoading.set(false);
           }
+          this.hasLoadedOnce.set(true);
           resolve();
         }
       });

@@ -65,4 +65,18 @@ describe('LoginView - URL Resolution', () => {
   it('should return empty list for empty or whitespace-only input', () => {
     expect(component.getCandidateUrls('   ')).toEqual([]);
   });
+
+  it('should validate mismatched or short passwords during first-time setup', () => {
+    component.setupMode.set(true);
+    component.setupToken.set('tok-123');
+    component.newPassword = '123';
+    component.confirmPassword = '123';
+    component.onSubmitSetup();
+    expect(component.error()).toContain('al menos 6 caracteres');
+
+    component.newPassword = 'password123';
+    component.confirmPassword = 'password999';
+    component.onSubmitSetup();
+    expect(component.error()).toContain('no coinciden');
+  });
 });

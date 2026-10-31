@@ -5,6 +5,7 @@ import { forkJoin, of, switchMap, map, catchError } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { RefreshService } from '../../services/refresh.service';
 import { CategoryDoughnut } from '../../components/category-doughnut/category-doughnut';
+import { debouncedLoading } from '../../utils/loading';
 
 export type DashboardPeriod = 'day' | 'week' | 'month' | 'year';
 
@@ -60,6 +61,7 @@ export class Dashboard implements OnInit {
   globalDebt = signal<number>(0);
   globalLimit = signal<number>(0);
   isLoading = signal<boolean>(true);
+  showSpinner = debouncedLoading(this.isLoading, 300);
   errorMsg = signal<string>('');
 
   creditCards = signal<any[]>([]);

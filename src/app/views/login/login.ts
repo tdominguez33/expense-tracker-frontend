@@ -18,10 +18,18 @@ export class LoginView {
   private cdr = inject(ChangeDetectorRef);
 
   password = '';
+  apiUrl = '';
+
+  // First-time activation state (Option A)
+  setupMode = signal<boolean>(false);
+  setupToken = signal<string>('');
+  resolvedApiUrl = '';
+  newPassword = '';
+  confirmPassword = '';
+
   error = signal<string>('');
   isRateLimited = signal<boolean>(false);
   loading = signal<boolean>(false);
-  apiUrl = '';
 
   constructor() {
     if (this.auth.isAuthenticated()) {
@@ -91,6 +99,61 @@ export class LoginView {
     this.tryLogin(candidates, 0);
   }
 
+  onSubmitSetup() {
+    if (!this.newPassword || !this.confirmPassword) return;
+
+    this.error.set('');
+    this.isRateLimited.set(false);
+
+    if (this.newPassword.length < 6) {
+      this.error.set('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (this.newPassword !== this.confirmPassword) {
+      this.error.set('Las contraseñas no coinciden');
+      return;
+    }
+
+    this.submitStartTime = Date.now();
+    this.loading.set(true);
+
+    this.auth.completeSetup(
+      this.setupToken(),
+      this.newPassword,
+      this.confirmPassword,
+      this.resolvedApiUrl
+    ).subscribe({
+      next: () => {
+        this.finishWithDelay(() => {
+          this.router.navigate(['/dashboard']);
+        });
+      },
+      error: (err) => {
+        this.finishWithDelay(() => {
+          if (err.status === 401) {
+            this.setupMode.set(false);
+            this.setupToken.set('');
+            this.error.set(err.error?.detail || 'El código de activación expiró. Ingresa nuevamente.');
+          } else if (err.status === 429) {
+            this.isRateLimited.set(true);
+            this.error.set(err.error?.detail || 'Demasiados intentos. Espera un minuto.');
+          } else {
+            this.error.set(err.error?.detail || 'Error al configurar la contraseña.');
+          }
+        });
+      }
+    });
+  }
+
+  cancelSetup() {
+    this.setupMode.set(false);
+    this.setupToken.set('');
+    this.newPassword = '';
+    this.confirmPassword = '';
+    this.error.set('');
+  }
+
   private finishWithDelay(action: () => void) {
     const elapsed = Date.now() - this.submitStartTime;
     const remaining = Math.max(0, this.MIN_LOADING_TIME - elapsed);
@@ -112,8 +175,18 @@ export class LoginView {
     const currentUrl = candidates[index];
 
     this.auth.login(this.password, currentUrl).subscribe({
-      next: () => {
+      next: (response) => {
         this.finishWithDelay(() => {
+          if (response?.status === 'SETUP_REQUIRED' && response?.setup_token) {
+            this.resolvedApiUrl = currentUrl;
+            this.setupToken.set(response.setup_token);
+            this.setupMode.set(true);
+            this.password = '';
+            this.newPassword = '';
+            this.confirmPassword = '';
+            this.error.set('');
+            return;
+          }
           this.router.navigate(['/dashboard']);
         });
       },
@@ -135,7 +208,10 @@ export class LoginView {
               err.error?.detail || 'Demasiados intentos de inicio de sesión. Espera un minuto e intenta nuevamente.'
             );
           } else if (err.status === 401) {
-            this.error.set('Contraseña incorrecta');
+            const detail = err.error?.detail;
+            this.error.set(
+              detail === 'Código de activación incorrecto' ? detail : 'Contraseña incorrecta'
+            );
           } else if (err.status === 400) {
             this.error.set(err.error?.detail || 'Contraseña incorrecta');
           } else if (isTimeout || isNetworkError) {

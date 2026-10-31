@@ -29,6 +29,14 @@ export class AuthService {
     return null;
   }
 
+  private saveToken(token: string): void {
+    if (typeof localStorage !== 'undefined' && typeof localStorage?.setItem === 'function') {
+      try {
+        localStorage.setItem(this.TOKEN_KEY, token);
+      } catch {}
+    }
+  }
+
   public isAuthenticated(): boolean {
     return this.authState.value;
   }
@@ -40,26 +48,74 @@ export class AuthService {
 
     const baseUrl = (apiUrl || this.config.apiUrl()).trim().replace(/\/+$/, '');
 
-    return this.http.post<{access_token: string, token_type: string}>(`${baseUrl}/token`, formData)
+    return this.http.post<any>(`${baseUrl}/token`, formData)
       .pipe(
-        timeout(4000),
+        timeout(8000),
         tap({
           next: (response) => {
             if (apiUrl) {
               this.config.setApiUrl(baseUrl);
             }
-            if (typeof localStorage !== 'undefined' && typeof localStorage?.setItem === 'function') {
-              try {
-                localStorage.setItem(this.TOKEN_KEY, response.access_token);
-              } catch {}
+            if (response?.status === 'SETUP_REQUIRED' && response?.setup_token) {
+              return;
             }
-            this.authState.next(true);
+            if (response?.access_token) {
+              this.saveToken(response.access_token);
+              this.authState.next(true);
+            }
           },
           error: (err) => {
             // If the server responded with an HTTP status (e.g. 401 incorrect password),
             // the URL is reachable and valid.
             if (err.status && err.status !== 0 && apiUrl) {
               this.config.setApiUrl(baseUrl);
+            }
+          }
+        })
+      );
+  }
+
+  public completeSetup(setupToken: string, newPassword: string, confirmPassword: string, apiUrl?: string): Observable<any> {
+    const baseUrl = (apiUrl || this.config.apiUrl()).trim().replace(/\/+$/, '');
+    const payload = {
+      setup_token: setupToken,
+      new_password: newPassword,
+      confirm_password: confirmPassword
+    };
+
+    return this.http.post<{access_token: string, token_type: string, message?: string}>(`${baseUrl}/auth/setup`, payload)
+      .pipe(
+        timeout(12000),
+        tap({
+          next: (response) => {
+            if (apiUrl) {
+              this.config.setApiUrl(baseUrl);
+            }
+            if (response?.access_token) {
+              this.saveToken(response.access_token);
+              this.authState.next(true);
+            }
+          }
+        })
+      );
+  }
+
+  public changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Observable<any> {
+    const baseUrl = this.config.apiUrl().trim().replace(/\/+$/, '');
+    const payload = {
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword
+    };
+
+    return this.http.post<{access_token: string, token_type: string, message: string}>(`${baseUrl}/auth/change-password`, payload)
+      .pipe(
+        timeout(12000),
+        tap({
+          next: (response) => {
+            if (response?.access_token) {
+              this.saveToken(response.access_token);
+              this.authState.next(true);
             }
           }
         })

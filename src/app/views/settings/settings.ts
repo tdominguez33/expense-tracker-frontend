@@ -1,5 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal, HostListener, DestroyRef } from '@angular/core';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -7,6 +8,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { CATEGORY_COLORS } from '../../constants/colors';
 import { getContrastColor } from '../../utils/color';
+import { debouncedLoading } from '../../utils/loading';
 
 @Component({
   selector: 'app-settings',
@@ -17,6 +19,7 @@ import { getContrastColor } from '../../utils/color';
 })
 export class Settings implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  private auth = inject(AuthService);
   private fb = inject(FormBuilder);
   private refreshService = inject(RefreshService);
   private destroyRef = inject(DestroyRef);
@@ -30,6 +33,7 @@ export class Settings implements OnInit, OnDestroy {
 
   
   isLoading = signal<boolean>(true);
+  showSpinner = debouncedLoading(this.isLoading, 300);
   
   timezoneControl = this.fb.control('America/Argentina/Buenos_Aires', Validators.required);
   
@@ -37,10 +41,28 @@ export class Settings implements OnInit, OnDestroy {
   entForm: FormGroup;
   accForm: FormGroup;
   configForm: FormGroup;
+  passwordForm: FormGroup;
   
   isSubmitting = signal<boolean>(false);
+  isSavingTimezone = signal<boolean>(false);
   errorMsg = signal<string>('');
   
+  private readonly MIN_SUBMIT_DELAY = 500; // ms
+
+  /**
+   * Ejecuta una acción asegurando que hayan pasado al menos MIN_SUBMIT_DELAY ms
+   * desde startTime para garantizar una animación visible al usuario.
+   */
+  private runWithMinDelay(startTime: number, action: () => void, minDelay = this.MIN_SUBMIT_DELAY) {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, minDelay - elapsed);
+    if (remaining > 0) {
+      setTimeout(action, remaining);
+    } else {
+      action();
+    }
+  }
+
   // Track currently edited items. Null means creating.
   editingCatId = signal<number | null>(null);
   editingEntId = signal<number | null>(null);
@@ -51,6 +73,13 @@ export class Settings implements OnInit, OnDestroy {
   selectedImportFile = signal<File | null>(null);
   importError = signal<string>('');
   importSuccessMsg = signal<string>('');
+
+  // Password Change State
+  isChangingPassword = signal<boolean>(false);
+  passwordErrorMsg = signal<string>('');
+  passwordSuccessMsg = signal<string>('');
+  private passwordSuccessTimeout: any = null;
+  private passwordErrorTimeout: any = null;
 
   // Color Picker State
   showAllColors = signal(false);
@@ -78,6 +107,12 @@ export class Settings implements OnInit, OnDestroy {
       name: ['', [Validators.required, Validators.maxLength(15)]],
       available_limit: [''],
       apple_wallet_alias: ['']
+    });
+
+    this.passwordForm = this.fb.group({
+      current_password: ['', Validators.required],
+      new_password: ['', [Validators.required, Validators.minLength(6)]],
+      confirm_password: ['', [Validators.required, Validators.minLength(6)]]
     });
 
     this.accForm.get('available_limit')?.valueChanges.subscribe(val => {
@@ -160,9 +195,21 @@ export class Settings implements OnInit, OnDestroy {
 
   saveTimezone() {
     if (this.timezoneControl.valid && this.timezoneControl.value) {
+      this.isSavingTimezone.set(true);
+      const startTime = Date.now();
       this.api.updateConfig({ timezone: this.timezoneControl.value }).subscribe({
-        next: () => this.loadData(),
-        error: (err) => console.error(err)
+        next: () => {
+          this.runWithMinDelay(startTime, () => {
+            this.isSavingTimezone.set(false);
+            this.loadData();
+          });
+        },
+        error: (err) => {
+          this.runWithMinDelay(startTime, () => {
+            this.isSavingTimezone.set(false);
+            console.error(err);
+          });
+        }
       });
     }
   }
@@ -217,6 +264,7 @@ export class Settings implements OnInit, OnDestroy {
   saveConfig() {
     if (this.configForm.invalid) return;
     this.isSubmitting.set(true);
+    const startTime = Date.now();
     
     // Parse value before save
     const payload = { ...this.configForm.value };
@@ -229,10 +277,14 @@ export class Settings implements OnInit, OnDestroy {
     
     this.api.updateConfig(payload).subscribe({
       next: () => {
-        this.isSubmitting.set(false);
+        this.runWithMinDelay(startTime, () => {
+          this.isSubmitting.set(false);
+        });
       },
       error: () => {
-        this.isSubmitting.set(false);
+        this.runWithMinDelay(startTime, () => {
+          this.isSubmitting.set(false);
+        });
       }
     });
   }
@@ -409,6 +461,14 @@ export class Settings implements OnInit, OnDestroy {
     if (this.longPressAccTimeout) {
       clearTimeout(this.longPressAccTimeout);
       this.longPressAccTimeout = null;
+    }
+    if (this.passwordSuccessTimeout) {
+      clearTimeout(this.passwordSuccessTimeout);
+      this.passwordSuccessTimeout = null;
+    }
+    if (this.passwordErrorTimeout) {
+      clearTimeout(this.passwordErrorTimeout);
+      this.passwordErrorTimeout = null;
     }
   }
 
@@ -804,6 +864,7 @@ export class Settings implements OnInit, OnDestroy {
   onSubmitCat() {
     if (this.catForm.invalid) return;
     this.isSubmitting.set(true);
+    const startTime = Date.now();
     
     const obs = this.editingCatId() 
       ? this.api.updateCategory(this.editingCatId()!, this.catForm.value)
@@ -811,17 +872,22 @@ export class Settings implements OnInit, OnDestroy {
       
     obs.subscribe({
       next: () => {
-        this.isSubmitting.set(false);
-        this.closeModal('cat_modal');
-        this.loadData();
+        this.runWithMinDelay(startTime, () => {
+          this.isSubmitting.set(false);
+          this.closeModal('cat_modal');
+          this.loadData();
+        });
       },
-      error: (err) => this.handleError(err)
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => this.handleError(err));
+      }
     });
   }
   
   onSubmitEnt() {
     if (this.entForm.invalid) return;
     this.isSubmitting.set(true);
+    const startTime = Date.now();
     
     const obs = this.editingEntId()
       ? this.api.updateEntity(this.editingEntId()!, this.entForm.value)
@@ -829,17 +895,22 @@ export class Settings implements OnInit, OnDestroy {
       
     obs.subscribe({
       next: () => {
-        this.isSubmitting.set(false);
-        this.closeModal('ent_modal');
-        this.loadData();
+        this.runWithMinDelay(startTime, () => {
+          this.isSubmitting.set(false);
+          this.closeModal('ent_modal');
+          this.loadData();
+        });
       },
-      error: (err) => this.handleError(err)
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => this.handleError(err));
+      }
     });
   }
   
   onSubmitAcc() {
     if (this.accForm.invalid) return;
     this.isSubmitting.set(true);
+    const startTime = Date.now();
     
     const payload = { ...this.accForm.value };
     payload.entity_id = parseInt(payload.entity_id);
@@ -859,11 +930,15 @@ export class Settings implements OnInit, OnDestroy {
       
     obs.subscribe({
       next: () => {
-        this.isSubmitting.set(false);
-        this.closeModal('acc_modal');
-        this.loadData();
+        this.runWithMinDelay(startTime, () => {
+          this.isSubmitting.set(false);
+          this.closeModal('acc_modal');
+          this.loadData();
+        });
       },
-      error: (err) => this.handleError(err)
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => this.handleError(err));
+      }
     });
   }
   
@@ -891,6 +966,7 @@ export class Settings implements OnInit, OnDestroy {
     if (!target) return;
     
     this.isSubmitting.set(true);
+    const startTime = Date.now();
     let obs;
     
     if (target.type === 'category') obs = this.api.deleteCategory(target.id);
@@ -900,14 +976,18 @@ export class Settings implements OnInit, OnDestroy {
     if (obs) {
       obs.subscribe({
         next: () => {
-          this.isSubmitting.set(false);
-          this.closeModal('confirm_modal');
-          this.loadData();
+          this.runWithMinDelay(startTime, () => {
+            this.isSubmitting.set(false);
+            this.closeModal('confirm_modal');
+            this.loadData();
+          });
         },
         error: (err) => {
-          this.isSubmitting.set(false);
-          this.closeModal('confirm_modal');
-          alert(err.error?.detail || 'Error al eliminar');
+          this.runWithMinDelay(startTime, () => {
+            this.isSubmitting.set(false);
+            this.closeModal('confirm_modal');
+            alert(err.error?.detail || 'Error al eliminar');
+          });
         }
       });
     }
@@ -934,37 +1014,42 @@ export class Settings implements OnInit, OnDestroy {
 
   downloadDatabase() {
     this.isDownloadingDb.set(true);
+    const startTime = Date.now();
     this.api.backupDatabase().subscribe({
       next: (response) => {
-        this.isDownloadingDb.set(false);
-        const blob = response.body;
-        if (!blob) return;
+        this.runWithMinDelay(startTime, () => {
+          this.isDownloadingDb.set(false);
+          const blob = response.body;
+          if (!blob) return;
 
-        let filename = 'expense_tracker_backup.sqlite';
-        const disposition = response.headers.get('content-disposition');
-        if (disposition && disposition.includes('filename=')) {
-          const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (match && match[1]) {
-            filename = match[1].replace(/['"]/g, '');
+          let filename = 'expense_tracker_backup.sqlite';
+          const disposition = response.headers.get('content-disposition');
+          if (disposition && disposition.includes('filename=')) {
+            const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (match && match[1]) {
+              filename = match[1].replace(/['"]/g, '');
+            }
+          } else {
+            const dateStr = new Date().toISOString().slice(0, 10);
+            filename = `expense_tracker_backup_${dateStr}.sqlite`;
           }
-        } else {
-          const dateStr = new Date().toISOString().slice(0, 10);
-          filename = `expense_tracker_backup_${dateStr}.sqlite`;
-        }
 
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        });
       },
       error: (err) => {
-        this.isDownloadingDb.set(false);
-        console.error('Error al descargar copia de la base de datos', err);
-        alert('Error al descargar la copia de seguridad de la base de datos.');
+        this.runWithMinDelay(startTime, () => {
+          this.isDownloadingDb.set(false);
+          console.error('Error al descargar copia de la base de datos', err);
+          alert('Error al descargar la copia de seguridad de la base de datos.');
+        });
       }
     });
   }
@@ -1016,24 +1101,93 @@ export class Settings implements OnInit, OnDestroy {
 
     this.isImportingDb.set(true);
     this.importError.set('');
+    const startTime = Date.now();
 
     this.api.restoreDatabase(file).subscribe({
       next: (res) => {
-        this.isImportingDb.set(false);
-        this.importSuccessMsg.set('Base de datos importada con éxito. La página se reiniciará en unos segundos...');
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        this.runWithMinDelay(startTime, () => {
+          this.isImportingDb.set(false);
+          this.importSuccessMsg.set('Base de datos importada con éxito. La página se reiniciará en unos segundos...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        });
       },
       error: (err) => {
-        this.isImportingDb.set(false);
-        console.error('Error al importar la base de datos:', err);
-        if (err.status === 413) {
-          this.importError.set(err.error?.detail || 'El archivo excede el tamaño máximo permitido (100 MB).');
-          return;
-        }
-        const msg = err.error?.detail || 'Error inesperado al procesar la base de datos.';
-        this.importError.set(msg);
+        this.runWithMinDelay(startTime, () => {
+          this.isImportingDb.set(false);
+          console.error('Error al importar la base de datos:', err);
+          if (err.status === 413) {
+            this.importError.set(err.error?.detail || 'El archivo excede el tamaño máximo permitido (100 MB).');
+            return;
+          }
+          const msg = err.error?.detail || 'Error inesperado al procesar la base de datos.';
+          this.importError.set(msg);
+        });
+      }
+    });
+  }
+
+  private showPasswordError(msg: string) {
+    this.passwordErrorMsg.set(msg);
+    if (this.passwordErrorTimeout) {
+      clearTimeout(this.passwordErrorTimeout);
+    }
+    this.passwordErrorTimeout = setTimeout(() => {
+      this.passwordErrorMsg.set('');
+    }, 5000);
+  }
+
+  onSubmitPasswordChange() {
+    this.passwordErrorMsg.set('');
+    this.passwordSuccessMsg.set('');
+    if (this.passwordSuccessTimeout) {
+      clearTimeout(this.passwordSuccessTimeout);
+      this.passwordSuccessTimeout = null;
+    }
+    if (this.passwordErrorTimeout) {
+      clearTimeout(this.passwordErrorTimeout);
+      this.passwordErrorTimeout = null;
+    }
+
+    if (this.passwordForm.invalid) {
+      this.showPasswordError('Completa todos los campos (la nueva contraseña debe tener al menos 6 caracteres).');
+      return;
+    }
+
+    const { current_password, new_password, confirm_password } = this.passwordForm.value;
+
+    if (new_password !== confirm_password) {
+      this.showPasswordError('Las contraseñas nuevas no coinciden.');
+      return;
+    }
+
+    if (new_password === current_password) {
+      this.showPasswordError('La nueva contraseña debe ser diferente a la actual.');
+      return;
+    }
+
+    this.isChangingPassword.set(true);
+    const startTime = Date.now();
+
+    this.auth.changePassword(current_password, new_password, confirm_password).subscribe({
+      next: () => {
+        this.runWithMinDelay(startTime, () => {
+          this.isChangingPassword.set(false);
+          this.passwordForm.reset();
+          this.passwordSuccessMsg.set('Contraseña actualizada');
+          this.passwordSuccessTimeout = setTimeout(() => {
+            this.passwordSuccessMsg.set('');
+          }, 5000);
+        });
+      },
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => {
+          this.isChangingPassword.set(false);
+          this.showPasswordError(
+            err.error?.detail || 'Error al actualizar la contraseña. Verifica tu contraseña actual.'
+          );
+        });
       }
     });
   }

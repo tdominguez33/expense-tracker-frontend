@@ -4,7 +4,7 @@
     <p class="text-base-content/70">Resumen financiero de tus cuentas y tarjetas de crédito.</p>
   </div>
 
-  @if (isLoading()) {
+  @if (showSpinner()) {
     <div class="flex justify-center my-10">
       <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>

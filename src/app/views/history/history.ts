@@ -8,7 +8,7 @@ import { PeriodCharts } from '../../components/period-charts/period-charts';
 import { DEFAULT_PAGE_SIZE } from '../transactions/transactions';
 import { getContrastColor } from '../../utils/color';
 
-export const SPINNER_DELAY_MS = 250;
+export const SPINNER_DELAY_MS = 300;
 
 export type SortColumn = 'date' | 'description' | 'category' | 'account' | 'installments' | 'amount';
 export type SortDirection = 'asc' | 'desc';

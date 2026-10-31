@@ -1,64 +1,132 @@
 <div class="h-full w-full flex items-center justify-center bg-base-200 px-4 py-8 overflow-y-auto">
   <div class="card w-full max-w-sm bg-base-100 shadow-xl">
     <div class="card-body">
-      <h2 class="card-title text-2xl font-bold justify-center items-center gap-3 mb-6">
+      <h2 class="card-title text-2xl font-bold justify-center items-center gap-3 mb-4">
         <img src="icon.png" alt="Logo" class="w-9 h-9 object-contain" />
         <span>Expense Tracker</span>
       </h2>
-      
-      <form (ngSubmit)="onSubmit()" class="space-y-4">
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text font-medium">URL del Servidor</span>
-          </label>
-          <input 
-            type="text" 
-            [(ngModel)]="apiUrl" 
-            name="apiUrl"
-            placeholder="midominio.com"
-            class="input input-bordered w-full" 
-            required 
-            [disabled]="loading()"
-          />
-        </div>
 
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text font-medium">Contraseña</span>
-          </label>
-          <input 
-            type="password" 
-            [(ngModel)]="password" 
-            name="password"
-            class="input input-bordered w-full" 
-            required 
-            autofocus
-            [disabled]="loading()"
-          />
-        </div>
-        
-        @if (error()) {
-          <div class="alert text-sm py-2 px-3 flex flex-row items-center gap-2 text-left justify-start"
-               [class.alert-warning]="isRateLimited()"
-               [class.alert-error]="!isRateLimited()">
-            @if (isRateLimited()) {
-              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            } @else {
-              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            }
-            <span class="leading-tight">{{ error() }}</span>
+      @if (!setupMode()) {
+        <form (ngSubmit)="onSubmit()" class="space-y-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">URL del Servidor</span>
+            </label>
+            <input 
+              type="text" 
+              [(ngModel)]="apiUrl" 
+              name="apiUrl"
+              placeholder="midominio.com"
+              class="input input-bordered w-full" 
+              required 
+              [disabled]="loading()"
+            />
           </div>
-        }
-        
-        <div class="form-control mt-6">
-          <button type="submit" class="btn btn-primary" [disabled]="loading() || !password || !apiUrl">
-            @if (loading()) {
-              <span class="loading loading-spinner"></span>
-            }
-            Ingresar
-          </button>
-        </div>
-      </form>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Contraseña</span>
+            </label>
+            <input 
+              type="password" 
+              [(ngModel)]="password" 
+              name="password"
+              class="input input-bordered w-full" 
+              required 
+              autofocus
+              [disabled]="loading()"
+            />
+          </div>
+          
+          @if (error()) {
+            <div class="alert text-sm py-2 px-3 flex flex-row items-center gap-2 text-left justify-start"
+                 [class.alert-warning]="isRateLimited()"
+                 [class.alert-error]="!isRateLimited()">
+              @if (isRateLimited()) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              }
+              <span class="leading-tight">{{ error() }}</span>
+            </div>
+          }
+          
+          <div class="form-control mt-6">
+            <button type="submit" class="btn btn-primary" [disabled]="loading() || !password || !apiUrl">
+              @if (loading()) {
+                <span class="loading loading-spinner"></span>
+              }
+              Ingresar
+            </button>
+          </div>
+        </form>
+      } @else {
+        <form (ngSubmit)="onSubmitSetup()" class="space-y-4">
+          <div class="alert alert-info/15 border border-info/30 text-xs py-2.5 px-3 text-left">
+            <div class="space-y-1">
+              <div class="font-bold text-sm flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                Definir Contraseña
+              </div>
+              <p class="text-base-content/80 leading-relaxed">
+                Tu instancia aún no tiene contraseña. Define una clave (mín. 6 caracteres) para acceder a tu cuenta.
+              </p>
+            </div>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Nueva Contraseña</span>
+            </label>
+            <input 
+              type="password" 
+              [(ngModel)]="newPassword" 
+              name="newPassword"
+              placeholder="Mínimo 6 caracteres"
+              class="input input-bordered w-full" 
+              required 
+              minlength="6"
+              autofocus
+              [disabled]="loading()"
+            />
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Confirmar Contraseña</span>
+            </label>
+            <input 
+              type="password" 
+              [(ngModel)]="confirmPassword" 
+              name="confirmPassword"
+              placeholder="Repite la contraseña"
+              class="input input-bordered w-full" 
+              required 
+              minlength="6"
+              [disabled]="loading()"
+            />
+          </div>
+
+          @if (error()) {
+            <div class="alert alert-error text-sm py-2 px-3 flex flex-row items-center gap-2 text-left justify-start">
+              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-4 w-4" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span class="leading-tight">{{ error() }}</span>
+            </div>
+          }
+
+          <div class="flex flex-col gap-2 pt-2">
+            <button type="submit" class="btn btn-primary w-full" [disabled]="loading() || !newPassword || !confirmPassword">
+              @if (loading()) {
+                <span class="loading loading-spinner"></span>
+              }
+              Activar y Guardar
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm w-full" (click)="cancelSetup()" [disabled]="loading()">
+              Volver
+            </button>
+          </div>
+        </form>
+      }
     </div>
   </div>
 </div>
