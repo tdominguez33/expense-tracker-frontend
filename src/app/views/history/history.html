@@ -334,7 +334,7 @@
         <!-- Mobile View (< md): Compact card list spanning full width of the main card without nested card borders -->
         <div class="md:hidden divide-y divide-base-content/10 border-t border-base-content/10">
           @for (t of txList; track t.id) {
-            <div class="px-4 py-3 hover:bg-base-200/40 active:bg-base-200/60 transition-colors flex flex-col gap-1.5">
+            <div class="history-tx-mobile px-4 py-3 transition-colors flex flex-col gap-1.5">
               <!-- Row 1: Description & Amount -->
               <div class="flex items-center justify-between gap-3 min-w-0">
                 <span class="font-medium text-sm text-base-content truncate flex-1" [title]="t.description || '-'">

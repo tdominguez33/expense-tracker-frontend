@@ -17,7 +17,16 @@
 
 /* Smooth fade transition for mobile drawer backdrop overlay */
 :host .drawer-side > .drawer-overlay {
+  touch-action: none;
+  overscroll-behavior: none;
   transition: background-color 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (max-width: 1023.98px) {
+  :host .sidebar-panel {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
 }
 
 

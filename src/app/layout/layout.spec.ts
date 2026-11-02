@@ -347,6 +347,60 @@ describe('Layout', () => {
     vi.unstubAllGlobals();
   });
 
+  it('should prevent default when dragging vertically on the backdrop overlay to lock background page', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const overlay = fixture.nativeElement.querySelector('.drawer-overlay') as HTMLElement;
+    const preventDefaultMock = vi.fn();
+
+    drawer.checked = true;
+
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 320, clientY: 200 }],
+      target: overlay,
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 320, clientY: 260 }],
+      cancelable: true,
+      preventDefault: preventDefaultMock
+    } as any);
+
+    expect(preventDefaultMock).toHaveBeenCalled();
+    expect(component['isDrawerSwiping']).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('should not prevent default when scrolling vertically inside the sidebar panel', () => {
+    vi.stubGlobal('innerWidth', 375);
+    const drawer = fixture.nativeElement.querySelector('#my-drawer-2') as HTMLInputElement;
+    const panel = fixture.nativeElement.querySelector('.sidebar-panel') as HTMLElement;
+    const preventDefaultMock = vi.fn();
+
+    drawer.checked = true;
+
+    component.onGlobalTouchStart({
+      touches: [{ clientX: 100, clientY: 100 }],
+      target: panel,
+      cancelable: true,
+      preventDefault: vi.fn()
+    } as any);
+
+    component.onGlobalTouchMove({
+      touches: [{ clientX: 100, clientY: 160 }],
+      cancelable: true,
+      preventDefault: preventDefaultMock
+    } as any);
+
+    expect(preventDefaultMock).not.toHaveBeenCalled();
+    expect(component['isDrawerSwiping']).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
 
   it('should not intercept touches or start edge swipe when touching inside the navbar or on the menu button', () => {
     vi.stubGlobal('innerWidth', 375);

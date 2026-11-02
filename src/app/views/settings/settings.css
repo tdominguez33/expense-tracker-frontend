@@ -10,3 +10,69 @@
   background-color: transparent !important;
   cursor: default !important;
 }
+
+.settings-category-item,
+.settings-account-item {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .settings-category-item:hover,
+  .settings-account-item:hover {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.5));
+  }
+}
+
+/* Ensure menus and their list items stay strictly within container width */
+:host .menu {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex-wrap: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+:host .menu li,
+.settings-category-item,
+.settings-account-item {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
+  box-sizing: border-box !important;
+}
+
+:host .menu li > .item-actions {
+  flex-shrink: 0 !important;
+  padding: 0.25rem !important;
+}
+
+/* Truncation and ellipsis reinforcement for categories, entities, and accounts */
+.settings-category-item a,
+.settings-account-item a {
+  display: flex !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.settings-account-item a > div {
+  display: flex !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.settings-category-item a > span.truncate,
+.settings-account-item a span.truncate,
+h3 span.truncate {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}

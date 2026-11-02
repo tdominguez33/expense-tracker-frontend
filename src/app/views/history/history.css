@@ -1,1 +1,11 @@
 /* Styles for History View */
+
+.history-tx-mobile {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .history-tx-mobile:hover {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.4));
+  }
+}

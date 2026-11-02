@@ -11,3 +11,16 @@ select option {
   padding-left: 0.75rem;
   padding-right: 1.5rem;
 }
+
+.transaction-item-mobile {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .transaction-item-mobile:hover {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.5));
+  }
+  .transaction-item-mobile:active {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.8));
+  }
+}

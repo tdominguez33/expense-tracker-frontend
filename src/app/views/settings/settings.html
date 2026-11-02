@@ -93,9 +93,9 @@
           <p class="text-lg font-medium">No hay categorías configuradas</p>
         </div>
       } @else {
-        <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
+        <ul class="menu bg-base-200/50 w-full max-w-full rounded-box border border-base-content/20 p-1 overflow-hidden">
           @for (cat of categories(); track cat.id; let idx = $index) {
-            <li class="flex flex-row items-center justify-between hover:bg-base-200/50 cursor-move border-b border-base-content/20 last:border-0 select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0"
+            <li class="settings-category-item flex flex-row items-center justify-between cursor-move border-b border-base-content/20 last:border-0 select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0 w-full max-w-full"
                 [attr.data-cat-index]="idx"
                 [class.opacity-50]="draggedCatIndex() === idx"
                 [class.shadow-xl]="touchDraggedCatIndex() === idx"
@@ -113,10 +113,10 @@
                 (touchmove)="onTouchMoveCat($event)"
                 (touchend)="onTouchEndCat()"
                 (touchcancel)="onTouchEndCat()">
-              <a class="flex items-center gap-2.5 sm:gap-3 flex-grow pointer-events-none min-w-0 py-2 sm:py-3">
+              <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 pointer-events-none overflow-hidden mr-1">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
                 <span class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full shrink-0" [style.backgroundColor]="cat.color"></span>
-                <span class="font-medium text-sm sm:text-base truncate">{{ cat.name }}</span>
+                <span class="font-medium text-sm sm:text-base truncate min-w-0 max-w-full flex-1 block" [title]="cat.name">{{ cat.name }}</span>
               </a>
               <div class="item-actions flex gap-1 sm:gap-2 p-1 sm:p-2 shrink-0">
                 <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-info" (click)="openCatModal(cat)" title="Editar">
@@ -168,7 +168,7 @@
                  (dragover)="canDragEnt ? onDragOverEnt($event) : null"
                  (drop)="canDragEnt ? onDropEnt(i, $event) : null"
                  (dragend)="canDragEnt ? onDragEndEnt() : null"
-                 class="transition-[transform,opacity,box-shadow] duration-150 min-w-0 rounded-2xl p-1"
+                 class="transition-[transform,opacity,box-shadow] duration-150 min-w-0 w-full max-w-full rounded-2xl p-1"
                  [class.opacity-40]="canDragEnt && draggedEntIndex() === i && draggedEntIndex() !== null"
                  [class.shadow-xl]="canDragEnt && touchDraggedEntIndex() === i"
                  [class.scale-[1.02]]="canDragEnt && touchDraggedEntIndex() === i"
@@ -177,17 +177,17 @@
                  [class.border-primary]="canDragEnt && touchDraggedEntIndex() === i"
                  [class.border-transparent]="!canDragEnt || touchDraggedEntIndex() !== i"
                  [class.z-20]="canDragEnt && touchDraggedEntIndex() === i">
-              <div class="flex items-center justify-between mb-2 sm:mb-3 pl-1 sm:pl-2 pr-[5px] min-w-0 select-none"
+              <div class="flex items-center justify-between mb-2 sm:mb-3 pl-1 sm:pl-2 pr-[5px] min-w-0 w-full max-w-full select-none"
                    [class.cursor-grab]="canDragEnt"
                    [class.active:cursor-grabbing]="canDragEnt"
                    (touchstart)="canDragEnt ? onTouchStartEnt(i, $event) : null"
                    (touchmove)="canDragEnt ? onTouchMoveEnt($event) : null"
                    (touchend)="canDragEnt ? onTouchEndEnt() : null"
                    (touchcancel)="canDragEnt ? onTouchEndEnt() : null">
-                <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 pointer-events-none min-w-0 flex-1 truncate">
+                <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 pointer-events-none min-w-0 flex-1 overflow-hidden mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" [class.invisible]="!canDragEnt" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5 opacity-70 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                  <span class="truncate">{{ entName }}</span>
+                  <span class="truncate min-w-0 max-w-full flex-1 block" [title]="entName">{{ entName }}</span>
                 </h3>
                 <div class="item-actions flex gap-1 sm:gap-2 p-1 sm:p-2 shrink-0">
                   <button class="btn btn-xs sm:btn-sm btn-circle btn-ghost text-info" (click)="openEntModal({id: ent.id, name: entName})" title="Editar Entidad">
@@ -204,10 +204,10 @@
                   Sin cuentas asociadas a esta entidad
                 </div>
               } @else {
-                <ul class="menu bg-base-200/50 w-full rounded-box border border-base-content/20 p-1">
+                <ul class="menu bg-base-200/50 w-full max-w-full rounded-box border border-base-content/20 p-1 overflow-hidden">
                   @let canDragAcc = accountsByEntity()[entName].accounts.length > 1;
                   @for (acc of accountsByEntity()[entName].accounts; track acc.id; let j = $index) {
-                    <li class="flex flex-row items-center justify-between hover:bg-base-200/50 select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0 flex-nowrap"
+                    <li class="settings-account-item flex flex-row items-center justify-between select-none transition-[transform,opacity,box-shadow] duration-150 rounded-lg min-w-0 w-full max-w-full flex-nowrap"
                         [class.cursor-grab]="canDragAcc"
                         [class.active:cursor-grabbing]="canDragAcc"
                         [attr.data-acc-index]="canDragAcc ? j : null"
@@ -228,11 +228,11 @@
                         [class.border]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
                         [class.border-primary]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j"
                         [class.z-20]="canDragAcc && touchDraggedAcc()?.entityName === entName && touchDraggedAcc()?.index === j">
-                      <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 pointer-events-none">
+                      <a class="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 py-2 sm:py-3 pointer-events-none overflow-hidden mr-1">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/30 shrink-0" [class.invisible]="!canDragAcc" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-1 min-w-0 gap-0.5 sm:gap-2">
-                          <span class="font-medium text-sm sm:text-base truncate">{{ acc.name }}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between flex-1 min-w-0 w-full max-w-full gap-0.5 sm:gap-2 overflow-hidden">
+                          <span class="font-medium text-sm sm:text-base truncate min-w-0 w-full sm:w-auto max-w-full flex-1 block" [title]="acc.name">{{ acc.name }}</span>
                           <span class="badge badge-xs sm:badge-sm badge-ghost shrink-0 w-fit text-[11px] sm:text-xs">{{ translateType(acc.account_type) }}</span>
                         </div>
                       </a>
@@ -561,7 +561,7 @@
     <h3 class="font-bold text-xl mb-4 text-error">¿Confirmar Eliminación?</h3>
     <p class="py-4">
       Estás a punto de eliminar: 
-      <strong class="text-base-content block mt-2 text-lg">
+      <strong class="text-base-content block mt-2 text-lg truncate" [title]="deleteTarget()?.name">
         {{ deleteTarget()?.name }}
       </strong>
     </p>

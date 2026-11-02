@@ -1,0 +1,12 @@
+.statement-card-mobile {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .statement-card-mobile:hover {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.4));
+  }
+  .statement-card-mobile:active {
+    background-color: var(--fallback-b2, oklch(var(--b2) / 0.7));
+  }
+}

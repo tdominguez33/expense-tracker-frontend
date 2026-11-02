@@ -193,11 +193,23 @@ app-login {
     }
   }
 
-  /* Prevent DaisyUI from locking html/body to overflow-y: hidden on mobile when drawer is toggled */
+  /* Lock html/body scrolling when mobile drawer is open or active to prevent underlying page from moving */
   html:has(.drawer-toggle:checked),
-  body:has(.drawer-toggle:checked) {
-    overflow-y: auto !important;
-    scrollbar-gutter: auto !important;
+  body:has(.drawer-toggle:checked),
+  html:has(.drawer.drawer-active),
+  body:has(.drawer.drawer-active) {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+
+  .drawer-side > .drawer-overlay {
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  .drawer-side > .sidebar-panel {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
   }
 }
 

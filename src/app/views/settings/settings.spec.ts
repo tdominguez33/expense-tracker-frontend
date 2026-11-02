@@ -591,5 +591,33 @@ describe('Settings', () => {
       expect(component.categories().length).toBe(1);
       expect(component.categories()[0].name).toBe('Comida');
     });
+
+    it('should render category, entity, and account names with truncation and title attributes', () => {
+      const cats = [{ id: 1, name: 'Categor?a Muy Larga Que Debe Recortarse', color: '#ff0000', order: 0 }];
+      const ents = [{ id: 1, name: 'Entidad Bancaria Con Nombre Extremadamente Largo', order: 0 }];
+      const accs = [{ id: 1, name: 'Cuenta Corriente Especial En Pesos Con Nombre Extenso', account_type: 'DEBIT', entity_id: 1, order: 0 }];
+
+      component.categories.set(cats);
+      component.entities.set(ents);
+      component.accounts.set(accs);
+      component.loadAccounts(accs);
+
+      fixture.detectChanges();
+
+      const catSpan = fixture.nativeElement.querySelector('.settings-category-item span.truncate');
+      expect(catSpan).toBeTruthy();
+      expect(catSpan.classList.contains('min-w-0')).toBe(true);
+      expect(catSpan.getAttribute('title')).toBe('Categor?a Muy Larga Que Debe Recortarse');
+
+      const entSpan = fixture.nativeElement.querySelector('h3 span.truncate');
+      expect(entSpan).toBeTruthy();
+      expect(entSpan.classList.contains('min-w-0')).toBe(true);
+      expect(entSpan.getAttribute('title')).toBe('Entidad Bancaria Con Nombre Extremadamente Largo');
+
+      const accSpan = fixture.nativeElement.querySelector('.settings-account-item span.truncate');
+      expect(accSpan).toBeTruthy();
+      expect(accSpan.classList.contains('min-w-0')).toBe(true);
+      expect(accSpan.getAttribute('title')).toBe('Cuenta Corriente Especial En Pesos Con Nombre Extenso');
+    });
   });
 });

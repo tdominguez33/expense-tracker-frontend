@@ -80,7 +80,7 @@
           <!-- Mobile view (< md): Touch-friendly card list, no horizontal scroll -->
           <div class="md:hidden bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden">
             @for (tx of group.items; track tx.id) {
-              <div class="flex items-center justify-between p-3.5 hover:bg-base-200/50 active:bg-base-200/80 cursor-pointer transition-colors select-none gap-3"
+              <div class="transaction-item-mobile flex items-center justify-between p-3.5 cursor-pointer transition-colors select-none gap-3"
                    (click)="openModal(tx)">
                 <div class="min-w-0 flex-1">
                   <div class="font-medium text-base text-base-content truncate">

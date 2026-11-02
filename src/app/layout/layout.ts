@@ -28,6 +28,7 @@ export class Layout implements OnInit, OnDestroy {
   private isDrawerSwiping = false;
   private isDragging = false;
   private isDirectionLocked = false;
+  private isTouchInsideSidebar = false;
   private dragAnimationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Drawer active state (controls display: none vs grid on mobile)
@@ -206,6 +207,8 @@ export class Layout implements OnInit, OnDestroy {
         this.isDrawerSwiping = false;
       }
     } else {
+      const target = e.target as HTMLElement | null;
+      this.isTouchInsideSidebar = !!target?.closest?.('.sidebar-panel');
       this.isDrawerSwiping = true;
       this.isEdgeSwiping = false;
       this.canPullToRefresh = false;
@@ -265,7 +268,12 @@ export class Layout implements OnInit, OnDestroy {
       }
     }
 
-    if (!this.isEdgeSwiping && !this.isDrawerSwiping) return;
+    if (!this.isEdgeSwiping && !this.isDrawerSwiping) {
+      if (this.isDrawerOpen() && !this.isTouchInsideSidebar && e.cancelable) {
+        e.preventDefault();
+      }
+      return;
+    }
     if (e.touches.length !== 1) return;
 
     const touch = e.touches[0];
@@ -288,6 +296,9 @@ export class Layout implements OnInit, OnDestroy {
         this.isEdgeSwiping = false;
         this.isDrawerSwiping = false;
         this.isDragging = false;
+        if (this.isDrawerOpen() && !this.isTouchInsideSidebar && e.cancelable) {
+          e.preventDefault();
+        }
         return;
       }
 
@@ -371,6 +382,7 @@ export class Layout implements OnInit, OnDestroy {
     this.isDrawerSwiping = false;
     this.isDragging = false;
     this.isDirectionLocked = false;
+    this.isTouchInsideSidebar = false;
 
     if (wasEdgeSwiping) {
       const isFlick = velocityX > 0.3 && dx > 30;

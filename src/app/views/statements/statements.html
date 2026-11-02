@@ -118,7 +118,7 @@
             <div class="md:hidden flex flex-col gap-3">
               @for (st of recentSts; track st.id) {
                 @let stState = getStatementState(st);
-                <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
+                <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 statement-card-mobile transition-colors cursor-pointer select-none"
                      (click)="viewStatement(st)">
                   <!-- Card Header: Period and Status -->
                   <div class="flex items-center justify-between gap-2 mb-2.5">
@@ -291,7 +291,7 @@
       <div class="md:hidden flex flex-col gap-3">
         @for (st of filteredStatements(); track st.id) {
           @let stState = getStatementState(st);
-          <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 hover:bg-base-200/40 active:bg-base-200/70 transition-colors cursor-pointer select-none"
+          <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm p-4 statement-card-mobile transition-colors cursor-pointer select-none"
                (click)="viewStatement(st)">
             <!-- Card Header: Period and Status -->
             <div class="flex items-center justify-between gap-2 mb-2.5">
