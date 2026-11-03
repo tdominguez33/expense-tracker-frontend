@@ -358,11 +358,15 @@ export class Settings implements OnInit, OnDestroy {
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.setData('text/plain', `${index}`);
     }
   }
 
   onDragOverCat(event: DragEvent) {
     event.preventDefault(); // Necessary to allow dropping
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
   }
 
   onDropCat(index: number, event: DragEvent) {
@@ -511,11 +515,15 @@ export class Settings implements OnInit, OnDestroy {
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.setData('text/plain', `${index}`);
     }
   }
 
   onDragOverEnt(event: DragEvent) {
     event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
   }
 
   onDropEnt(index: number, event: DragEvent) {
@@ -639,6 +647,7 @@ export class Settings implements OnInit, OnDestroy {
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.setData('text/plain', `${index}`);
     }
   }
 
@@ -646,6 +655,9 @@ export class Settings implements OnInit, OnDestroy {
     const dragged = this.draggedAccIndex();
     if (dragged && dragged.entityName === entityName) {
       event.preventDefault(); // Only allow dropping in same entity
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
     }
   }
 

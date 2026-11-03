@@ -151,6 +151,59 @@ describe('Settings', () => {
     }
   });
 
+  it('should handle HTML5 drag and drop reordering for categories', () => {
+    component.categories.set([
+      { id: 1, name: 'Comida', color: '#ff0000', sort_order: 0 },
+      { id: 2, name: 'Transporte', color: '#00ff00', sort_order: 1 },
+      { id: 3, name: 'Servicios', color: '#0000ff', sort_order: 2 }
+    ]);
+    fixture.detectChanges();
+
+    const mockDataTransfer = {
+      effectAllowed: '',
+      dropEffect: '',
+      setData: vi.fn(),
+      getData: vi.fn()
+    };
+    const mockDragStartEvent = {
+      dataTransfer: mockDataTransfer
+    } as unknown as DragEvent;
+
+    // 1. Start dragging category 0
+    component.onDragStartCat(0, mockDragStartEvent);
+    expect(component.draggedCatIndex()).toBe(0);
+    expect(mockDataTransfer.effectAllowed).toBe('move');
+    expect(mockDataTransfer.dropEffect).toBe('move');
+    expect(mockDataTransfer.setData).toHaveBeenCalledWith('text/plain', '0');
+
+    // 2. Drag over
+    const mockDragOverEvent = {
+      preventDefault: vi.fn(),
+      dataTransfer: mockDataTransfer
+    } as unknown as DragEvent;
+    component.onDragOverCat(mockDragOverEvent);
+    expect(mockDragOverEvent.preventDefault).toHaveBeenCalled();
+    expect(mockDataTransfer.dropEffect).toBe('move');
+
+    // 3. Drop on category 2 (move index 0 to 2)
+    const mockDropEvent = {
+      preventDefault: vi.fn()
+    } as unknown as DragEvent;
+    component.onDropCat(2, mockDropEvent);
+    expect(mockDropEvent.preventDefault).toHaveBeenCalled();
+
+    // Verify reordering
+    expect(component.categories()[0].name).toBe('Transporte');
+    expect(component.categories()[1].name).toBe('Servicios');
+    expect(component.categories()[2].name).toBe('Comida');
+    expect(component.draggedCatIndex()).toBeNull();
+    expect(mockApiService.reorderCategories).toHaveBeenCalledWith([
+      { id: 2, sort_order: 0 },
+      { id: 3, sort_order: 1 },
+      { id: 1, sort_order: 2 }
+    ]);
+  });
+
   it('should render compact responsive account list with non-wrapping buttons', () => {
     component.entities.set([{ id: 1, name: 'Banco Santander' }]);
     component.accountsByEntity.set({
