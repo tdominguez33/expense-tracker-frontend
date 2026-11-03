@@ -4,6 +4,17 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, tap, timeout } from 'rxjs';
 import { ConfigService } from './config.service';
 
+export interface ApiKeyStatus {
+  configured: boolean;
+  last3: string | null;
+  created_at: string | null;
+}
+
+export interface ApiKeyGenerateResponse extends ApiKeyStatus {
+  api_key: string;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -120,6 +131,21 @@ export class AuthService {
           }
         })
       );
+  }
+
+  public getApiKeyStatus(): Observable<ApiKeyStatus> {
+    const baseUrl = this.config.apiUrl().trim().replace(/\/+$/, '');
+    return this.http.get<ApiKeyStatus>(`${baseUrl}/auth/api-key`).pipe(timeout(8000));
+  }
+
+  public generateApiKey(): Observable<ApiKeyGenerateResponse> {
+    const baseUrl = this.config.apiUrl().trim().replace(/\/+$/, '');
+    return this.http.post<ApiKeyGenerateResponse>(`${baseUrl}/auth/api-key`, {}).pipe(timeout(8000));
+  }
+
+  public revokeApiKey(): Observable<ApiKeyStatus & { message?: string }> {
+    const baseUrl = this.config.apiUrl().trim().replace(/\/+$/, '');
+    return this.http.delete<ApiKeyStatus & { message?: string }>(`${baseUrl}/auth/api-key`).pipe(timeout(8000));
   }
 
   public logout(): void {

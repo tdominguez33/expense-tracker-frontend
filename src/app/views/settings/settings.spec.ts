@@ -26,7 +26,20 @@ describe('Settings', () => {
       imports: [Settings],
       providers: [
         { provide: ApiService, useValue: mockApiService },
-        { provide: AuthService, useValue: mockAuthService = { changePassword: vi.fn().mockReturnValue(of({ message: 'OK', access_token: 'tok' })) } }
+        {
+          provide: AuthService,
+          useValue: mockAuthService = {
+            changePassword: vi.fn().mockReturnValue(of({ message: 'OK', access_token: 'tok' })),
+            getApiKeyStatus: vi.fn().mockReturnValue(of({ configured: false, last3: null, created_at: null })),
+            generateApiKey: vi.fn().mockReturnValue(of({
+              configured: true,
+              api_key: 'secret-token-for-shortcuts-789',
+              last3: '789',
+              created_at: '2026-11-02T22:00:00Z'
+            })),
+            revokeApiKey: vi.fn().mockReturnValue(of({ configured: false, last3: null, created_at: null }))
+          }
+        }
       ]
     })
     .compileComponents();
@@ -618,6 +631,46 @@ describe('Settings', () => {
       expect(accSpan).toBeTruthy();
       expect(accSpan.classList.contains('min-w-0')).toBe(true);
       expect(accSpan.getAttribute('title')).toBe('Cuenta Corriente Especial En Pesos Con Nombre Extenso');
+    });
+
+    it('should generate, reveal once, and revoke Apple Shortcuts API key', () => {
+      vi.useFakeTimers();
+      try {
+        expect(component.apiKeyInfo().configured).toBe(false);
+        expect(component.newlyGeneratedApiKey()).toBeNull();
+
+        // 1. Generate new API key
+        component.onGenerateApiKey();
+        vi.advanceTimersByTime(600);
+
+        expect(mockAuthService.generateApiKey).toHaveBeenCalled();
+        expect(component.apiKeyInfo()).toEqual({
+          configured: true,
+          last3: '789',
+          created_at: '2026-11-02T22:00:00Z'
+        });
+        expect(component.newlyGeneratedApiKey()).toBe('secret-token-for-shortcuts-789');
+
+        // 2. Dismiss one-time token display; metadata remains active
+        component.dismissNewApiKey();
+        expect(component.newlyGeneratedApiKey()).toBeNull();
+        expect(component.apiKeyInfo().configured).toBe(true);
+        expect(component.apiKeyInfo().last3).toBe('789');
+
+        // 3. Revoke API key
+        component.onRevokeApiKey();
+        vi.advanceTimersByTime(600);
+
+        expect(mockAuthService.revokeApiKey).toHaveBeenCalled();
+        expect(component.apiKeyInfo()).toEqual({
+          configured: false,
+          last3: null,
+          created_at: null
+        });
+        expect(component.newlyGeneratedApiKey()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

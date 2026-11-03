@@ -262,12 +262,14 @@
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Seguridad</div>
-        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Cambiar contraseña</div>
+        <div class="text-xs sm:text-sm font-normal text-base-content/60 break-words">Cambiar contraseña y gestionar token para integraciones</div>
       </div>
     </div>
     <div class="collapse-content pt-2 space-y-4">
-      <div class="p-4 bg-base-200/50 rounded-box border border-base-content/10">
-        <div class="text-sm text-base-content/70 mb-4">
+      <!-- Subsección: Cambiar Contraseña -->
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold px-1 mb-1">Cambiar Contraseña</h3>
+        <div class="text-sm text-base-content/70 mb-4 px-1">
           Al cambiar tu contraseña se cerrarán automáticamente las sesiones abiertas en otros dispositivos.
         </div>
 
@@ -316,6 +318,114 @@
             </div>
           </fieldset>
         </form>
+      </div>
+
+      <div class="divider my-2"></div>
+
+      <!-- Subsección: Token para integraciones -->
+      <div class="w-full">
+        <h3 class="text-base sm:text-lg font-semibold px-1 mb-1 flex items-center gap-2 flex-wrap">
+          <span>Token para integraciones</span>
+          @if (apiKeyInfo().configured) {
+            <span class="badge badge-success text-xs sm:text-sm h-6 px-2.5 font-normal">Activo</span>
+          } @else {
+            <span class="badge badge-ghost text-xs sm:text-sm h-6 px-2.5 font-normal">Sin configurar</span>
+          }
+        </h3>
+        <div class="text-sm text-base-content/70 mb-4 px-1">
+          Permite conectar integraciones externas sin usar tu contraseña.
+        </div>
+
+        @if (apiKeyInfo().configured) {
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mb-4 px-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-base-content/60">Token actual:</span>
+              <code class="font-mono font-semibold bg-base-200 px-2 py-0.5 rounded text-xs sm:text-sm">••••••••••••{{ apiKeyInfo().last3 || '***' }}</code>
+            </div>
+            @if (apiKeyInfo().created_at) {
+              <div class="text-xs text-base-content/60">
+                Creado: <span class="font-medium text-base-content/80">{{ formatApiKeyDate(apiKeyInfo().created_at) }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        @if (newlyGeneratedApiKey(); as fullToken) {
+          <div class="space-y-2 mb-4 w-full">
+            <div class="flex items-center justify-between gap-2 px-1 w-full">
+              <span class="text-xs sm:text-sm text-warning font-medium">
+                Copia este token ahora. No podrás volver a verlo cuando salgas de esta pantalla.
+              </span>
+              <button type="button" class="btn btn-xs btn-ghost shrink-0" (click)="dismissNewApiKey()" title="Ocultar">
+                Ocultar
+              </button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 w-full">
+              <input type="text" readonly [value]="fullToken" class="input input-bordered input-sm sm:input-md font-mono text-xs sm:text-sm flex-1 w-full min-w-0 select-all" />
+              <button type="button" class="btn btn-sm sm:btn-md btn-primary shrink-0" (click)="copyApiKey()">
+                @if (apiKeyCopied()) {
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  ¡Copiado!
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copiar Token
+                }
+              </button>
+            </div>
+          </div>
+        }
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1 w-full">
+          <button type="button"
+                  class="btn btn-primary w-full sm:w-auto"
+                  [class.btn-outline]="apiKeyInfo().configured"
+                  [disabled]="isGeneratingApiKey() || isRevokingApiKey()"
+                  (click)="onGenerateApiKey()">
+            @if (isGeneratingApiKey()) {
+              <span class="loading loading-spinner loading-sm"></span>
+              Generando...
+            } @else if (apiKeyInfo().configured) {
+              Regenerar Token
+            } @else {
+              Generar Token
+            }
+          </button>
+
+          @if (apiKeyInfo().configured) {
+            <button type="button"
+                    class="btn btn-outline btn-error w-full sm:w-auto"
+                    [disabled]="isGeneratingApiKey() || isRevokingApiKey()"
+                    (click)="onRevokeApiKey()">
+              @if (isRevokingApiKey()) {
+                <span class="loading loading-spinner loading-sm"></span>
+                Revocando...
+              } @else {
+                Revocar Token
+              }
+            </button>
+          }
+
+          @if (apiKeySuccessMsg()) {
+            <div class="flex items-center gap-1.5 text-success text-sm font-medium">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{{ apiKeySuccessMsg() }}</span>
+            </div>
+          }
+          @if (apiKeyErrorMsg()) {
+            <div class="flex items-center gap-1.5 text-error text-sm font-medium">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>{{ apiKeyErrorMsg() }}</span>
+            </div>
+          }
+        </div>
       </div>
     </div>
   </div>

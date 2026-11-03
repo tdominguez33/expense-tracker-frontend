@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal, HostListener, DestroyRef } from '@angular/core';
 import { ApiService } from '../../services/api.service';
-import { AuthService } from '../../services/auth.service';
+import { AuthService, ApiKeyStatus } from '../../services/auth.service';
 import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -80,6 +80,17 @@ export class Settings implements OnInit, OnDestroy {
   passwordSuccessMsg = signal<string>('');
   private passwordSuccessTimeout: any = null;
   private passwordErrorTimeout: any = null;
+
+  // Apple Shortcuts API Key State
+  apiKeyInfo = signal<ApiKeyStatus>({ configured: false, last3: null, created_at: null });
+  newlyGeneratedApiKey = signal<string | null>(null);
+  isGeneratingApiKey = signal<boolean>(false);
+  isRevokingApiKey = signal<boolean>(false);
+  apiKeyCopied = signal<boolean>(false);
+  apiKeyErrorMsg = signal<string>('');
+  apiKeySuccessMsg = signal<string>('');
+  private apiKeyCopyTimeout: any = null;
+  private apiKeyMsgTimeout: any = null;
 
   // Color Picker State
   showAllColors = signal(false);
@@ -224,9 +235,12 @@ export class Settings implements OnInit, OnDestroy {
         config: this.api.getConfig().pipe(catchError(() => of({}))),
         cats: this.api.getCategories().pipe(catchError(() => of([]))),
         ents: this.api.getEntities().pipe(catchError(() => of([]))),
-        accs: this.api.getAccounts().pipe(catchError(() => of([])))
+        accs: this.api.getAccounts().pipe(catchError(() => of([]))),
+        apiKey: (this.auth.getApiKeyStatus ? this.auth.getApiKeyStatus() : of({ configured: false, last3: null, created_at: null })).pipe(
+          catchError(() => of({ configured: false, last3: null, created_at: null }))
+        )
       }).subscribe({
-        next: ({ config: c, cats, ents, accs }) => {
+        next: ({ config: c, cats, ents, accs, apiKey }) => {
           let taxStr = '';
           if (c && (c as any).default_tax_percentage !== null && (c as any).default_tax_percentage !== undefined) {
             taxStr = (c as any).default_tax_percentage.toString().replace('.', ',');
@@ -243,6 +257,14 @@ export class Settings implements OnInit, OnDestroy {
           
           this.accounts.set(accs || []);
           this.loadAccounts(accs || []);
+
+          if (apiKey) {
+            this.apiKeyInfo.set({
+              configured: !!apiKey.configured,
+              last3: apiKey.last3 ?? null,
+              created_at: apiKey.created_at ?? null
+            });
+          }
           
           if (!options?.silent) {
             this.isLoading.set(false);
@@ -469,6 +491,14 @@ export class Settings implements OnInit, OnDestroy {
     if (this.passwordErrorTimeout) {
       clearTimeout(this.passwordErrorTimeout);
       this.passwordErrorTimeout = null;
+    }
+    if (this.apiKeyCopyTimeout) {
+      clearTimeout(this.apiKeyCopyTimeout);
+      this.apiKeyCopyTimeout = null;
+    }
+    if (this.apiKeyMsgTimeout) {
+      clearTimeout(this.apiKeyMsgTimeout);
+      this.apiKeyMsgTimeout = null;
     }
   }
 
@@ -1189,6 +1219,131 @@ export class Settings implements OnInit, OnDestroy {
           );
         });
       }
+    });
+  }
+
+  private clearApiKeyMessages() {
+    this.apiKeyErrorMsg.set('');
+    this.apiKeySuccessMsg.set('');
+    if (this.apiKeyMsgTimeout) {
+      clearTimeout(this.apiKeyMsgTimeout);
+      this.apiKeyMsgTimeout = null;
+    }
+  }
+
+  private showApiKeyMessage(type: 'success' | 'error', msg: string) {
+    this.clearApiKeyMessages();
+    if (type === 'success') {
+      this.apiKeySuccessMsg.set(msg);
+    } else {
+      this.apiKeyErrorMsg.set(msg);
+    }
+    this.apiKeyMsgTimeout = setTimeout(() => {
+      this.apiKeyErrorMsg.set('');
+      this.apiKeySuccessMsg.set('');
+    }, 5000);
+  }
+
+  onGenerateApiKey() {
+    this.clearApiKeyMessages();
+    this.isGeneratingApiKey.set(true);
+    const startTime = Date.now();
+
+    this.auth.generateApiKey().subscribe({
+      next: (res) => {
+        this.runWithMinDelay(startTime, () => {
+          this.isGeneratingApiKey.set(false);
+          this.apiKeyInfo.set({
+            configured: true,
+            last3: res.last3 ?? null,
+            created_at: res.created_at ?? null
+          });
+          this.newlyGeneratedApiKey.set(res.api_key);
+          this.apiKeyCopied.set(false);
+          this.showApiKeyMessage('success', 'Nuevo token generado');
+        });
+      },
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => {
+          this.isGeneratingApiKey.set(false);
+          this.showApiKeyMessage('error', err.error?.detail || 'Error al generar el token de acceso.');
+        });
+      }
+    });
+  }
+
+  onRevokeApiKey() {
+    this.clearApiKeyMessages();
+    this.isRevokingApiKey.set(true);
+    const startTime = Date.now();
+
+    this.auth.revokeApiKey().subscribe({
+      next: () => {
+        this.runWithMinDelay(startTime, () => {
+          this.isRevokingApiKey.set(false);
+          this.apiKeyInfo.set({
+            configured: false,
+            last3: null,
+            created_at: null
+          });
+          this.newlyGeneratedApiKey.set(null);
+          this.apiKeyCopied.set(false);
+          this.showApiKeyMessage('success', 'Token revocado');
+        });
+      },
+      error: (err) => {
+        this.runWithMinDelay(startTime, () => {
+          this.isRevokingApiKey.set(false);
+          this.showApiKeyMessage('error', err.error?.detail || 'Error al revocar el token de acceso.');
+        });
+      }
+    });
+  }
+
+  async copyApiKey() {
+    const token = this.newlyGeneratedApiKey();
+    if (!token) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(token);
+      } else if (typeof document !== 'undefined') {
+        const textarea = document.createElement('textarea');
+        textarea.value = token;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      this.apiKeyCopied.set(true);
+      if (this.apiKeyCopyTimeout) {
+        clearTimeout(this.apiKeyCopyTimeout);
+      }
+      this.apiKeyCopyTimeout = setTimeout(() => {
+        this.apiKeyCopied.set(false);
+      }, 2500);
+    } catch (e) {
+      console.error('No se pudo copiar el token al portapapeles', e);
+    }
+  }
+
+  dismissNewApiKey() {
+    this.newlyGeneratedApiKey.set(null);
+    this.apiKeyCopied.set(false);
+  }
+
+  formatApiKeyDate(isoDate: string | null | undefined): string {
+    if (!isoDate) return '-';
+    const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return isoDate;
+    return d.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
     });
   }
 }
