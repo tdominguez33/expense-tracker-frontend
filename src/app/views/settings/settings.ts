@@ -1,9 +1,9 @@
-import { Component, inject, OnInit, OnDestroy, signal, HostListener, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, HostListener, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { AuthService, ApiKeyStatus } from '../../services/auth.service';
 import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { CATEGORY_COLORS } from '../../constants/colors';
@@ -13,7 +13,8 @@ import { debouncedLoading } from '../../utils/loading';
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule],
+  imports: [ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings.html',
   styleUrl: './settings.css'
 })
@@ -228,6 +229,8 @@ export class Settings implements OnInit, OnDestroy {
   loadData(options?: { silent?: boolean }): Promise<void> {
     if (!options?.silent) {
       this.isLoading.set(true);
+    } else {
+      this.api.invalidateCache?.('config', 'categories', 'entities', 'accounts');
     }
 
     return new Promise((resolve) => {

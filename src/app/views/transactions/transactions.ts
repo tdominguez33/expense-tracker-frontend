@@ -1,8 +1,8 @@
-import { Component, inject, OnInit, OnDestroy, AfterViewInit, signal, computed, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, AfterViewInit, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { RefreshService } from '../../services/refresh.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { CommonModule, DatePipe } from '@angular/common';
+import { DecimalPipe, DatePipe } from '@angular/common';
 import { Subject, forkJoin, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, catchError } from 'rxjs/operators';
 import { getContrastColor } from '../../utils/color';
@@ -13,10 +13,11 @@ export const SPINNER_DELAY_MS = 300;
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [ReactiveFormsModule, FormsModule, CommonModule],
+  imports: [ReactiveFormsModule, FormsModule, DecimalPipe, DatePipe],
   providers: [DatePipe],
   templateUrl: './transactions.html',
-  styleUrl: './transactions.css'
+  styleUrl: './transactions.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   protected readonly Math = Math;
@@ -24,14 +25,38 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   private fb = inject(FormBuilder);
   private refreshService = inject(RefreshService);
   private destroyRef = inject(DestroyRef);
-  
+
   transactions = signal<any[]>([]);
   accounts = signal<any[]>([]);
   categories = signal<any[]>([]);
   entities = signal<any[]>([]);
-  
+
+  private accountMap = computed(() => {
+    const map = new Map<number, any>();
+    for (const a of this.accounts()) {
+      map.set(Number(a.id), a);
+    }
+    return map;
+  });
+
+  private entityMap = computed(() => {
+    const map = new Map<number, string>();
+    for (const e of this.entities()) {
+      map.set(Number(e.id), e.name);
+    }
+    return map;
+  });
+
+  private categoryMap = computed(() => {
+    const map = new Map<number, { name: string; color: string }>();
+    for (const c of this.categories()) {
+      map.set(Number(c.id), c);
+    }
+    return map;
+  });
+
   generalReport = signal<any>(null);
-  
+
   // Pagination & Filtering state
   currentPage = signal<number>(1);
   pageSize = signal<number>(DEFAULT_PAGE_SIZE);
@@ -39,7 +64,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   totalPages = signal<number>(1);
   searchTerm = signal<string>('');
   selectedFilterCategory = signal<number | 'all'>('all');
-  
+
   // Floating scroll-to-top button state
   showScrollTop = signal<boolean>(false);
   private scrollContainer: HTMLElement | null = null;
@@ -47,12 +72,12 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
 
   isMobile = signal<boolean>(false);
   private onResizeHandler = () => this.checkIsMobile();
-  
+
   private searchSubject = new Subject<string>();
 
-  groupedTransactions = computed<{ date: string, total: number, items: any[] }[]>(() => {
+  groupedTransactions = computed<{ date: string; total: number; items: any[] }[]>(() => {
     const txs = this.transactions();
-    
+
     // Create an object to group by date
     const groupedObj = txs.reduce((acc, tx) => {
       const date = tx.transaction_date;
@@ -65,15 +90,15 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
         : Number(tx.total_amount);
       acc[date].total += effectiveAmount;
       return acc;
-    }, {} as Record<string, { date: string, total: number, items: any[] }>);
-    
+    }, {} as Record<string, { date: string; total: number; items: any[] }>);
+
     // Convert back to array, sorting by date descending
-    const result = Object.values(groupedObj) as { date: string, total: number, items: any[] }[];
-    result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
+    const result = Object.values(groupedObj) as { date: string; total: number; items: any[] }[];
+    result.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
     return result;
   });
-  
+
   isLoading = signal<boolean>(false);
   showSpinner = signal<boolean>(false);
   hasLoadedOnce = signal<boolean>(false);
@@ -81,13 +106,13 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   isSubmitting = signal<boolean>(false);
   errorMsg = signal<string>('');
   formError = signal<string>('');
-  
+
   txForm: FormGroup;
   showInstallments = signal<boolean>(false);
 
   constructor() {
     const today = new Date().toISOString().split('T')[0];
-    
+
     this.txForm = this.fb.group({
       total_amount: ['', [Validators.required]],
       real_amount: [''],
@@ -100,7 +125,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.txForm.get('account_id')?.valueChanges.subscribe(val => {
-      const acc = this.accounts().find(a => a.id == val);
+      const acc = this.accountMap().get(Number(val));
       if (acc && acc.account_type === 'CREDIT_CARD') {
         this.showInstallments.set(true);
       } else {
@@ -141,8 +166,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.loadTransactions();
-    this.loadGeneralReport();
-    
+
     // Load dropdown data
     this.api.getConfig().subscribe(c => {
       this.defaultAccountId.set(c.default_account_id);
@@ -154,26 +178,26 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
 
     this.txForm.get('total_amount')?.valueChanges.subscribe(val => {
       if (val === null || val === '') return;
-      
+
       const strVal = val.toString();
       let clean = strVal.replace(/[^0-9,]/g, '');
-      
+
       const parts = clean.split(',');
       if (parts.length > 2) {
         clean = parts[0] + ',' + parts.slice(1).join('');
       }
-      
+
       if (parts.length >= 2 && parts[1].length > 2) {
         clean = parts[0] + ',' + parts[1].substring(0, 2);
       }
-      
+
       const newParts = clean.split(',');
       if (newParts[0]) {
         newParts[0] = newParts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       }
-      
+
       const formatted = newParts.join(',');
-      
+
       if (strVal !== formatted) {
         this.txForm.get('total_amount')?.setValue(formatted, { emitEvent: false });
       }
@@ -181,26 +205,26 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
 
     this.txForm.get('real_amount')?.valueChanges.subscribe(val => {
       if (val === null || val === '') return;
-      
+
       const strVal = val.toString();
       let clean = strVal.replace(/[^0-9,]/g, '');
-      
+
       const parts = clean.split(',');
       if (parts.length > 2) {
         clean = parts[0] + ',' + parts.slice(1).join('');
       }
-      
+
       if (parts.length >= 2 && parts[1].length > 2) {
         clean = parts[0] + ',' + parts[1].substring(0, 2);
       }
-      
+
       const newParts = clean.split(',');
       if (newParts[0]) {
         newParts[0] = newParts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
       }
-      
+
       const formatted = newParts.join(',');
-      
+
       if (strVal !== formatted) {
         this.txForm.get('real_amount')?.setValue(formatted, { emitEvent: false });
       }
@@ -211,14 +235,14 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     this.txForm.get('transaction_time')?.valueChanges.subscribe(val => {
       if (!val || this.isMobile()) return;
       let clean = val.replace(/[^0-9:]/g, '');
-      
+
       if (clean.length === 2 && val.length === 2 && !clean.includes(':')) {
         clean += ':';
       }
       if (clean.length > 5) {
         clean = clean.substring(0, 5);
       }
-      
+
       if (val !== clean) {
         this.txForm.get('transaction_time')?.setValue(clean, { emitEvent: false });
       }
@@ -234,7 +258,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   loadGeneralReport() {
     this.api.getGeneralReport().subscribe({
       next: (report) => this.generalReport.set(report),
-      error: (err) => console.error("Error loading general report:", err)
+      error: (err) => console.error('Error loading general report:', err)
     });
   }
 
@@ -276,7 +300,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   scrollToTop(duration: number = 200) {
     const startMain = this.scrollContainer ? this.scrollContainer.scrollTop : 0;
     const startWindow = (typeof window !== 'undefined') ? (window.scrollY || document.documentElement.scrollTop || 0) : 0;
-    
+
     if (startMain <= 0 && startWindow <= 0) return;
 
     if (duration <= 0 || typeof requestAnimationFrame === 'undefined') {
@@ -370,13 +394,8 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async reloadAllSilent(): Promise<void> {
+    this.api.invalidateCache?.('accounts', 'entities', 'categories');
     const txPromise = this.loadTransactions(true);
-    const reportPromise = new Promise<void>((resolve) => {
-      this.api.getGeneralReport().subscribe({
-        next: (r) => { this.generalReport.set(r); resolve(); },
-        error: () => resolve()
-      });
-    });
     const metaPromise = new Promise<void>((resolve) => {
       forkJoin({
         accs: this.api.getAccounts().pipe(catchError(() => of([]))),
@@ -392,7 +411,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
         error: () => resolve()
       });
     });
-    await Promise.all([txPromise, reportPromise, metaPromise]);
+    await Promise.all([txPromise, metaPromise]);
   }
 
   onSearchChange(term: string) {
@@ -434,21 +453,18 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   openModal(tx?: any) {
     this.checkIsMobile();
     this.formError.set('');
-    
+
     if (tx) {
       this.editingTxId.set(tx.id);
-      
+
       // Convert float back to string with comma for the mask
-      let formattedAmount = tx.total_amount.toString().replace('.', ',');
-      if (formattedAmount.indexOf(',') === -1 && tx.total_amount % 1 !== 0) {
-          // just in case
-      }
-      
+      const formattedAmount = tx.total_amount.toString().replace('.', ',');
+
       let formattedRealAmount = '';
       if (tx.real_amount !== null && tx.real_amount !== undefined) {
         formattedRealAmount = tx.real_amount.toString().replace('.', ',');
       }
-      
+
       this.txForm.patchValue({
         total_amount: formattedAmount,
         real_amount: formattedRealAmount,
@@ -460,13 +476,13 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
         transaction_time: tx.transaction_time ? tx.transaction_time.substring(0, 5) : ''
       });
 
-      const acc = this.accounts().find(a => a.id == tx.account_id);
+      const acc = this.accountMap().get(Number(tx.account_id));
       this.showInstallments.set(acc?.account_type === 'CREDIT_CARD');
     } else {
       this.editingTxId.set(null);
       const tz = this.appTimezone();
       const today = new Date().toLocaleDateString('en-CA', { timeZone: tz });
-      
+
       this.txForm.reset({
         total_amount: '',
         real_amount: '',
@@ -478,10 +494,10 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
         transaction_time: ''
       });
     }
-    
+
     const modal = document.getElementById('tx_modal') as HTMLDialogElement;
     modal.showModal();
-    
+
     // Prevent the mobile keyboard from automatically opening when creating or editing
     if (this.isMobile()) {
       setTimeout(() => {
@@ -495,7 +511,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   closeModal() {
     (document.getElementById('tx_modal') as HTMLDialogElement).close();
   }
-  
+
   closeConfirmModal() {
     (document.getElementById('confirm_modal') as HTMLDialogElement).close();
   }
@@ -503,26 +519,23 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   getSelectedAccountDisplay(): string {
     const val = this.txForm?.get('account_id')?.value;
     if (!val) return 'Selecciona una cuenta';
-    const acc = this.accounts().find(a => a.id == val);
+    const acc = this.accountMap().get(Number(val));
     if (!acc) return 'Selecciona una cuenta';
     return `${this.getEntityName(acc.entity_id)} - ${acc.name}`;
   }
 
   getEntityName(entityId: number): string {
-    const ent = this.entities().find(e => e.id === entityId);
-    return ent ? ent.name : 'Desconocido';
+    return this.entityMap().get(Number(entityId)) ?? 'Desconocido';
   }
 
   getCategoryName(catId: number): string {
-    const cat = this.categories().find(c => c.id === catId);
-    return cat ? cat.name : 'Sin categoría';
+    return this.categoryMap().get(Number(catId))?.name ?? 'Sin categoría';
   }
-  
+
   getCategoryColor(catId: number): string {
-    const cat = this.categories().find(c => c.id === catId);
-    return cat ? cat.color : '#e5e7eb';
+    return this.categoryMap().get(Number(catId))?.color ?? '#e5e7eb';
   }
-  
+
   getTextColorForBackground(hexColor: string): string {
     return getContrastColor(hexColor);
   }
@@ -541,10 +554,10 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
       this.formError.set('Por favor, completa los campos requeridos correctamente.');
       return;
     }
-    
+
     this.isSubmitting.set(true);
     this.formError.set('');
-    
+
     const payload = { ...this.txForm.value };
     if (!payload.description) delete payload.description;
 
@@ -552,18 +565,18 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     if (isNaN(payload.installments_count) || payload.installments_count < 1) {
       payload.installments_count = 1;
     }
-    
+
     // Parse formatted string back to float
     const rawAmount = payload.total_amount.toString();
     payload.total_amount = parseFloat(rawAmount.replace(/\./g, '').replace(',', '.'));
-    
+
     if (payload.real_amount !== null && payload.real_amount !== undefined && payload.real_amount !== '') {
       const rawRealAmount = payload.real_amount.toString();
       payload.real_amount = parseFloat(rawRealAmount.replace(/\./g, '').replace(',', '.'));
     } else {
       payload.real_amount = null;
     }
-    
+
     if (payload.transaction_time) {
       const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
       if (!timeRegex.test(payload.transaction_time)) {
@@ -575,12 +588,12 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
     } else {
       delete payload.transaction_time;
     }
-    
+
     const isEdit = !!this.editingTxId();
     const obs = isEdit
       ? this.api.updateTransaction(this.editingTxId()!, payload)
       : this.api.createTransaction(payload);
-      
+
     obs.subscribe({
       next: () => {
         this.isSubmitting.set(false);
@@ -589,7 +602,6 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
           this.currentPage.set(1);
         }
         this.loadTransactions(true);
-        this.loadGeneralReport();
       },
       error: (err) => {
         console.error(err);
@@ -616,7 +628,7 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
   executeDelete() {
     const target = this.deleteTarget();
     if (!target) return;
-    
+
     this.isSubmitting.set(true);
     this.api.deleteTransaction(target.id).subscribe({
       next: () => {
@@ -626,7 +638,6 @@ export class Transactions implements OnInit, AfterViewInit, OnDestroy {
           this.currentPage.update(p => p - 1);
         }
         this.loadTransactions(true);
-        this.loadGeneralReport();
         this.deleteTarget.set(null);
       },
       error: (err) => {

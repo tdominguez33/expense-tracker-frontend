@@ -1,5 +1,5 @@
 import { Component, input, output, signal, computed, HostListener, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe, NgClass } from '@angular/common';
 import { CategoryDoughnut, CategoryBreakdownItem } from '../category-doughnut/category-doughnut';
 
 export interface TimelineBarItem {
@@ -24,7 +24,7 @@ export interface TimelineActiveCountInfo {
 @Component({
   selector: 'app-period-charts',
   standalone: true,
-  imports: [CommonModule, CategoryDoughnut],
+  imports: [DecimalPipe, NgClass, CategoryDoughnut],
   templateUrl: './period-charts.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`

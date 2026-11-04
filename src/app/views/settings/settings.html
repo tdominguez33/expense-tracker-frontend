@@ -5,7 +5,7 @@
   </div>
   <!-- Preferencias Generales -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
-    <input type="checkbox" checked="checked" /> 
+    <input id="collapse-prefs" name="collapse_prefs" aria-label="Preferencias Generales" type="checkbox" checked="checked" /> 
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Preferencias Generales</div>
@@ -17,8 +17,8 @@
         <form [formGroup]="configForm" (ngSubmit)="saveConfig()" class="space-y-4 max-w-full sm:max-w-md mt-4 min-w-0">
         
         <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Cuenta Predeterminada para Gastos</span></label>
-          <select class="select select-bordered w-full min-w-0 max-w-full truncate text-sm sm:text-base" formControlName="default_account_id">
+          <label class="label" for="cfg-default-account"><span class="label-text font-medium">Cuenta Predeterminada para Gastos</span></label>
+          <select id="cfg-default-account" name="default_account_id" class="select select-bordered w-full min-w-0 max-w-full truncate text-sm sm:text-base" formControlName="default_account_id">
             <option [ngValue]="null">-- Ninguna --</option>
             @for (ent of entities(); track ent.id) {
               <optgroup [label]="ent.name">
@@ -28,29 +28,29 @@
               </optgroup>
             }
           </select>
-          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se seleccionará automáticamente al crear un nuevo gasto.</span></label>
+          <div class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se seleccionará automáticamente al crear un nuevo gasto.</span></div>
         </div>
 
         <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Impuesto Predeterminado para Resúmenes (%)</span></label>
+          <label class="label" for="cfg-default-tax"><span class="label-text font-medium">Impuesto Predeterminado para Resúmenes (%)</span></label>
           
           <div class="join w-full min-w-0 max-w-full">
-            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(-0.1)">-</button>
-            <input type="text" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="default_tax_percentage" />
-            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxConfig(0.1)">+</button>
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" [disabled]="isLoading()" (click)="stepTaxConfig(-0.1)">-</button>
+            <input id="cfg-default-tax" name="default_tax_percentage" type="text" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="default_tax_percentage" />
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" [disabled]="isLoading()" (click)="stepTaxConfig(0.1)">+</button>
           </div>
           
-          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se aplicará automáticamente a los nuevos resúmenes (ej. Sellos).</span></label>
+          <div class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Se aplicará automáticamente a los nuevos resúmenes (ej. Sellos).</span></div>
         </div>
         
         <div class="form-control w-full min-w-0">
-          <label class="label"><span class="label-text font-medium">Días de gracia para cierre de resumen</span></label>
+          <label class="label" for="cfg-grace-days"><span class="label-text font-medium">Días de gracia para cierre de resumen</span></label>
           <div class="join w-full min-w-0 max-w-full">
-            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(-1)">-</button>
-            <input type="text" inputmode="numeric" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="statement_grace_days" />
-            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepGraceDays(1)">+</button>
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" [disabled]="isLoading()" (click)="stepGraceDays(-1)">-</button>
+            <input id="cfg-grace-days" name="statement_grace_days" type="text" inputmode="numeric" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" formControlName="statement_grace_days" />
+            <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" [disabled]="isLoading()" (click)="stepGraceDays(1)">+</button>
           </div>
-          <label class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Días antes del cierre en los que un gasto puede ser movido al mes siguiente.</span></label>
+          <div class="label"><span class="label-text-alt text-base-content/60 break-words whitespace-normal">Días antes del cierre en los que un gasto puede ser movido al mes siguiente.</span></div>
         </div>
         
         <div class="pt-2">
@@ -69,7 +69,7 @@
 
   <!-- Categories Section -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
-    <input type="checkbox" checked="checked" /> 
+    <input id="collapse-categories" name="collapse_categories" aria-label="Categorías" type="checkbox" checked="checked" /> 
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Categorías</div>
@@ -135,7 +135,7 @@
 
   <!-- Accounts and Entities Section -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
-    <input type="checkbox" checked="checked" /> 
+    <input id="collapse-accounts" name="collapse_accounts" aria-label="Cuentas y Entidades" type="checkbox" checked="checked" /> 
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Cuentas y Entidades</div>
@@ -258,7 +258,7 @@
 
   <!-- Seguridad Section -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
-    <input type="checkbox" /> 
+    <input id="collapse-security" name="collapse_security" aria-label="Seguridad" type="checkbox" /> 
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Seguridad</div>
@@ -276,18 +276,18 @@
         <form [formGroup]="passwordForm" (ngSubmit)="onSubmitPasswordChange()" class="max-w-full sm:max-w-md">
           <fieldset [disabled]="isChangingPassword()" class="space-y-3">
             <div class="form-control">
-              <label class="label py-1"><span class="label-text text-sm font-medium">Contraseña Actual</span></label>
-              <input type="password" formControlName="current_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Ingresa tu contraseña actual" />
+              <label class="label py-1" for="pwd-current"><span class="label-text text-sm font-medium">Contraseña Actual</span></label>
+              <input id="pwd-current" name="current_password" type="password" formControlName="current_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Ingresa tu contraseña actual" />
             </div>
 
             <div class="form-control">
-              <label class="label py-1"><span class="label-text text-sm font-medium">Nueva Contraseña</span></label>
-              <input type="password" formControlName="new_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Mínimo 6 caracteres" />
+              <label class="label py-1" for="pwd-new"><span class="label-text text-sm font-medium">Nueva Contraseña</span></label>
+              <input id="pwd-new" name="new_password" type="password" formControlName="new_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Mínimo 6 caracteres" />
             </div>
 
             <div class="form-control">
-              <label class="label py-1"><span class="label-text text-sm font-medium">Confirmar Nueva Contraseña</span></label>
-              <input type="password" formControlName="confirm_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Repite la nueva contraseña" />
+              <label class="label py-1" for="pwd-confirm"><span class="label-text text-sm font-medium">Confirmar Nueva Contraseña</span></label>
+              <input id="pwd-confirm" name="confirm_password" type="password" formControlName="confirm_password" class="input input-bordered input-sm sm:input-md w-full" placeholder="Repite la nueva contraseña" />
             </div>
 
             <div class="pt-1 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -361,7 +361,7 @@
               </button>
             </div>
             <div class="flex flex-col sm:flex-row gap-2 w-full">
-              <input type="text" readonly [value]="fullToken" class="input input-bordered input-sm sm:input-md font-mono text-xs sm:text-sm flex-1 w-full min-w-0 select-all" />
+              <input id="newly-generated-api-key" name="newly_generated_api_key" aria-label="Token generado" type="text" readonly [value]="fullToken" class="input input-bordered input-sm sm:input-md font-mono text-xs sm:text-sm flex-1 w-full min-w-0 select-all" />
               <button type="button" class="btn btn-sm sm:btn-md btn-primary shrink-0" (click)="copyApiKey()">
                 @if (apiKeyCopied()) {
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -432,7 +432,7 @@
 
   <!-- Opciones avanzadas -->
   <div class="collapse collapse-plus bg-base-100 border border-base-content/20 shadow-sm min-w-0 max-w-full overflow-hidden">
-    <input type="checkbox" /> 
+    <input id="collapse-advanced" name="collapse_advanced" aria-label="Opciones avanzadas" type="checkbox" /> 
     <div class="collapse-title text-lg sm:text-xl font-medium flex items-center pr-12 min-w-0">
       <div class="min-w-0 flex-1">
         <div class="font-bold truncate">Opciones avanzadas</div>
@@ -442,9 +442,9 @@
     <div class="collapse-content pt-2 space-y-4">
       
       <div>
-        <label class="label"><span class="label-text font-medium">Zona Horaria Global</span></label>
+        <label class="label" for="cfg-timezone"><span class="label-text font-medium">Zona Horaria Global</span></label>
         <div class="flex flex-col sm:flex-row gap-3">
-          <select [formControl]="timezoneControl" class="select select-bordered w-full sm:max-w-xs">
+          <select id="cfg-timezone" name="timezone" [formControl]="timezoneControl" class="select select-bordered w-full sm:max-w-xs">
             <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires</option>
             <option value="America/Montevideo">America/Montevideo</option>
             <option value="America/Santiago">America/Santiago</option>
@@ -460,13 +460,13 @@
             Guardar Zona
           </button>
         </div>
-        <label class="label"><span class="label-text-alt text-base-content/60">Afecta las fechas de tus nuevos gastos.</span></label>
+        <div class="label"><span class="label-text-alt text-base-content/60">Afecta las fechas de tus nuevos gastos.</span></div>
       </div>
 
       <div class="divider my-2"></div>
 
       <div>
-        <label class="label"><span class="label-text font-medium">Copia de Seguridad y Restauración</span></label>
+        <div class="label"><span class="label-text font-medium">Copia de Seguridad y Restauración</span></div>
         
         <!-- Descargar -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-base-200/50 rounded-box border border-base-content/10 mb-3">
@@ -521,14 +521,14 @@
     <h3 class="font-bold text-xl mb-4">{{ editingCatId() ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
     <form [formGroup]="catForm" (ngSubmit)="onSubmitCat()" class="space-y-4">
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="cat-name">
           <span class="label-text font-medium">Nombre</span>
           <span class="label-text-alt text-base-content/60">{{ (catForm.get('name')?.value || '').length }}/15</span>
         </label>
-        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
+        <input id="cat-name" name="cat_name" type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Color</span></label>
+        <div class="label"><span class="label-text font-medium">Color</span></div>
         
         <div class="grid grid-cols-5 sm:grid-cols-10 gap-2 mb-2">
           @for (c of (showAllColors() ? pastelColors : pastelColors.slice(0, 10)); track c) {
@@ -580,11 +580,11 @@
     <h3 class="font-bold text-xl mb-4">{{ editingEntId() ? 'Editar Entidad / Banco' : 'Nueva Entidad / Banco' }}</h3>
     <form [formGroup]="entForm" (ngSubmit)="onSubmitEnt()" class="space-y-4">
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="ent-name">
           <span class="label-text font-medium">Nombre</span>
           <span class="label-text-alt text-base-content/60">{{ (entForm.get('name')?.value || '').length }}/15</span>
         </label>
-        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
+        <input id="ent-name" name="ent_name" type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" />
       </div>
       
       @if (errorMsg()) { <div class="alert alert-error mt-2 py-2"><span>{{ errorMsg() }}</span></div> }
@@ -609,8 +609,8 @@
     <h3 class="font-bold text-xl mb-4">{{ editingAccId() ? 'Editar Cuenta' : 'Nueva Cuenta' }}</h3>
     <form [formGroup]="accForm" (ngSubmit)="onSubmitAcc()" class="space-y-4">
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Entidad / Banco</span></label>
-        <select formControlName="entity_id" class="select select-bordered w-full">
+        <label class="label" for="acc-entity-id"><span class="label-text font-medium">Entidad / Banco</span></label>
+        <select id="acc-entity-id" name="entity_id" formControlName="entity_id" class="select select-bordered w-full">
           <option value="" disabled selected>Selecciona una entidad</option>
           @for (ent of entities(); track ent.id) {
             <option [value]="ent.id">{{ ent.name }}</option>
@@ -619,33 +619,33 @@
       </div>
       
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Tipo de Cuenta</span></label>
-        <select formControlName="account_type" class="select select-bordered w-full">
+        <label class="label" for="acc-account-type"><span class="label-text font-medium">Tipo de Cuenta</span></label>
+        <select id="acc-account-type" name="account_type" formControlName="account_type" class="select select-bordered w-full">
           <option value="DEBIT">Débito</option>
           <option value="CREDIT_CARD">Tarjeta de Crédito</option>
         </select>
       </div>
       
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="acc-name">
           <span class="label-text font-medium">Nombre</span>
           <span class="label-text-alt text-base-content/60">{{ (accForm.get('name')?.value || '').length }}/15</span>
         </label>
-        <input type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" placeholder="Ej: Visa Signature" />
+        <input id="acc-name" name="acc_name" type="text" formControlName="name" maxlength="15" class="input input-bordered w-full" placeholder="Ej: Visa Signature" />
       </div>
       
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="acc-wallet-alias">
           <span class="label-text font-medium">Alias de Apple Wallet (Opcional)</span>
           <span class="label-text-alt text-base-content/60">Para automatizaciones</span>
         </label>
-        <input type="text" formControlName="apple_wallet_alias" maxlength="100" class="input input-bordered w-full" />
+        <input id="acc-wallet-alias" name="apple_wallet_alias" type="text" formControlName="apple_wallet_alias" maxlength="100" class="input input-bordered w-full" />
       </div>
       
       @if (accForm.get('account_type')?.value === 'CREDIT_CARD') {
         <div class="form-control animate-fade-in">
-          <label class="label"><span class="label-text font-medium">Límite Disponible ($)</span></label>
-          <input type="text" formControlName="available_limit" class="input input-bordered w-full" placeholder="0,00" />
+          <label class="label" for="acc-available-limit"><span class="label-text font-medium">Límite Disponible ($)</span></label>
+          <input id="acc-available-limit" name="available_limit" type="text" formControlName="available_limit" class="input input-bordered w-full" placeholder="0,00" />
         </div>
       }
       
@@ -711,8 +711,10 @@
     </div>
 
     <div class="form-control mb-4">
-      <label class="label"><span class="label-text font-medium">Seleccionar archivo SQLite (.sqlite, .db, .sqlite3)</span></label>
-      <input type="file" 
+      <label class="label" for="import-db-file"><span class="label-text font-medium">Seleccionar archivo SQLite (.sqlite, .db, .sqlite3)</span></label>
+      <input id="import-db-file"
+             name="import_db_file"
+             type="file" 
              accept=".sqlite,.db,.sqlite3" 
              (change)="onImportFileSelected($event)" 
              class="file-input file-input-bordered w-full" 

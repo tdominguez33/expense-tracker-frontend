@@ -1,7 +1,6 @@
-import { Component, signal, OnInit, OnDestroy, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal, OnInit, OnDestroy, Input, ChangeDetectionStrategy } from '@angular/core';
 import { isTauri } from '@tauri-apps/api/core';
-import { getCurrentWindow, Window as TauriWindow } from '@tauri-apps/api/window';
+import type { Window as TauriWindow } from '@tauri-apps/api/window';
 
 export function isDesktopApp(): boolean {
   if (typeof window === 'undefined') return false;
@@ -18,11 +17,19 @@ export function isDesktopApp(): boolean {
 @Component({
   selector: 'app-titlebar',
   standalone: true,
-  imports: [CommonModule],
-  templateUrl: './titlebar.html'
+  imports: [],
+  templateUrl: './titlebar.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TitlebarComponent implements OnInit, OnDestroy {
-  @Input() forceShow = false;
+  private _forceShow = signal<boolean>(false);
+  @Input()
+  get forceShow(): boolean {
+    return this._forceShow();
+  }
+  set forceShow(val: boolean) {
+    this._forceShow.set(val);
+  }
 
   isDesktop = signal<boolean>(isDesktopApp());
   isMaximized = signal<boolean>(false);
@@ -45,6 +52,7 @@ export class TitlebarComponent implements OnInit, OnDestroy {
 
       if (typeof window !== 'undefined' && isDesktopApp()) {
         try {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
           this.appWindow = getCurrentWindow();
           const max = await this.appWindow.isMaximized();
           this.isMaximized.set(max);

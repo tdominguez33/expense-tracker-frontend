@@ -538,7 +538,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (tx of getViewingDetails(); track tx.id) {
+          @for (tx of getViewingDetails(); track tx.installment_id ?? tx.id) {
             <tr class="hover">
               <td>
                 <div class="font-medium">{{ tx.description || 'Sin descripción' }}</div>
@@ -632,7 +632,7 @@
         </div>
       } @else {
         <div class="bg-base-100 rounded-box border border-base-content/20 shadow-sm divide-y divide-base-content/10 overflow-hidden">
-          @for (tx of getViewingDetails(); track tx.id) {
+          @for (tx of getViewingDetails(); track tx.installment_id ?? tx.id) {
             <div class="p-3.5 space-y-2">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
@@ -709,30 +709,30 @@
     <form [formGroup]="stForm" (ngSubmit)="onSubmit()" class="space-y-4">
       @if (filteredStatements().length > 0 && !editingStId()) {
         <div class="form-control">
-          <label class="label"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></label>
+          <div class="label"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></div>
           <div class="input input-bordered w-full bg-base-200 flex items-center text-base-content/70 cursor-not-allowed">
             {{ stForm.get('start_date')?.value }} (Automático)
           </div>
         </div>
       } @else {
         <div class="form-control">
-          <label class="label"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></label>
-          <input type="date" formControlName="start_date" class="input input-bordered w-full" />
+          <label class="label" for="st-start-date"><span class="label-text font-medium">Fecha de Inicio del Periodo</span></label>
+          <input id="st-start-date" name="start_date" type="date" formControlName="start_date" class="input input-bordered w-full" />
         </div>
       }
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Fecha de Cierre</span></label>
-        <input type="date" formControlName="closing_date" class="input input-bordered w-full" />
+        <label class="label" for="st-closing-date"><span class="label-text font-medium">Fecha de Cierre</span></label>
+        <input id="st-closing-date" name="closing_date" type="date" formControlName="closing_date" class="input input-bordered w-full" />
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Fecha de Vencimiento</span></label>
-        <input type="date" formControlName="due_date" class="input input-bordered w-full" />
+        <label class="label" for="st-due-date"><span class="label-text font-medium">Fecha de Vencimiento</span></label>
+        <input id="st-due-date" name="due_date" type="date" formControlName="due_date" class="input input-bordered w-full" />
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-medium">Impuestos (%)</span></label>
+        <label class="label" for="st-tax-percentage"><span class="label-text font-medium">Impuestos (%)</span></label>
         <div class="join w-full">
           <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxStatement(-0.1)">-</button>
-          <input type="text" formControlName="tax_percentage" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
+          <input id="st-tax-percentage" name="tax_percentage" type="text" formControlName="tax_percentage" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
           <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepTaxStatement(0.1)">+</button>
         </div>
       </div>
@@ -788,10 +788,12 @@
     </h3>
     
     <div class="form-control">
-      <label class="label">
+      <label class="label" for="st-comment">
         <span class="label-text font-medium">Comentario del Resumen</span>
       </label>
       <textarea 
+        id="st-comment"
+        name="statement_comment"
         [formControl]="commentControl" 
         maxlength="500"
         class="textarea textarea-bordered w-full h-28 text-base" 

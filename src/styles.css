@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Doppio+One&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+/* Google Fonts (Inter) loaded via <link rel="preconnect"> in index.html */
 
 @tailwind base;
 @tailwind components;
@@ -296,6 +296,30 @@ app-login {
 
 ::view-transition-new(root) {
   z-index: 2;
+}
+
+/* Fix .join stepper border overlap (prevent double-opacity border on '+' button)
+   and unify disabled state across lateral buttons and central input */
+.join > .btn-outline.join-item:not(:hover):not(:active):not(:disabled):not([disabled]) {
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+}
+
+.join > .btn-outline.join-item:hover,
+.join > .btn-outline.join-item:active {
+  z-index: 1;
+}
+
+.join > .input.join-item:focus,
+.join > .input.join-item:focus-within {
+  z-index: 2;
+}
+
+.join > .btn.join-item:disabled,
+.join > .btn.join-item[disabled],
+fieldset:disabled .join > .btn.join-item {
+  background-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-color: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 0.4)) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

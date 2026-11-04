@@ -1,18 +1,20 @@
-import { Component, inject, OnInit, signal, computed, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { RefreshService } from '../../services/refresh.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CommonModule, Location } from '@angular/common';
+import { DecimalPipe, DatePipe, Location } from '@angular/common';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { debouncedLoading } from '../../utils/loading';
+import { getContrastColor } from '../../utils/color';
 
 @Component({
   selector: 'app-statements',
   standalone: true,
-  imports: [ReactiveFormsModule, CommonModule],
-  templateUrl: './statements.html'
+  imports: [ReactiveFormsModule, DecimalPipe, DatePipe],
+  templateUrl: './statements.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Statements implements OnInit {
   private api = inject(ApiService);
@@ -31,14 +33,41 @@ export class Statements implements OnInit {
   categories = signal<any[]>([]);
   appTimezone = signal<string>('America/Argentina/Buenos_Aires');
   graceDays = signal<number>(10);
-  
+
+  private entityMap = computed(() => {
+    const map = new Map<number, string>();
+    for (const e of this.entities()) {
+      map.set(Number(e.id), e.name);
+    }
+    return map;
+  });
+
+  private categoryMap = computed(() => {
+    const map = new Map<number, { name: string; color: string }>();
+    for (const c of this.categories()) {
+      map.set(Number(c.id), c);
+    }
+    return map;
+  });
+
+  private todayInTimezone = computed(() => {
+    const tz = this.appTimezone();
+    try {
+      return new Date().toLocaleDateString('en-CA', { timeZone: tz });
+    } catch {
+      return new Date().toISOString().split('T')[0];
+    }
+  });
+
+  private statementPeriodCache = new Map<string, string>();
+
   isLoading = signal<boolean>(true);
   showSpinner = debouncedLoading(this.isLoading, 300);
   hasLoadedOnce = signal<boolean>(false);
-  
+
   routeId = signal<number | null>(null);
   routeAccountId = signal<number | null>(null);
-  viewingDetailsData = signal<{ items: any[], subtotal: number, tax_amount: number, total_amount: number } | null>(null);
+  viewingDetailsData = signal<{ items: any[]; subtotal: number; tax_amount: number; total_amount: number } | null>(null);
   expensesSort = signal<'oldest' | 'amount'>('oldest');
 
   sortedViewingDetails = computed(() => {
@@ -73,33 +102,58 @@ export class Statements implements OnInit {
       }
     });
   });
-  
+
   viewingStatement = computed(() => {
     const id = this.routeId();
     if (!id) return null;
     return this.statements().find((s: any) => s.id === id) || null;
   });
-  
+
   selectedAccountId = signal<number | null>(null);
-  
+
+  private statementsByAccountMap = computed(() => {
+    const map = new Map<number, any[]>();
+    for (const s of this.statements()) {
+      const accId = Number(s.account_id);
+      let list = map.get(accId);
+      if (!list) {
+        list = [];
+        map.set(accId, list);
+      }
+      list.push(s);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => (b.closing_date || '').localeCompare(a.closing_date || ''));
+    }
+    return map;
+  });
+
+  private latestStatementsByAccountMap = computed(() => {
+    const map = new Map<number, any[]>();
+    for (const [accId, list] of this.statementsByAccountMap().entries()) {
+      map.set(accId, list.slice(0, 3));
+    }
+    return map;
+  });
+
   filteredStatements = computed(() => {
     const accId = this.selectedAccountId();
     if (!accId) return [];
-    return this.statements().filter(s => s.account_id == accId).sort((a, b) => new Date(b.closing_date).getTime() - new Date(a.closing_date).getTime());
+    return this.statementsByAccountMap().get(Number(accId)) ?? [];
   });
 
   stForm: FormGroup;
   editingStId = signal<number | null>(null);
   deleteTarget = signal<any>(null);
-  
+
   isSubmitting = signal(false);
   formError = signal('');
-  
+
   commentControl = new FormControl('');
   commentTarget = signal<any>(null);
   isSubmittingComment = signal(false);
   commentError = signal('');
-  
+
   constructor() {
     this.stForm = this.fb.group({
       start_date: ['', Validators.required],
@@ -107,7 +161,7 @@ export class Statements implements OnInit {
       due_date: ['', Validators.required],
       tax_percentage: ['0', [Validators.required]]
     });
-    
+
     this.stForm.get('tax_percentage')?.valueChanges.subscribe(val => {
       if (val === null || val === '') return;
       const strVal = val.toString();
@@ -141,7 +195,7 @@ export class Statements implements OnInit {
     this.route.paramMap.subscribe(params => {
       const idStr = params.get('id');
       const accIdStr = params.get('accountId');
-      
+
       if (idStr) {
         const id = parseInt(idStr, 10);
         this.routeId.set(id);
@@ -164,6 +218,8 @@ export class Statements implements OnInit {
   loadData(options?: { silent?: boolean }): Promise<void> {
     if (!options?.silent) {
       this.isLoading.set(true);
+    } else {
+      this.api.invalidateCache?.('config', 'entities', 'categories', 'accounts');
     }
 
     return new Promise((resolve) => {
@@ -182,12 +238,12 @@ export class Statements implements OnInit {
           this.categories.set(cats || []);
           this.accounts.set((accs || []).filter((a: any) => a.account_type === 'CREDIT_CARD'));
           this.statements.set(sts || []);
-          
+
           const currentRouteId = this.routeId();
-          if (currentRouteId) {
+          if (currentRouteId && options?.silent) {
             this.loadStatementItems(currentRouteId);
           }
-          
+
           if (!options?.silent) {
             this.isLoading.set(false);
           }
@@ -229,7 +285,7 @@ export class Statements implements OnInit {
       if (accountIdForNew) {
         this.selectedAccountId.set(accountIdForNew);
       }
-      
+
       let nextStartDate = '';
       if (this.filteredStatements().length > 0) {
         const lastSt = this.filteredStatements()[0];
@@ -241,7 +297,7 @@ export class Statements implements OnInit {
         const d = lastClosingDate.getDate().toString().padStart(2, '0');
         nextStartDate = `${y}-${m}-${d}`;
       }
-      
+
       this.stForm.patchValue({
         start_date: nextStartDate,
         closing_date: '',
@@ -257,13 +313,13 @@ export class Statements implements OnInit {
   }
 
   stepTaxStatement(step: number) {
-    let currentStr = this.stForm.get('tax_percentage')?.value?.toString() || '0';
+    const currentStr = this.stForm.get('tax_percentage')?.value?.toString() || '0';
     let currentNum = parseFloat(currentStr.replace(',', '.'));
     if (isNaN(currentNum)) currentNum = 0;
-    
+
     let newVal = currentNum + step;
     if (newVal < 0) newVal = 0;
-    
+
     newVal = Math.round(newVal * 100) / 100;
     this.stForm.get('tax_percentage')?.setValue(newVal.toString().replace('.', ','));
   }
@@ -272,16 +328,16 @@ export class Statements implements OnInit {
     if (this.stForm.invalid || !this.selectedAccountId()) return;
     this.isSubmitting.set(true);
     this.formError.set('');
-    
+
     const payload = { ...this.stForm.value, account_id: this.selectedAccountId() };
     if (payload.tax_percentage) {
       payload.tax_percentage = parseFloat(payload.tax_percentage.toString().replace(',', '.'));
     }
-    
+
     const obs = this.editingStId()
       ? this.api.updateStatement(this.editingStId()!, payload)
       : this.api.createStatement(payload);
-      
+
     obs.subscribe({
       next: () => {
         this.isSubmitting.set(false);
@@ -299,7 +355,7 @@ export class Statements implements OnInit {
     this.deleteTarget.set(st);
     (document.getElementById('confirm_st_modal') as HTMLDialogElement).showModal();
   }
-  
+
   closeConfirmModal() {
     (document.getElementById('confirm_st_modal') as HTMLDialogElement).close();
   }
@@ -307,7 +363,7 @@ export class Statements implements OnInit {
   executeDelete() {
     const target = this.deleteTarget();
     if (!target) return;
-    
+
     this.isSubmitting.set(true);
     this.api.deleteStatement(target.id).subscribe({
       next: () => {
@@ -327,10 +383,7 @@ export class Statements implements OnInit {
   }
 
   getLatestStatementsForAccount(accountId: number): any[] {
-    return this.statements()
-      .filter(s => s.account_id === accountId)
-      .sort((a, b) => new Date(b.closing_date).getTime() - new Date(a.closing_date).getTime())
-      .slice(0, 3);
+    return this.latestStatementsByAccountMap().get(Number(accountId)) ?? [];
   }
 
   viewAccount(accountId: number) {
@@ -340,11 +393,8 @@ export class Statements implements OnInit {
   getStatementState(st: any): string {
     if (!st) return '';
     if (st.is_paid) return 'PAID';
-    
-    // Check if closed based on local timezone
-    const tz = this.appTimezone();
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: tz });
-    if (todayStr > st.closing_date) {
+
+    if (this.todayInTimezone() > st.closing_date) {
       return 'CLOSED';
     }
     return 'OPEN';
@@ -356,7 +406,7 @@ export class Statements implements OnInit {
     if (state === 'PAID') return 'Pagado';
     return state;
   }
-  
+
   markAsPaid(st: any) {
     this.isSubmitting.set(true);
     this.api.updateStatement(st.id, { is_paid: true }).subscribe({
@@ -386,48 +436,59 @@ export class Statements implements OnInit {
   }
 
   getEntityName(entityId: number): string {
-    const ent = this.entities().find(e => e.id === entityId);
-    return ent ? `${ent.name} - ` : '';
+    const name = this.entityMap().get(Number(entityId));
+    return name ? `${name} - ` : '';
   }
 
   getEntityOnlyName(entityId?: number | null): string {
     if (!entityId) return '';
-    const ent = this.entities().find(e => e.id === entityId);
-    return ent ? ent.name : '';
+    return this.entityMap().get(Number(entityId)) ?? '';
   }
 
   getStatementPeriod(startDateStr: string | undefined, closingDateStr: string | undefined): string {
     if (!startDateStr || !closingDateStr) return '';
-    
+
+    const cacheKey = `${startDateStr}|${closingDateStr}`;
+    const cached = this.statementPeriodCache.get(cacheKey);
+    if (cached !== undefined) return cached;
+
     const start = new Date(startDateStr + 'T00:00:00');
     const end = new Date(closingDateStr + 'T00:00:00');
-    
-    if (start > end) return '';
-    
-    const monthCounts: Record<string, number> = {};
-    
-    let current = new Date(start);
-    while (current <= end) {
-        const key = `${current.getFullYear()}-${current.getMonth()}`;
-        monthCounts[key] = (monthCounts[key] || 0) + 1;
-        current.setDate(current.getDate() + 1);
+
+    if (start > end) {
+      this.statementPeriodCache.set(cacheKey, '');
+      return '';
     }
-    
+
+    const monthCounts: Record<string, number> = {};
+
+    const current = new Date(start);
+    while (current <= end) {
+      const key = `${current.getFullYear()}-${current.getMonth()}`;
+      monthCounts[key] = (monthCounts[key] || 0) + 1;
+      current.setDate(current.getDate() + 1);
+    }
+
     let maxDays = 0;
     let maxKey = '';
-    
+
     for (const [key, count] of Object.entries(monthCounts)) {
-        if (count > maxDays) {
-            maxDays = count;
-            maxKey = key;
-        }
+      if (count > maxDays) {
+        maxDays = count;
+        maxKey = key;
+      }
     }
-    
-    if (!maxKey) return '';
-    
+
+    if (!maxKey) {
+      this.statementPeriodCache.set(cacheKey, '');
+      return '';
+    }
+
     const [y, m] = maxKey.split('-');
     const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return `${months[parseInt(m)]} ${y}`;
+    const result = `${months[parseInt(m)]} ${y}`;
+    this.statementPeriodCache.set(cacheKey, result);
+    return result;
   }
 
   toggleExpensesSort() {
@@ -454,7 +515,7 @@ export class Statements implements OnInit {
     }
     return 0;
   }
-  
+
   getStatementTaxAmount(st: any): number {
     if (this.viewingDetailsData() && this.viewingStatement()?.id === st?.id) {
       return this.viewingDetailsData()!.tax_amount;
@@ -468,39 +529,28 @@ export class Statements implements OnInit {
     }
     return 0;
   }
-  
+
   getCategoryName(catId: number): string {
-    const cat = this.categories().find(c => c.id === catId);
-    return cat ? cat.name : 'Sin categoría';
+    return this.categoryMap().get(Number(catId))?.name ?? 'Sin categoría';
   }
-  
+
   getCategoryColor(catId: number): string {
-    const cat = this.categories().find(c => c.id === catId);
-    return cat ? cat.color : '#e5e7eb';
+    return this.categoryMap().get(Number(catId))?.color ?? '#e5e7eb';
   }
 
   getTextColorForBackground(hexColor: string): string {
-    if (!hexColor) return '#1f2937';
-    const hex = hexColor.replace('#', '');
-    if (hex.length !== 6 && hex.length !== 3) return '#1f2937';
-    
-    const r = parseInt(hex.length === 3 ? hex.charAt(0) + hex.charAt(0) : hex.substring(0, 2), 16);
-    const g = parseInt(hex.length === 3 ? hex.charAt(1) + hex.charAt(1) : hex.substring(2, 4), 16);
-    const b = parseInt(hex.length === 3 ? hex.charAt(2) + hex.charAt(2) : hex.substring(4, 6), 16);
-    
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    return yiq >= 128 ? '#1f2937' : '#ffffff';
+    return getContrastColor(hexColor);
   }
 
   canPostpone(inst: any, st: any): boolean {
     if (inst.installment_number !== 1) return false;
     if (inst.postponed_months > 0) return false;
-    
+
     const txDate = new Date(inst.transaction_date + 'T00:00:00');
     const closingDate = new Date(st.closing_date + 'T00:00:00');
     const diffTime = closingDate.getTime() - txDate.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
-    
+
     return diffDays >= 0 && diffDays <= this.graceDays();
   }
 
@@ -517,15 +567,15 @@ export class Statements implements OnInit {
     this.postponeTargetIsForward.set(postpone);
     (document.getElementById('confirm_postpone_modal') as HTMLDialogElement).showModal();
   }
-  
+
   closePostponeModal() {
     (document.getElementById('confirm_postpone_modal') as HTMLDialogElement).close();
   }
-  
+
   executePostpone() {
     const inst = this.postponeTargetInst();
     if (!inst) return;
-    
+
     this.isSubmitting.set(true);
     this.api.postponeTransaction(inst.id, this.postponeTargetIsForward()).subscribe({
       next: () => {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TitlebarComponent } from './components/titlebar/titlebar';
 
@@ -6,7 +6,8 @@ import { TitlebarComponent } from './components/titlebar/titlebar';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, TitlebarComponent],
-  templateUrl: './app.html'
+  templateUrl: './app.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class App {
   title = 'frontend-angular';

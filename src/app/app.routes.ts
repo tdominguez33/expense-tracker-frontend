@@ -1,29 +1,45 @@
 import { Routes } from '@angular/router';
-import { Layout } from './layout/layout';
-import { Dashboard } from './views/dashboard/dashboard';
-import { Transactions } from './views/transactions/transactions';
-import { Statements } from './views/statements/statements';
-import { Settings } from './views/settings/settings';
-import { HistoryView } from './views/history/history';
-
 import { authGuard } from './guards/auth.guard';
-import { LoginView } from './views/login/login';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginView },
+  {
+    path: 'login',
+    loadComponent: () => import('./views/login/login').then(m => m.LoginView)
+  },
   {
     path: '',
-    component: Layout,
+    loadComponent: () => import('./layout/layout').then(m => m.Layout),
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', component: Dashboard },
-      { path: 'history', component: HistoryView },
-      { path: 'transactions', component: Transactions },
-      { path: 'statements', component: Statements },
-      { path: 'statements/account/:accountId', component: Statements },
-      { path: 'statements/:id', component: Statements },
-      { path: 'settings', component: Settings }
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./views/dashboard/dashboard').then(m => m.Dashboard)
+      },
+      {
+        path: 'history',
+        loadComponent: () => import('./views/history/history').then(m => m.HistoryView)
+      },
+      {
+        path: 'transactions',
+        loadComponent: () => import('./views/transactions/transactions').then(m => m.Transactions)
+      },
+      {
+        path: 'statements',
+        loadComponent: () => import('./views/statements/statements').then(m => m.Statements)
+      },
+      {
+        path: 'statements/account/:accountId',
+        loadComponent: () => import('./views/statements/statements').then(m => m.Statements)
+      },
+      {
+        path: 'statements/:id',
+        loadComponent: () => import('./views/statements/statements').then(m => m.Statements)
+      },
+      {
+        path: 'settings',
+        loadComponent: () => import('./views/settings/settings').then(m => m.Settings)
+      }
     ]
   },
   { path: '**', redirectTo: '' }

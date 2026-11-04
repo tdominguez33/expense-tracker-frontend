@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, NavigationStart, NavigationEnd, NavigationCancel } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { Layout } from './layout';
 import { RefreshService } from '../services/refresh.service';
@@ -769,6 +769,33 @@ describe('Layout', () => {
 
       component.ngOnDestroy();
       expect(component['drawerCloseTimeout']).toBeNull();
+      vi.useRealTimers();
+    });
+
+    it('should immediately activate pending sidebar route on NavigationStart and show route loading after 120ms', () => {
+      vi.useFakeTimers();
+      expect(component.isNavItemActive('/dashboard')).toBe(true);
+      expect(component.isNavItemActive('/transactions')).toBe(false);
+
+      component['handleRouterEvent'](new NavigationStart(1, '/transactions'));
+      expect(component.pendingRoute()).toBe('/transactions');
+      expect(component.isNavItemActive('/transactions')).toBe(true);
+      expect(component.isNavItemActive('/dashboard')).toBe(false);
+      expect(component.isRouteLoading()).toBe(false);
+
+      vi.advanceTimersByTime(130);
+      expect(component.isRouteLoading()).toBe(true);
+
+      component['handleRouterEvent'](new NavigationEnd(1, '/transactions', '/transactions'));
+      expect(component.pendingRoute()).toBeNull();
+      expect(component.isRouteLoading()).toBe(false);
+      expect(component.isNavItemActive('/transactions')).toBe(true);
+
+      component['handleRouterEvent'](new NavigationStart(2, '/history'));
+      expect(component.isNavItemActive('/history')).toBe(true);
+      component['handleRouterEvent'](new NavigationCancel(2, '/history', 'cancelled'));
+      expect(component.pendingRoute()).toBeNull();
+      expect(component.isNavItemActive('/transactions')).toBe(true);
       vi.useRealTimers();
     });
 

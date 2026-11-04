@@ -1,5 +1,5 @@
-import { Component, input, signal, computed, HostListener, ElementRef, inject, OnDestroy, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, input, signal, computed, HostListener, ElementRef, inject, OnDestroy, effect, ChangeDetectionStrategy } from '@angular/core';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 
 export interface CategoryBreakdownItem {
   id: number;
@@ -13,8 +13,9 @@ export interface CategoryBreakdownItem {
 @Component({
   selector: 'app-category-doughnut',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DecimalPipe, NgTemplateOutlet],
   templateUrl: './category-doughnut.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     :host {
       display: flex;
@@ -88,6 +89,13 @@ export class CategoryDoughnut implements OnDestroy {
 
   topCategories = computed(() => this.breakdown().slice(0, 5));
   extraCategories = computed(() => this.breakdown().slice(5));
+  private categoryMap = computed(() => {
+    const map = new Map<number, CategoryBreakdownItem>();
+    for (const item of this.breakdown()) {
+      map.set(item.id, item);
+    }
+    return map;
+  });
 
   legendRowCount = computed(() => {
     const count = this.breakdown().length;
@@ -153,6 +161,38 @@ export class CategoryDoughnut implements OnDestroy {
   selectedCategory = signal<number | null>(null);
 
   activeCategoryId = computed(() => this.hoveredCategory() ?? this.selectedCategory());
+
+  hoveredInfo = computed<{ name: string; amount: number; color?: string }>(() => {
+    const catId = this.activeCategoryId();
+    if (catId !== null) {
+      const cat = this.categoryMap().get(catId);
+      if (cat) {
+        return { name: cat.name, amount: cat.amount, color: cat.color };
+      }
+    }
+
+    const title = this.periodTitle();
+    return {
+      name: title ? (title.toLowerCase().startsWith('total') ? title : `Total ${title}`) : 'Total',
+      amount: this.totalAmount()
+    };
+  });
+
+  svgBreakdown = computed(() => {
+    const list = this.breakdown();
+    let cumulative = 0;
+
+    return list.map(cat => {
+      const offset = 100 - cumulative;
+      const item = {
+        ...cat,
+        dasharray: `${cat.pct} ${100 - cat.pct}`,
+        offset: offset
+      };
+      cumulative += cat.pct;
+      return item;
+    });
+  });
 
   private hoverTimer: any = null;
   private touchStartX = 0;
@@ -244,9 +284,16 @@ export class CategoryDoughnut implements OnDestroy {
   }
 
   clearSelection() {
-    if (this.hoverTimer) clearTimeout(this.hoverTimer);
-    this.selectedCategory.set(null);
-    this.hoveredCategory.set(null);
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    if (this.selectedCategory() !== null) {
+      this.selectedCategory.set(null);
+    }
+    if (this.hoveredCategory() !== null) {
+      this.hoveredCategory.set(null);
+    }
     if (this.autoExpandedBySelection()) {
       this.isExpanded.set(false);
       this.autoExpandedBySelection.set(false);
@@ -255,6 +302,9 @@ export class CategoryDoughnut implements OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
+    if (this.selectedCategory() === null && this.hoveredCategory() === null && !this.autoExpandedBySelection()) {
+      return;
+    }
     const target = event.target as Element | null;
     const isInside = this.el.nativeElement.contains(target);
     const categoryEl = isInside ? target?.closest('[data-category-id]') : null;
@@ -346,34 +396,10 @@ export class CategoryDoughnut implements OnDestroy {
   }
 
   getHoveredInfo(): { name: string; amount: number; color?: string } {
-    const catId = this.activeCategoryId();
-    if (catId !== null) {
-      const cat = this.breakdown().find(c => c.id === catId);
-      if (cat) {
-        return { name: cat.name, amount: cat.amount, color: cat.color };
-      }
-    }
-
-    const title = this.periodTitle();
-    return {
-      name: title ? (title.toLowerCase().startsWith('total') ? title : `Total ${title}`) : 'Total',
-      amount: this.totalAmount()
-    };
+    return this.hoveredInfo();
   }
 
   getSvgBreakdown(): any[] {
-    const list = this.breakdown();
-    let cumulative = 0;
-
-    return list.map(cat => {
-      const offset = 100 - cumulative;
-      const item = {
-        ...cat,
-        dasharray: `${cat.pct} ${100 - cat.pct}`,
-        offset: offset
-      };
-      cumulative += cat.pct;
-      return item;
-    });
+    return this.svgBreakdown();
   }
 }

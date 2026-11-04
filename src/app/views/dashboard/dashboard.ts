@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal, computed, HostListener, DestroyRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, signal, computed, HostListener, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { DecimalPipe, NgClass, NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, of, switchMap, map, catchError } from 'rxjs';
 import { ApiService } from '../../services/api.service';
@@ -29,9 +29,10 @@ export interface TimelineActiveCount {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CategoryDoughnut],
+  imports: [DecimalPipe, NgClass, NgTemplateOutlet, CategoryDoughnut],
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.css'
+  styleUrl: './dashboard.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Dashboard implements OnInit {
   private api = inject(ApiService);
@@ -79,6 +80,22 @@ export class Dashboard implements OnInit {
   entities = signal<any[]>([]);
   categories = signal<any[]>([]);
 
+  private entityNameMap = computed(() => {
+    const map = new Map<number, string>();
+    for (const e of this.entities()) {
+      map.set(e.id, `${e.name} - `);
+    }
+    return map;
+  });
+
+  private categoryMap = computed(() => {
+    const map = new Map<number, { name: string; color: string }>();
+    for (const c of this.categories()) {
+      map.set(Number(c.id), c);
+    }
+    return map;
+  });
+
   ngOnInit() {
     const unregister = this.refreshService.register(() => this.loadData({ silent: true }));
     this.destroyRef.onDestroy(unregister);
@@ -96,6 +113,8 @@ export class Dashboard implements OnInit {
   loadData(options?: { silent?: boolean }): Promise<void> {
     if (!options?.silent) {
       this.isLoading.set(true);
+    } else {
+      this.api.invalidateCache?.('entities', 'categories', 'accounts');
     }
     this.errorMsg.set('');
 
@@ -121,6 +140,18 @@ export class Dashboard implements OnInit {
 
           if (cards.length === 0) {
             this.creditReports.set({});
+            return of([]);
+          }
+
+          if (res.creditAll?.cards) {
+            const reportsMap: Record<number, any> = {};
+            for (const card of cards) {
+              const cardReport = res.creditAll.cards[card.id] ?? res.creditAll.cards[String(card.id)];
+              if (cardReport) {
+                reportsMap[card.id] = cardReport;
+              }
+            }
+            this.creditReports.set(reportsMap);
             return of([]);
           }
 
@@ -192,10 +223,15 @@ export class Dashboard implements OnInit {
   }
 
   closeTooltip() {
-    if (this.activeTooltipPeriod() !== null) {
+    const hadActive = this.activeTooltipPeriod() !== null;
+    const hadHovered = this.hoveredTooltipPeriod() !== null;
+    if (!hadActive && !hadHovered) {
+      return;
+    }
+    if (hadActive) {
       this.activeTooltipPeriod.set(null);
     }
-    if (this.hoveredTooltipPeriod() !== null) {
+    if (hadHovered) {
       this.hoveredTooltipPeriod.set(null);
     }
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
@@ -219,8 +255,7 @@ export class Dashboard implements OnInit {
   }
 
   getEntityName(entityId: number): string {
-    const ent = this.entities().find(e => e.id === entityId);
-    return ent ? `${ent.name} - ` : '';
+    return this.entityNameMap().get(entityId) ?? '';
   }
 
   getComparison(period: string): any {
@@ -229,9 +264,11 @@ export class Dashboard implements OnInit {
     return report.comparisons[period] || null;
   }
 
-  getComparisonTooltip(period: string): { title: string; subtitle: string } {
-    const comp = this.getComparison(period);
-    if (!comp) return { title: '', subtitle: '' };
+  private comparisonTooltipsByPeriod = computed<Record<string, { title: string; subtitle: string }>>(() => {
+    const report = this.generalReport();
+    const comparisons = report?.comparisons;
+    const result: Record<string, { title: string; subtitle: string }> = {};
+    if (!comparisons) return result;
 
     const periodLabels: Record<string, string> = {
       day: 'Ayer',
@@ -240,42 +277,52 @@ export class Dashboard implements OnInit {
       year: 'Mismo punto año ant.'
     };
 
-    const label = periodLabels[period] || 'Período anterior';
-
-    if (comp.previous === 0) {
-      return {
-        title: `${label}: Sin gastos ($0)`,
-        subtitle: comp.current > 0
-          ? `Gasto actual: $${Math.round(comp.current).toLocaleString('es-AR')}`
-          : 'Sin gastos registrados'
-      };
+    for (const period of this.periods) {
+      const comp = comparisons[period];
+      if (!comp) continue;
+      const label = periodLabels[period] || 'Período anterior';
+      if (comp.previous === 0) {
+        result[period] = {
+          title: `${label}: Sin gastos ($0)`,
+          subtitle: comp.current > 0
+            ? `Gasto actual: $${Math.round(comp.current).toLocaleString('es-AR')}`
+            : 'Sin gastos registrados'
+        };
+      } else {
+        const diffPrefix = comp.diff > 0 ? '+' : '';
+        result[period] = {
+          title: `${label}: $${Math.round(comp.previous).toLocaleString('es-AR')}`,
+          subtitle: `Diferencia: ${diffPrefix}$${Math.round(comp.diff).toLocaleString('es-AR')}`
+        };
+      }
     }
+    return result;
+  });
 
-    const diffPrefix = comp.diff > 0 ? '+' : '';
-    return {
-      title: `${label}: $${Math.round(comp.previous).toLocaleString('es-AR')}`,
-      subtitle: `Diferencia: ${diffPrefix}$${Math.round(comp.diff).toLocaleString('es-AR')}`
-    };
+  private static readonly EMPTY_TOOLTIP = { title: '', subtitle: '' };
+
+  getComparisonTooltip(period: string): { title: string; subtitle: string } {
+    return this.comparisonTooltipsByPeriod()[period] ?? Dashboard.EMPTY_TOOLTIP;
   }
 
   getCategoryColor(catId: any): string {
-    if (catId == 0) return '#6b7280'; // Gray for uncategorized category (ID 0)
-    const cat = this.categories().find(c => c.id == catId);
-    return cat ? cat.color : '#6b7280';
+    const id = Number(catId);
+    if (id === 0) return '#6b7280'; // Gray for uncategorized category (ID 0)
+    return this.categoryMap().get(id)?.color ?? '#6b7280';
   }
 
   getCategoryName(catId: any): string {
-    if (catId == 0) return 'Sin categoría';
-    const cat = this.categories().find(c => c.id == catId);
-    return cat ? cat.name : 'Desconocido';
+    const id = Number(catId);
+    if (id === 0) return 'Sin categoría';
+    return this.categoryMap().get(id)?.name ?? 'Desconocido';
   }
 
-  getCategoryBreakdown(period: string): any[] {
+  private computeBreakdownForPeriod(period: string): any[] {
     const report = this.generalReport();
     if (!report || !report.by_category || !report.by_category[period]) return [];
 
     const byCat = report.by_category[period];
-    const total = report.totals[period] || 0;
+    const total = report.totals?.[period] || 0;
     if (total === 0) return [];
 
     const breakdown = Object.entries(byCat)
@@ -294,7 +341,7 @@ export class Dashboard implements OnInit {
 
     // Largest Remainder Method to guarantee integer percentages that sum to 100
     let totalPct = 0;
-    const remainders: { index: number, remainder: number }[] = [];
+    const remainders: { index: number; remainder: number }[] = [];
 
     breakdown.forEach((c, index) => {
       const rawPct = (c.amount / total) * 100;
@@ -304,14 +351,28 @@ export class Dashboard implements OnInit {
       remainders.push({ index, remainder: rawPct - floorPct });
     });
 
-    let diff = 100 - totalPct;
+    const diff = 100 - totalPct;
     remainders.sort((a, b) => b.remainder - a.remainder);
-    
+
     for (let i = 0; i < diff && i < remainders.length; i++) {
       breakdown[remainders[i].index].pct += 1;
     }
 
     return breakdown;
+  }
+
+  private categoryBreakdownsByPeriod = computed<Record<string, any[]>>(() => {
+    // Depend on categories and generalReport
+    this.categoryMap();
+    const result: Record<string, any[]> = {};
+    for (const p of this.periods) {
+      result[p] = this.computeBreakdownForPeriod(p);
+    }
+    return result;
+  });
+
+  getCategoryBreakdown(period: string): any[] {
+    return this.categoryBreakdownsByPeriod()[period] ?? this.computeBreakdownForPeriod(period);
   }
 
   currentCategoryBreakdown = computed(() => {
@@ -339,7 +400,7 @@ export class Dashboard implements OnInit {
   // Desktop doughnut card min-height computed signal
   desktopDoughnutMinHeight = computed<string>(() => {
     let maxAvailable = this.categories().length;
-    
+
     // Check if any period has uncategorized expenses (catId === 0)
     const report = this.generalReport();
     if (report?.by_category) {
@@ -352,8 +413,9 @@ export class Dashboard implements OnInit {
     }
 
     // Also check if any period breakdown has more categories
+    const breakdowns = this.categoryBreakdownsByPeriod();
     for (const p of this.periods) {
-      const count = this.getCategoryBreakdown(p).length;
+      const count = (breakdowns[p] ?? []).length;
       if (count > maxAvailable) {
         maxAvailable = count;
       }
@@ -384,13 +446,17 @@ export class Dashboard implements OnInit {
   private isMouseDownOnChart = false;
   private chartMouseStartX = 0;
 
-  getChartTransform(): string {
+  chartTransform = computed(() => {
     const basePct = -this.activeSlide() * 100;
     const offsetPx = this.chartSwipeOffset();
     if (offsetPx !== 0) {
       return `translateX(calc(${basePct}% + ${offsetPx}px))`;
     }
     return `translateX(${basePct}%)`;
+  });
+
+  getChartTransform(): string {
+    return this.chartTransform();
   }
 
   goToSlide(index: number) {
@@ -543,13 +609,17 @@ export class Dashboard implements OnInit {
   private isMouseDownOnCards = false;
   private cardsMouseStartX = 0;
 
-  getCardsTransform(): string {
+  cardsTransform = computed(() => {
     const basePct = -this.currentPeriodIndex() * 100;
     const offsetPx = this.cardsSwipeOffset();
     if (offsetPx !== 0) {
       return `translateX(calc(${basePct}% + ${offsetPx}px))`;
     }
     return `translateX(${basePct}%)`;
+  });
+
+  getCardsTransform(): string {
+    return this.cardsTransform();
   }
 
   startPeriodNavLock(durationMs = 320) {
@@ -743,9 +813,13 @@ export class Dashboard implements OnInit {
     }
   }
 
-  getPeriodTitle(): string {
+  periodTitle = computed(() => {
     const p = this.selectedPeriod();
     return p === 'day' ? 'Hoy' : p === 'week' ? 'Esta Semana' : p === 'month' ? 'Este Mes' : 'Este Año';
+  });
+
+  getPeriodTitle(): string {
+    return this.periodTitle();
   }
 
   timelineData = computed<TimelineBar[]>(() => {
@@ -803,7 +877,7 @@ export class Dashboard implements OnInit {
 
     const total = report.totals?.[period] || 0;
     const now = new Date();
-    
+
     if (period === 'week') {
       const jsDay = now.getDay();
       const elapsedDays = jsDay === 0 ? 7 : jsDay;

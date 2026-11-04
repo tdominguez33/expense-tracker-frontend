@@ -1,6 +1,6 @@
-import { Component, inject, OnInit, OnDestroy, ElementRef, HostListener, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs';
+import { Component, inject, OnInit, OnDestroy, ElementRef, HostListener, signal, ChangeDetectionStrategy } from '@angular/core';
+import { RouterOutlet, RouterLink, Router, NavigationStart, NavigationEnd, NavigationCancel, NavigationError, RouteConfigLoadStart } from '@angular/router';
+
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../services/auth.service';
 import { RefreshService } from '../services/refresh.service';
@@ -8,13 +8,18 @@ import { RefreshService } from '../services/refresh.service';
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink],
   templateUrl: './layout.html',
-  styleUrl: './layout.css'
+  styleUrl: './layout.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Layout implements OnInit, OnDestroy {
-  isDarkTheme = true;
-  isSidebarCollapsed = false;
+  private _isDarkTheme = signal<boolean>(true);
+  get isDarkTheme(): boolean { return this._isDarkTheme(); }
+  set isDarkTheme(val: boolean) { this._isDarkTheme.set(val); }
+  private _isSidebarCollapsed = signal<boolean>(false);
+  get isSidebarCollapsed(): boolean { return this._isSidebarCollapsed(); }
+  set isSidebarCollapsed(val: boolean) { this._isSidebarCollapsed.set(val); }
   private router = inject(Router);
   private elementRef = inject(ElementRef);
   private refreshService = inject(RefreshService);
@@ -34,6 +39,10 @@ export class Layout implements OnInit, OnDestroy {
   // Drawer active state (controls display: none vs grid on mobile)
   isDrawerActive = signal<boolean>(false);
   private drawerCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+  currentUrl = signal<string>('/dashboard');
+  pendingRoute = signal<string | null>(null);
+  isRouteLoading = signal<boolean>(false);
+  private routeLoadTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Pull-to-refresh state
   pullDistance = signal<number>(0);
@@ -50,16 +59,10 @@ export class Layout implements OnInit, OnDestroy {
   readonly MAX_PULL = 105;
 
   constructor(private authService: AuthService) {
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      takeUntilDestroyed()
-    ).subscribe(() => {
-      this.closeDrawer();
-      this.resetPullStyles();
-      const mainEl = this.getMainScrollElement();
-      if (mainEl) mainEl.scrollTop = 0;
-      if (typeof window !== 'undefined') window.scrollTo(0, 0);
-    });
+    if (this.router.url && this.router.url !== '/') {
+      this.currentUrl.set(this.router.url);
+    }
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => this.handleRouterEvent(event));
     let storedTheme: string | null = null;
     let storedSidebar: string | null = null;
     if (typeof localStorage !== 'undefined' && typeof localStorage?.getItem === 'function') {
@@ -80,6 +83,54 @@ export class Layout implements OnInit, OnDestroy {
     this.applyTheme();
   }
 
+  private handleRouterEvent(event: unknown) {
+    if (event instanceof NavigationStart) {
+      const cleanUrl = event.url.split('?')[0].split('#')[0] || '/dashboard';
+      this.pendingRoute.set(cleanUrl === '/' ? '/dashboard' : cleanUrl);
+      this.startRouteLoadTimer();
+    } else if (event instanceof RouteConfigLoadStart) {
+      this.startRouteLoadTimer();
+    } else if (event instanceof NavigationEnd) {
+      this.clearRouteLoadTimer();
+      const finalUrl = (event.urlAfterRedirects || event.url || '/dashboard').split('?')[0].split('#')[0];
+      this.currentUrl.set(finalUrl === '/' ? '/dashboard' : finalUrl);
+      this.pendingRoute.set(null);
+      this.isRouteLoading.set(false);
+      this.closeDrawer();
+      this.resetPullStyles();
+      const mainEl = this.getMainScrollElement();
+      if (mainEl) mainEl.scrollTop = 0;
+      if (typeof window !== 'undefined') window.scrollTo(0, 0);
+    } else if (event instanceof NavigationCancel || event instanceof NavigationError) {
+      this.clearRouteLoadTimer();
+      this.pendingRoute.set(null);
+      this.isRouteLoading.set(false);
+    }
+  }
+
+  private startRouteLoadTimer() {
+    if (this.routeLoadTimer !== null || this.isRouteLoading()) return;
+    this.routeLoadTimer = setTimeout(() => {
+      this.routeLoadTimer = null;
+      if (this.pendingRoute() !== null) {
+        this.isRouteLoading.set(true);
+      }
+    }, 120);
+  }
+
+  private clearRouteLoadTimer() {
+    if (this.routeLoadTimer !== null) {
+      clearTimeout(this.routeLoadTimer);
+      this.routeLoadTimer = null;
+    }
+  }
+
+  isNavItemActive(path: string): boolean {
+    const target = this.pendingRoute() ?? this.currentUrl();
+    const clean = target.split('?')[0].split('#')[0];
+    return clean === path || clean.startsWith(path + '/');
+  }
+
   ngOnInit() {
     if (typeof window !== 'undefined') {
       window.addEventListener('touchstart', this.onGlobalTouchStart, { passive: false });
@@ -90,6 +141,7 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.clearRouteLoadTimer();
     this.clearDragStyles();
     this.resetPullStyles();
     if (this.drawerCloseTimeout !== null) {

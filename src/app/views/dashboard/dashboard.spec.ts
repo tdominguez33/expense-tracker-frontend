@@ -398,5 +398,27 @@ describe('Dashboard', () => {
     expect(component.isLoading()).toBe(false);
     expect(component.generalReport()).toEqual({ totals: { month: { current: 1234 } }, comparisons: {} });
   });
+
+  it('should use creditAll.cards directly without calling getCreditReport for each card', async () => {
+    mockApiService.getAccounts.mockReturnValue(of([
+      { id: 1, name: 'Visa', account_type: 'CREDIT_CARD' },
+      { id: 2, name: 'Mastercard', account_type: 'CREDIT_CARD' }
+    ]));
+    mockApiService.getCreditAllReport.mockReturnValue(of({
+      total_global_debt: 150000,
+      total_available_limit: 850000,
+      cards: {
+        1: { account_id: 1, total_current_debt: 100000 },
+        2: { account_id: 2, total_current_debt: 50000 }
+      }
+    }));
+    mockApiService.getCreditReport.mockClear();
+
+    await component.loadData();
+
+    expect(mockApiService.getCreditReport).not.toHaveBeenCalled();
+    expect(component.creditReports()[1]).toEqual({ account_id: 1, total_current_debt: 100000 });
+    expect(component.creditReports()[2]).toEqual({ account_id: 2, total_current_debt: 50000 });
+  });
 });
 

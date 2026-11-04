@@ -13,7 +13,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <input type="text" 
+          <input id="tx-search" name="tx_search" aria-label="Buscar gasto" type="text" 
                  maxlength="100"
                  class="input input-bordered w-full pl-9 pr-8 text-base sm:text-sm" 
                  [placeholder]="isMobile() ? 'Buscar' : 'Buscar gasto...'" 
@@ -29,7 +29,7 @@
         </div>
 
         <!-- Category Filter -->
-        <select class="select select-bordered shadow-sm w-full sm:w-auto text-base sm:text-sm" 
+        <select id="tx-category-filter" name="tx_category_filter" aria-label="Filtrar por categoría" class="select select-bordered shadow-sm w-full sm:w-auto text-base sm:text-sm" 
                 [ngModel]="selectedFilterCategory()" 
                 (ngModelChange)="onCategoryChange($event)">
           <option value="all">{{ isMobile() ? 'Todos' : 'Todas las categorías' }}</option>
@@ -225,21 +225,21 @@
     <form [formGroup]="txForm" (ngSubmit)="onSubmit()" class="space-y-3 sm:space-y-4">
       
       <div class="form-control w-full">
-        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Monto</span></label>
+        <label class="label py-1 sm:py-1.5" for="tx-total-amount"><span class="label-text font-medium">Monto</span></label>
         <label class="input input-bordered flex items-center gap-2">
           $
-          <input type="text" inputmode="decimal" formControlName="total_amount" class="grow" placeholder="0,00" />
+          <input id="tx-total-amount" name="total_amount" type="text" inputmode="decimal" formControlName="total_amount" class="grow" placeholder="0,00" />
         </label>
       </div>
       
       <div class="form-control w-full">
-        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Descripción (Opcional)</span></label>
-        <input type="text" formControlName="description" maxlength="255" class="input input-bordered w-full" placeholder="Ej: Supermercado..." />
+        <label class="label py-1 sm:py-1.5" for="tx-description"><span class="label-text font-medium">Descripción (Opcional)</span></label>
+        <input id="tx-description" name="description" type="text" formControlName="description" maxlength="255" class="input input-bordered w-full" placeholder="Ej: Supermercado..." />
       </div>
 
       <div class="form-control w-full">
-        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Categoría</span></label>
-        <select formControlName="category_id" class="select select-bordered w-full text-sm pl-3 pr-8">
+        <label class="label py-1 sm:py-1.5" for="tx-category-id"><span class="label-text font-medium">Categoría</span></label>
+        <select id="tx-category-id" name="category_id" formControlName="category_id" class="select select-bordered w-full text-sm pl-3 pr-8">
           <option value="" disabled class="pr-4 pl-3">Selecciona una categoría</option>
           @for (cat of categories(); track cat.id) {
             <option [value]="cat.id" class="pr-4 pl-3">{{ cat.name }}&nbsp;&nbsp;</option>
@@ -248,9 +248,9 @@
       </div>
 
       <div class="form-control w-full">
-        <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Cuenta</span></label>
+        <label class="label py-1 sm:py-1.5" for="tx-account-id"><span class="label-text font-medium">Cuenta</span></label>
         <div class="relative w-full">
-          <select formControlName="account_id" class="select select-bordered w-full text-sm pl-3 pr-8 opacity-0 absolute inset-0 z-10 cursor-pointer peer">
+          <select id="tx-account-id" name="account_id" formControlName="account_id" class="select select-bordered w-full text-sm pl-3 pr-8 opacity-0 absolute inset-0 z-10 cursor-pointer peer">
             <option value="" disabled class="pr-4 pl-3">Selecciona una cuenta</option>
             @for (acc of accounts(); track acc.id) {
               <option [value]="acc.id" class="pr-4 pl-3">
@@ -269,19 +269,19 @@
       @if (showInstallments()) {
         <div class="grid grid-cols-2 gap-3 sm:gap-4 animate-fade-in min-w-0">
           <div class="form-control w-full min-w-0">
-            <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Cantidad de cuotas</span></label>
+            <label class="label py-1 sm:py-1.5" for="tx-installments-count"><span class="label-text font-medium">Cantidad de cuotas</span></label>
             <div class="join w-full">
               <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepInstallments(-1)">-</button>
-              <input type="text" inputmode="numeric" formControlName="installments_count" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
+              <input id="tx-installments-count" name="installments_count" type="text" inputmode="numeric" formControlName="installments_count" class="input input-bordered join-item flex-1 min-w-0 text-center font-medium" />
               <button type="button" class="btn btn-outline btn-square join-item border-base-content/20 shrink-0" (click)="stepInstallments(1)">+</button>
             </div>
           </div>
           
           <div class="form-control w-full min-w-0">
-            <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+            <label class="label py-1 sm:py-1.5" for="tx-real-amount"><span class="label-text font-medium">Pago Real <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
             <label class="input input-bordered flex items-center gap-2">
               $
-              <input type="text" inputmode="decimal" formControlName="real_amount" class="grow min-w-0" [placeholder]="isMobile() ? 'Total' : 'Monto total...'" />
+              <input id="tx-real-amount" name="real_amount" type="text" inputmode="decimal" formControlName="real_amount" class="grow min-w-0" [placeholder]="isMobile() ? 'Total' : 'Monto total...'" />
             </label>
           </div>
         </div>
@@ -289,15 +289,15 @@
 
       <div class="grid grid-cols-2 gap-3 sm:gap-4 min-w-0">
         <div class="form-control w-full min-w-0">
-          <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Fecha</span></label>
-          <input type="date" formControlName="transaction_date" class="input input-bordered w-full min-w-0 text-sm px-2 sm:px-4" />
+          <label class="label py-1 sm:py-1.5" for="tx-transaction-date"><span class="label-text font-medium">Fecha</span></label>
+          <input id="tx-transaction-date" name="transaction_date" type="date" formControlName="transaction_date" class="input input-bordered w-full min-w-0 text-sm px-2 sm:px-4" />
         </div>
         <div class="form-control w-full min-w-0">
-          <label class="label py-1 sm:py-1.5"><span class="label-text font-medium">Hora <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
+          <label class="label py-1 sm:py-1.5" for="tx-transaction-time"><span class="label-text font-medium">Hora <span class="text-xs text-base-content/60 font-normal">(Opcional)</span></span></label>
           @if (isMobile()) {
-            <input type="time" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm text-center px-2" />
+            <input id="tx-transaction-time" name="transaction_time" type="time" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm text-center px-2" />
           } @else {
-            <input type="text" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm" placeholder="HH:MM" maxlength="5" />
+            <input id="tx-transaction-time" name="transaction_time" type="text" formControlName="transaction_time" class="input input-bordered w-full min-w-0 text-sm" placeholder="HH:MM" maxlength="5" />
           }
         </div>
       </div>

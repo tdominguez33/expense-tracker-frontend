@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpResponse, HttpParams } from '@angular/common/http';
 import { ConfigService } from './config.service';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay, tap, catchError, throwError } from 'rxjs';
+
+interface CacheEntry<T> {
+  obs$: Observable<T>;
+  expiresAt: number;
+  baseUrl: string;
+}
+
+const DEFAULT_CACHE_TTL_MS = 60_000;
 
 @Injectable({
   providedIn: 'root'
@@ -9,81 +17,147 @@ import { Observable } from 'rxjs';
 export class ApiService {
   private http = inject(HttpClient);
   private config = inject(ConfigService);
+  private cache = new Map<string, CacheEntry<any>>();
 
   private get baseUrl() {
     return this.config.apiUrl();
   }
 
+  private getCached<T>(key: string, factory: () => Observable<T>, ttlMs = DEFAULT_CACHE_TTL_MS): Observable<T> {
+    const now = Date.now();
+    const currentBaseUrl = this.baseUrl;
+    const existing = this.cache.get(key);
+    if (existing && existing.baseUrl === currentBaseUrl && existing.expiresAt > now) {
+      return existing.obs$;
+    }
+
+    const obs$ = factory().pipe(
+      catchError((err) => {
+        this.cache.delete(key);
+        return throwError(() => err);
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+
+    this.cache.set(key, {
+      obs$,
+      expiresAt: now + ttlMs,
+      baseUrl: currentBaseUrl
+    });
+
+    return obs$;
+  }
+
+  invalidateCache(...keys: string[]): void {
+    if (keys.length === 0) {
+      this.cache.clear();
+      return;
+    }
+    for (const k of keys) {
+      this.cache.delete(k);
+    }
+  }
+
   // --- CONFIG ---
-  getConfig(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/config/`);
+  getConfig(forceRefresh = false): Observable<any> {
+    if (forceRefresh) this.invalidateCache('config');
+    return this.getCached('config', () => this.http.get(`${this.baseUrl}/config/`));
   }
 
   updateConfig(data: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/config/`, data);
+    return this.http.put(`${this.baseUrl}/config/`, data).pipe(
+      tap(() => this.invalidateCache('config'))
+    );
   }
 
   // --- CATEGORIES ---
-  getCategories(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/categories/`);
+  getCategories(forceRefresh = false): Observable<any> {
+    if (forceRefresh) this.invalidateCache('categories');
+    return this.getCached('categories', () => this.http.get(`${this.baseUrl}/categories/`));
   }
 
   createCategory(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/categories/`, data);
+    return this.http.post(`${this.baseUrl}/categories/`, data).pipe(
+      tap(() => this.invalidateCache('categories'))
+    );
   }
 
   updateCategory(id: number, data: any): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/categories/${id}`, data);
+    return this.http.patch(`${this.baseUrl}/categories/${id}`, data).pipe(
+      tap(() => this.invalidateCache('categories'))
+    );
   }
 
-  reorderCategories(orders: {id: number, sort_order: number}[]): Observable<any> {
-    return this.http.put(`${this.baseUrl}/categories/reorder`, orders);
+  reorderCategories(orders: { id: number; sort_order: number }[]): Observable<any> {
+    return this.http.put(`${this.baseUrl}/categories/reorder`, orders).pipe(
+      tap(() => this.invalidateCache('categories'))
+    );
   }
 
   deleteCategory(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/categories/${id}`);
+    return this.http.delete(`${this.baseUrl}/categories/${id}`).pipe(
+      tap(() => this.invalidateCache('categories'))
+    );
   }
 
   // --- ACCOUNTS ---
-  getAccounts(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/accounts/`);
+  getAccounts(forceRefresh = false): Observable<any> {
+    if (forceRefresh) this.invalidateCache('accounts');
+    return this.getCached('accounts', () => this.http.get(`${this.baseUrl}/accounts/`));
   }
 
   createAccount(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/accounts/`, data);
+    return this.http.post(`${this.baseUrl}/accounts/`, data).pipe(
+      tap(() => this.invalidateCache('accounts'))
+    );
   }
 
   updateAccount(id: number, data: any): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/accounts/${id}`, data);
+    return this.http.patch(`${this.baseUrl}/accounts/${id}`, data).pipe(
+      tap(() => this.invalidateCache('accounts'))
+    );
   }
 
-  reorderAccounts(orders: {id: number, sort_order: number}[]): Observable<any> {
-    return this.http.put(`${this.baseUrl}/accounts/reorder`, orders);
+  reorderAccounts(orders: { id: number; sort_order: number }[]): Observable<any> {
+    return this.http.put(`${this.baseUrl}/accounts/reorder`, orders).pipe(
+      tap(() => this.invalidateCache('accounts'))
+    );
   }
 
   deleteAccount(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/accounts/${id}`);
+    return this.http.delete(`${this.baseUrl}/accounts/${id}`).pipe(
+      tap(() => this.invalidateCache('accounts', 'config'))
+    );
   }
 
   // --- ENTITIES ---
-  getEntities(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/entities/`);
+  getEntities(forceRefresh = false): Observable<any> {
+    if (forceRefresh) this.invalidateCache('entities');
+    return this.getCached('entities', () => this.http.get(`${this.baseUrl}/entities/`));
   }
 
   createEntity(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/entities/`, data);
+    return this.http.post(`${this.baseUrl}/entities/`, data).pipe(
+      tap(() => this.invalidateCache('entities'))
+    );
   }
 
   updateEntity(id: number, data: any): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/entities/${id}`, data);
+    return this.http.patch(`${this.baseUrl}/entities/${id}`, data).pipe(
+      tap(() => this.invalidateCache('entities'))
+    );
   }
 
-  reorderEntities(orders: {id: number, sort_order: number}[]): Observable<any> {
-    return this.http.put(`${this.baseUrl}/entities/reorder`, orders);
+  reorderEntities(orders: { id: number; sort_order: number }[]): Observable<any> {
+    return this.http.put(`${this.baseUrl}/entities/reorder`, orders).pipe(
+      tap(() => this.invalidateCache('entities'))
+    );
   }
 
   deleteEntity(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/entities/${id}`);
+    return this.http.delete(`${this.baseUrl}/entities/${id}`).pipe(
+      tap(() => this.invalidateCache('entities', 'accounts'))
+    );
   }
 
   // --- TRANSACTIONS ---
@@ -184,6 +258,8 @@ export class ApiService {
   restoreDatabase(file: File): Observable<any> {
     const formData = new FormData();
     formData.append('file', file, file.name);
-    return this.http.post(`${this.baseUrl}/database/restore`, formData);
+    return this.http.post(`${this.baseUrl}/database/restore`, formData).pipe(
+      tap(() => this.invalidateCache())
+    );
   }
 }

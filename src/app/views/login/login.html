@@ -2,17 +2,18 @@
   <div class="card w-full max-w-sm bg-base-100 shadow-xl">
     <div class="card-body">
       <h2 class="card-title text-2xl font-bold justify-center items-center gap-3 mb-4">
-        <img src="icon.png" alt="Logo" class="w-9 h-9 object-contain" />
+        <img src="icon.png" alt="Logo" width="36" height="36" decoding="async" class="w-9 h-9 object-contain" />
         <span>Expense Tracker</span>
       </h2>
 
       @if (!setupMode()) {
         <form (ngSubmit)="onSubmit()" class="space-y-4">
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="login-api-url">
               <span class="label-text font-medium">URL del Servidor</span>
             </label>
             <input 
+              id="login-api-url"
               type="text" 
               [(ngModel)]="apiUrl" 
               name="apiUrl"
@@ -24,10 +25,11 @@
           </div>
 
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="login-password">
               <span class="label-text font-medium">Contraseña</span>
             </label>
             <input 
+              id="login-password"
               type="password" 
               [(ngModel)]="password" 
               name="password"
@@ -75,10 +77,11 @@
           </div>
 
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="setup-new-password">
               <span class="label-text font-medium">Nueva Contraseña</span>
             </label>
             <input 
+              id="setup-new-password"
               type="password" 
               [(ngModel)]="newPassword" 
               name="newPassword"
@@ -92,10 +95,11 @@
           </div>
 
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="setup-confirm-password">
               <span class="label-text font-medium">Confirmar Contraseña</span>
             </label>
             <input 
+              id="setup-confirm-password"
               type="password" 
               [(ngModel)]="confirmPassword" 
               name="confirmPassword"

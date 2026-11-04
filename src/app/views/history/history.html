@@ -248,7 +248,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               @if (selectedMonth() !== null) {
-                <input type="date" 
+                <input id="history-date-filter" name="history_date_filter" aria-label="Filtrar por fecha" type="date" 
                        [ngModel]="dateFilter()" 
                        (ngModelChange)="onDateFilterChange($event)"
                        [min]="getMinDate()"
@@ -256,7 +256,7 @@
                        class="input input-bordered input-sm w-full font-mono text-xs pl-9 pr-8 date-input-icon-left"
                        title="Filtrar por fecha" />
               } @else {
-                <input type="month" 
+                <input id="history-month-filter" name="history_month_filter" aria-label="Filtrar por mes" type="month" 
                        [ngModel]="dateFilter()" 
                        (ngModelChange)="onDateFilterChange($event)"
                        [min]="getMinDate()"
@@ -276,7 +276,7 @@
 
             <!-- Search Controls -->
             <div class="relative w-full sm:w-56">
-              <input type="text" 
+              <input id="history-search" name="history_search" aria-label="Buscar en el período" type="text" 
                      [(ngModel)]="searchQuery" 
                      (ngModelChange)="currentPage.set(1)"
                      placeholder="Buscar en el período..." 
