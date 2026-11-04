@@ -1,6 +1,6 @@
 [package]
 name = "expense-tracker"
-version = "0.16.1"
+version = "0.17.0"
 description = "Expense Tracker Application"
 authors = ["Expense Tracker"]
 license = ""
