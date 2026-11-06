@@ -1,10 +1,10 @@
-import { Component, inject, OnInit, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, DestroyRef, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { RefreshService } from '../../services/refresh.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { DecimalPipe, DatePipe, Location } from '@angular/common';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { debouncedLoading } from '../../utils/loading';
 import { getContrastColor } from '../../utils/color';
@@ -14,6 +14,7 @@ import { getContrastColor } from '../../utils/color';
   standalone: true,
   imports: [ReactiveFormsModule, DecimalPipe, DatePipe],
   templateUrl: './statements.html',
+  styleUrl: './statements.css',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class Statements implements OnInit {
@@ -68,6 +69,8 @@ export class Statements implements OnInit {
   routeId = signal<number | null>(null);
   routeAccountId = signal<number | null>(null);
   viewingDetailsData = signal<{ items: any[]; subtotal: number; tax_amount: number; total_amount: number } | null>(null);
+  isLoadingDetails = signal<boolean>(false);
+  loadedStatementId = signal<number | null>(null);
   expensesSort = signal<'oldest' | 'amount'>('oldest');
 
   sortedViewingDetails = computed(() => {
@@ -107,6 +110,17 @@ export class Statements implements OnInit {
     const id = this.routeId();
     if (!id) return null;
     return this.statements().find((s: any) => s.id === id) || null;
+  });
+
+  isDetailsReady = computed(() => {
+    const id = this.routeId();
+    if (!id) return true;
+    if (this.isLoading() || this.isLoadingDetails()) return false;
+    const st = this.viewingStatement();
+    const details = this.viewingDetailsData();
+    if (!st || !details) return false;
+    if (this.loadedStatementId() !== id) return false;
+    return true;
   });
 
   selectedAccountId = signal<number | null>(null);
@@ -154,6 +168,94 @@ export class Statements implements OnInit {
   isSubmittingComment = signal(false);
   commentError = signal('');
 
+  activeTooltip = signal<{
+    text: string;
+    y: number;
+    isBottom: boolean;
+    align: 'center' | 'right' | 'left';
+    left?: number;
+    right?: number;
+    arrowOffset?: number;
+  } | null>(null);
+  isTooltipClosing = signal<boolean>(false);
+  isTouchTooltip = signal<boolean>(false);
+  private hideTooltipTimeout: any = null;
+
+  @HostListener('window:wheel')
+  @HostListener('document:click')
+  onDismissTooltip() {
+    this.hideCommentTooltip();
+  }
+
+  showCommentTooltip(text: string, event: MouseEvent | TouchEvent, isTouch = false) {
+    if (this.hideTooltipTimeout) {
+      clearTimeout(this.hideTooltipTimeout);
+      this.hideTooltipTimeout = null;
+    }
+    const target = event.currentTarget as HTMLElement;
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const winWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const btnCenterX = rect.left + rect.width / 2;
+    const btnCenterRight = winWidth - btnCenterX;
+    const isBottom = rect.top < 60;
+    const y = Math.round(isBottom ? rect.bottom + 6 : rect.top - 6);
+
+    let align: 'center' | 'right' | 'left' = 'center';
+    let left: number | undefined;
+    let right: number | undefined;
+    let arrowOffset: number | undefined;
+
+    if (btnCenterRight < 150) {
+      align = 'right';
+      const rightEdge = Math.max(12, Math.round(winWidth - rect.right - 4));
+      right = rightEdge;
+      arrowOffset = Math.max(10, Math.round(btnCenterRight - rightEdge - 4));
+    } else if (btnCenterX < 150) {
+      align = 'left';
+      const leftEdge = Math.max(12, Math.round(rect.left - 4));
+      left = leftEdge;
+      arrowOffset = Math.max(10, Math.round(btnCenterX - leftEdge - 4));
+    } else {
+      align = 'center';
+      left = Math.round(btnCenterX);
+    }
+
+    this.activeTooltip.set({
+      text,
+      y,
+      isBottom,
+      align,
+      left,
+      right,
+      arrowOffset
+    });
+    this.isTooltipClosing.set(false);
+    this.isTouchTooltip.set(isTouch);
+  }
+
+  hideCommentTooltip() {
+    if (!this.activeTooltip() || this.isTooltipClosing()) return;
+    this.isTooltipClosing.set(true);
+    if (this.hideTooltipTimeout) {
+      clearTimeout(this.hideTooltipTimeout);
+    }
+    this.hideTooltipTimeout = setTimeout(() => {
+      this.activeTooltip.set(null);
+      this.isTooltipClosing.set(false);
+      this.isTouchTooltip.set(false);
+      this.hideTooltipTimeout = null;
+    }, 120);
+  }
+
+  toggleCommentTooltip(text: string, event: MouseEvent | TouchEvent) {
+    if (this.activeTooltip()?.text === text && !this.isTooltipClosing()) {
+      this.hideCommentTooltip();
+    } else {
+      this.showCommentTooltip(text, event, true);
+    }
+  }
+
   constructor() {
     this.stForm = this.fb.group({
       start_date: ['', Validators.required],
@@ -181,16 +283,38 @@ export class Statements implements OnInit {
 
   defaultTaxPercentage = signal<number>(0);
 
-  loadStatementItems(id: number) {
+  loadStatementItems(id: number, options?: { silent?: boolean }) {
+    if (!options?.silent) {
+      this.isLoadingDetails.set(true);
+      if (this.loadedStatementId() !== id) {
+        this.viewingDetailsData.set(null);
+      }
+    }
     this.api.getStatementItems(id).subscribe({
-      next: (data) => this.viewingDetailsData.set(data),
-      error: (err) => console.error('Error loading statement items', err)
+      next: (data) => {
+        this.viewingDetailsData.set(data);
+        this.loadedStatementId.set(id);
+        this.isLoadingDetails.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading statement items', err);
+        this.isLoadingDetails.set(false);
+      }
     });
   }
 
   ngOnInit() {
     const unregister = this.refreshService.register(() => this.loadData({ silent: true }));
     this.destroyRef.onDestroy(unregister);
+
+    if (typeof window !== 'undefined') {
+      const onScroll = () => this.hideCommentTooltip();
+      window.addEventListener('scroll', onScroll, true);
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', onScroll, true);
+        if (this.hideTooltipTimeout) clearTimeout(this.hideTooltipTimeout);
+      });
+    }
 
     this.route.paramMap.subscribe(params => {
       const idStr = params.get('id');
@@ -201,14 +325,20 @@ export class Statements implements OnInit {
         this.routeId.set(id);
         this.routeAccountId.set(null);
         this.expensesSort.set('oldest');
-        this.loadStatementItems(id);
+        if (this.loadedStatementId() !== id || !this.viewingDetailsData()) {
+          this.loadStatementItems(id);
+        }
       } else if (accIdStr) {
         this.routeId.set(null);
         this.routeAccountId.set(parseInt(accIdStr, 10));
         this.selectedAccountId.set(parseInt(accIdStr, 10));
+        this.viewingDetailsData.set(null);
+        this.loadedStatementId.set(null);
       } else {
         this.routeId.set(null);
         this.routeAccountId.set(null);
+        this.viewingDetailsData.set(null);
+        this.loadedStatementId.set(null);
       }
     });
 
@@ -241,7 +371,7 @@ export class Statements implements OnInit {
 
           const currentRouteId = this.routeId();
           if (currentRouteId && options?.silent) {
-            this.loadStatementItems(currentRouteId);
+            this.loadStatementItems(currentRouteId, { silent: true });
           }
 
           if (!options?.silent) {
@@ -561,47 +691,59 @@ export class Statements implements OnInit {
 
   postponeTargetIsForward = signal<boolean>(true);
   postponeTargetInst = signal<any>(null);
+  isSubmittingPostpone = signal<boolean>(false);
 
   postponeTransaction(inst: any, postpone: boolean) {
     this.postponeTargetInst.set(inst);
     this.postponeTargetIsForward.set(postpone);
-    (document.getElementById('confirm_postpone_modal') as HTMLDialogElement).showModal();
+    const modal = document.getElementById('confirm_postpone_modal') as HTMLDialogElement;
+    if (typeof modal?.showModal === 'function') {
+      modal.showModal();
+    }
   }
 
   closePostponeModal() {
-    (document.getElementById('confirm_postpone_modal') as HTMLDialogElement).close();
+    if (this.isSubmittingPostpone()) return;
+    const modal = document.getElementById('confirm_postpone_modal') as HTMLDialogElement;
+    if (typeof modal?.close === 'function') {
+      modal.close();
+    }
   }
 
-  executePostpone() {
+  async executePostpone() {
     const inst = this.postponeTargetInst();
-    if (!inst) return;
+    if (!inst || this.isSubmittingPostpone()) return;
 
     this.isSubmitting.set(true);
-    this.api.postponeTransaction(inst.id, this.postponeTargetIsForward()).subscribe({
-      next: () => {
-        const id = this.routeId();
-        if (id) {
-          this.api.getStatementItems(id).subscribe({
-            next: (data) => {
-              this.viewingDetailsData.set(data);
-              this.isSubmitting.set(false);
-              this.closePostponeModal();
-            },
-            error: () => {
-              this.isSubmitting.set(false);
-              this.closePostponeModal();
-            }
-          });
-        } else {
-          this.isSubmitting.set(false);
-          this.closePostponeModal();
+    this.isSubmittingPostpone.set(true);
+    const minDurationPromise = new Promise(resolve => setTimeout(resolve, 300));
+    let errorMessage: string | null = null;
+
+    try {
+      await firstValueFrom(this.api.postponeTransaction(inst.id, this.postponeTargetIsForward()));
+      const id = this.routeId();
+      if (id) {
+        try {
+          const data = await firstValueFrom(this.api.getStatementItems(id));
+          this.viewingDetailsData.set(data);
+          this.loadedStatementId.set(id);
+        } catch (err) {
+          console.error('Error reloading statement items:', err);
         }
-      },
-      error: () => {
-        this.isSubmitting.set(false);
-        this.closePostponeModal();
       }
-    });
+      this.loadStatements();
+    } catch (err: any) {
+      console.error('Error postponing transaction:', err);
+      errorMessage = err.error?.detail || 'Error al mover el gasto';
+    } finally {
+      await minDurationPromise;
+      this.isSubmitting.set(false);
+      this.isSubmittingPostpone.set(false);
+      this.closePostponeModal();
+      if (errorMessage) {
+        alert(errorMessage);
+      }
+    }
   }
 
   hasComment(st: any): boolean {
